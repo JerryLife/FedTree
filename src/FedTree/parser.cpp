@@ -51,6 +51,9 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     gbdt_param->tree_per_rounds = 1; // # tree of each round, depends on # class
     gbdt_param->metric = "default";
 
+    DeltaBoostParam *deltaboost_param = &fl_param.deltaboost_param;
+    deltaboost_param->enable_delta = "false";
+
     if (argc < 2) {
         printf("Usage: <config>\n");
         exit(0);
@@ -127,8 +130,10 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 gbdt_param->tree_method = val;
             else if (str_name.compare("metric") == 0)
                 gbdt_param->metric = val;
+            else if (str_name.compare("enable_delta") == 0)
+                deltaboost_param->enable_delta = (strcasecmp("true", val) == 0);
             else
-                LOG(INFO) << "\"" << name << "\" is unknown option!";
+                LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {
             string str_name(name);
             if (str_name.compare("-help") == 0) {
@@ -136,16 +141,23 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 exit(0);
             }
         }
-
     };
 
     //read configuration file
     std::ifstream conf_file(argv[1]);
+    if (conf_file.fail()) {
+        LOG(FATAL) << "File \"" << argv[1] << "\" does not exist.";
+    }
+
     std::string line;
     while (std::getline(conf_file, line))
     {
         //LOG(INFO) << line;
         parse_value(line.c_str());
+    }
+    if (deltaboost_param->enable_delta) {
+        // copy gbdt params into deltaboost params
+        fl_param.deltaboost_param = *(new DeltaBoostParam(*gbdt_param, true));
     }
 
     //TODO: confirm handling spaces around "="

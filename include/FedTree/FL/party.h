@@ -57,8 +57,8 @@ public:
     }
 
     void send_node(int node_id, int n_nodes_in_level, Party &party){
-        Tree::TreeNode *receiver_nodes_data = party.booster.fbuilder->trees.nodes.host_data();
-        Tree::TreeNode *sender_nodes_data = booster.fbuilder->trees.nodes.host_data();
+        Tree::TreeNode *receiver_nodes_data = party.booster.fbuilder->tree.nodes.host_data();
+        Tree::TreeNode *sender_nodes_data = booster.fbuilder->tree.nodes.host_data();
         auto& receiver_sp = party.booster.fbuilder->sp;
         auto& sender_sp = booster.fbuilder->sp;
         auto receiver_sp_data = receiver_sp.host_data();

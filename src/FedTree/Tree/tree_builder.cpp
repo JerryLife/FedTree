@@ -90,7 +90,7 @@ void TreeBuilder::set_y_predict(int k){
 void TreeBuilder::predict_in_training(int k) {
     auto y_predict_data = y_predict.host_data() + k * n_instances;
     auto nid_data = ins2node_id.host_data();
-    const Tree::TreeNode *nodes_data = trees.nodes.host_data();
+    const Tree::TreeNode *nodes_data = tree.nodes.host_data();
     auto lr = param.learning_rate;
 #pragma omp parallel for
     for(int i = 0; i < n_instances; i++){
@@ -101,14 +101,14 @@ void TreeBuilder::predict_in_training(int k) {
 }
 
 void TreeBuilder::build_init(const GHPair sum_gh, int k) {
-    this->trees.init_CPU(sum_gh, param);
+    this->tree.init_CPU(sum_gh, param);
 }
 
 void TreeBuilder::build_init(const SyncArray<GHPair> &gradients, int k) {
     //LOG(INFO)<<"n_instances:"<<n_instances;
     this->ins2node_id.resize(n_instances); // initialize n_instances here
     this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_instances));
-    this->trees.init_CPU(this->gradients, param);
+    this->tree.init_CPU(this->gradients, param);
 }
 
 vector<Tree> TreeBuilder::build_approximate(const SyncArray<GHPair> &gradients, bool update_y_predict) {
@@ -121,7 +121,7 @@ vector<Tree> TreeBuilder::build_approximate(const SyncArray<GHPair> &gradients, 
 
         this->ins2node_id.resize(n_instances);
         this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_instances));
-        this->trees.init_CPU(this->gradients, param);
+        this->tree.init_CPU(this->gradients, param);
 
         for (int level = 0; level < param.depth; ++level) {
             //LOG(INFO)<<"in level:"<<level;
@@ -145,12 +145,12 @@ vector<Tree> TreeBuilder::build_approximate(const SyncArray<GHPair> &gradients, 
             }
         }
         //here
-        this->trees.prune_self(param.gamma);
+        this->tree.prune_self(param.gamma);
 //        LOG(INFO) << "y_predict: " << y_predict;
         if(update_y_predict)
             predict_in_training(k);
-        tree.nodes.resize(this->trees.nodes.size());
-        tree.nodes.copy_from(this->trees.nodes);
+        tree.nodes.resize(this->tree.nodes.size());
+        tree.nodes.copy_from(this->tree.nodes);
     }
     return trees;
 }
@@ -166,12 +166,12 @@ void TreeBuilder::build_tree_by_predefined_structure(const SyncArray<GHPair> &gr
         Tree &tree = trees[k];
         this->ins2node_id.resize(n_instances);
         this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_instances));
-        this->trees = tree;
+        this->tree = tree;
 
         GHPair sum_gh = thrust::reduce(thrust::host, this->gradients.host_data(), this->gradients.host_end());
 
         float_type lambda = param.lambda;
-        auto node_data = this->trees.nodes.host_data();
+        auto node_data = this->tree.nodes.host_data();
         Tree::TreeNode &root_node = node_data[0];
         root_node.sum_gh_pair = sum_gh;
         root_node.is_valid = true;
@@ -200,9 +200,9 @@ void TreeBuilder::build_tree_by_predefined_structure(const SyncArray<GHPair> &gr
             }
         }
         //here
-        this->trees.prune_self(param.gamma);
+        this->tree.prune_self(param.gamma);
         predict_in_training(k);
-        tree = this->trees;
+        tree = this->tree;
 //        tree.nodes.resize(this->trees.nodes.size());
 //        tree.nodes.copy_from(this->trees.nodes);
     }
@@ -249,7 +249,7 @@ void TreeBuilder::find_split (SyncArray<SplitPoint> &sp, int n_nodes_in_level, T
 void TreeBuilder::update_tree() {
     TIMED_FUNC(timerObj);
     auto& sp = this->sp;
-    auto& tree = this->trees;
+    auto& tree = this->tree;
     auto sp_data = sp.host_data();
     int n_nodes_in_level = sp.size();
 
@@ -304,7 +304,7 @@ void TreeBuilder::update_tree() {
 void TreeBuilder::update_tree_in_a_node(int node_id) {
     TIMED_FUNC(timerObj);
     auto& sp = this->sp;
-    auto& tree = this->trees;
+    auto& tree = this->tree;
     auto sp_data = sp.host_data();
     LOG(DEBUG) << sp;
     int n_nodes_in_level = sp.size();
@@ -355,7 +355,7 @@ void TreeBuilder::update_tree_in_a_node(int node_id) {
 void TreeBuilder::update_tree_by_sp_values() {
     TIMED_FUNC(timerObj);
     auto& sp = this->sp;
-    auto& tree = this->trees;
+    auto& tree = this->tree;
     auto sp_data = sp.host_data();
     LOG(DEBUG) << sp;
     int n_nodes_in_level = sp.size();

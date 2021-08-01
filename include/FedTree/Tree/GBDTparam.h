@@ -37,4 +37,13 @@ struct GBDTParam {
     std::string metric;
 };
 
+struct DeltaBoostParam : public GBDTParam {
+    bool enable_delta = false;
+
+    DeltaBoostParam() = default;
+
+    DeltaBoostParam(const GBDTParam & gbdt_param, bool enable_delta):
+    GBDTParam(gbdt_param), enable_delta(enable_delta) {}
+};
+
 #endif //FEDTREE_GBDTPARAM_H

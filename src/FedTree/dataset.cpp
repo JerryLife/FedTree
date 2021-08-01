@@ -246,7 +246,7 @@ void DataSet::load_from_file(string file_name, FLParam &param) {
                         continue;
                     }
                     if(r == 2) {
-                        col_idx[tid].push_back(feature_id - 1);
+                        col_idx[tid].push_back(feature_id - 1);     // assuming the feature_id starts from 1
                         val_[tid].push_back(value);
                         if(feature_id > max_feature[tid])
                             max_feature[tid] = feature_id;
@@ -653,6 +653,7 @@ void DataSet::csr_to_csc(){
     for (int i = 1; i < n_column + 1; ++i){
         csc_col_ptr[i] += csc_col_ptr[i - 1];
     }
+
     // TODO to parallelize here
     for (int row = 0; row < csr_row_ptr.size() - 1; ++row) {
         for (int j = csr_row_ptr[row]; j < csr_row_ptr[row + 1]; ++j) {

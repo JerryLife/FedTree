@@ -24,6 +24,7 @@ public:
     float variance; // variance of dp noise if privacy_tech=="dp"
     float privacy_budget;       // privacy budget for differential privacy
     GBDTParam gbdt_param; // parameters for the gbdt training
+    DeltaBoostParam deltaboost_param;
 };
 
 

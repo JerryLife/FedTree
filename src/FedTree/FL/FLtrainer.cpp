@@ -237,14 +237,14 @@ void FLtrainer::horizontal_fl_trainer(vector<Party> &parties, Server &server, FL
             t_start = t_end;
 
             // After training each tree, update vector of tree
-            server.booster.fbuilder->trees.prune_self(model_param.gamma);
+            server.booster.fbuilder->tree.prune_self(model_param.gamma);
 #pragma omp parallel for
             for (int p = 0; p < n_parties; p++) {
                 Tree &tree = parties_trees[p][k];
-                parties[p].booster.fbuilder->trees.prune_self(model_param.gamma);
+                parties[p].booster.fbuilder->tree.prune_self(model_param.gamma);
                 parties[p].booster.fbuilder->predict_in_training(k);
-                tree.nodes.resize(parties[p].booster.fbuilder->trees.nodes.size());
-                tree.nodes.copy_from(parties[p].booster.fbuilder->trees.nodes);
+                tree.nodes.resize(parties[p].booster.fbuilder->tree.nodes.size());
+                tree.nodes.copy_from(parties[p].booster.fbuilder->tree.nodes);
             }
 
             t_end = timer.now();
@@ -479,7 +479,7 @@ void FLtrainer::vertical_fl_trainer(vector<Party> &parties, Server &server, FLPa
                     // update local split_feature_id to global
                     auto party_global_hist_fid_data = parties_global_hist_fid[party_id].host_data();
                     int global_fid = party_global_hist_fid_data[local_idx];
-                    auto nodes_data = parties[party_id].booster.fbuilder->trees.nodes.host_data();
+                    auto nodes_data = parties[party_id].booster.fbuilder->tree.nodes.host_data();
                     auto sp_data = parties[party_id].booster.fbuilder->sp.host_data();
                     // LOG(INFO)<<"local split fea id:"<<sp_data[node].split_fea_id;
                     sp_data[node].split_fea_id = global_fid;
@@ -499,7 +499,7 @@ void FLtrainer::vertical_fl_trainer(vector<Party> &parties, Server &server, FLPa
                 }
 
                 if (params.privacy_tech == "he") {
-                    auto node_data = server.booster.fbuilder->trees.nodes.host_data();
+                    auto node_data = server.booster.fbuilder->tree.nodes.host_data();
 #pragma omp parallel for
                     for (int nid = (1 << l) - 1; nid < (2 << (l + 1)) - 1; nid++) {
                         server.decrypt_gh(node_data[nid].sum_gh_pair);
@@ -528,8 +528,8 @@ void FLtrainer::vertical_fl_trainer(vector<Party> &parties, Server &server, FLPa
                     // add Laplace noise to leaf node values
                     if (params.privacy_tech == "dp") {
                         for(int party_id = 0; party_id < parties.size(); party_id ++) {
-                            int tree_size = parties[party_id].booster.fbuilder->trees.nodes.size();
-                            auto nodes = parties[party_id].booster.fbuilder->trees.nodes.host_data();
+                            int tree_size = parties[party_id].booster.fbuilder->tree.nodes.size();
+                            auto nodes = parties[party_id].booster.fbuilder->tree.nodes.host_data();
                             for(int node_id = 0; node_id < tree_size; node_id++) {
                                 Tree::TreeNode node = nodes[node_id];
                                 if(node.is_leaf) {
@@ -544,13 +544,13 @@ void FLtrainer::vertical_fl_trainer(vector<Party> &parties, Server &server, FLPa
             }
 
             for (int pid = 0; pid < parties.size(); pid++) {
-                parties[pid].booster.fbuilder->trees.prune_self(model_param.gamma);
+                parties[pid].booster.fbuilder->tree.prune_self(model_param.gamma);
 //                LOG(INFO)<<"trees:"<< parties[pid].booster.fbuilder->trees.nodes;
                 parties[pid].booster.fbuilder->predict_in_training(t);
             }
-            server.booster.fbuilder->trees.prune_self(model_param.gamma);
+            server.booster.fbuilder->tree.prune_self(model_param.gamma);
             server.booster.fbuilder->predict_in_training(t);
-            tree = parties[0].booster.fbuilder->trees;
+            tree = parties[0].booster.fbuilder->tree;
 //            tree.nodes.resize(parties[0].booster.fbuilder->trees.nodes.size());
 //            tree.nodes.copy_from(parties[0].booster.fbuilder->trees.nodes);
         }

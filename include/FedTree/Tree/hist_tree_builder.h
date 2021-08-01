@@ -17,7 +17,7 @@ public:
 
     void init(DataSet &dataset, const GBDTParam &param) override;
 
-    void init_nocutpoints(DataSet &dataset, const GBDTParam &param);
+    virtual void init_nocutpoints(DataSet &dataset, const GBDTParam &param);
 
     void get_bin_ids();
 
@@ -35,7 +35,8 @@ public:
 
     void get_best_gain_in_a_level(SyncArray<float_type> &gain, SyncArray<int_float> &best_idx_gain, int n_nodes_in_level, int n_bins) override;
 
-    void get_split_points(SyncArray<int_float> &best_idx_gain, int level, int *hist_fid, SyncArray<GHPair> &missing_gh, SyncArray<GHPair> &hist);
+    virtual void get_split_points(SyncArray<int_float> &best_idx_gain, int level, int *hist_fid,
+                                  SyncArray<GHPair> &missing_gh, SyncArray<GHPair> &hist);
 
     SyncArray<GHPair> get_gradients();
 
@@ -143,7 +144,7 @@ public:
 //    }
 
 
-private:
+protected:
     vector<HistCut> parties_cut;
     // MSyncArray<unsigned char> char_dense_bin_id;
     SyncArray<unsigned char> dense_bin_id;

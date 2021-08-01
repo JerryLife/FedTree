@@ -180,10 +180,10 @@ void HistTreeBuilder::find_split_by_predefined_features(int level) {
     std::chrono::high_resolution_clock timer;
 //    int nid_offset = static_cast<int>(pow(2, level) - 1);
     int n_column = sorted_dataset.n_features();
-    int n_nodes_in_level = trees.n_nodes_level[level + 1] - trees.n_nodes_level[level];
-    int nid_offset = trees.n_nodes_level[level];
+    int n_nodes_in_level = tree.n_nodes_level[level + 1] - tree.n_nodes_level[level];
+    int nid_offset = tree.n_nodes_level[level];
 
-    auto nodes_data = trees.nodes.host_data();
+    auto nodes_data = tree.nodes.host_data();
     vector<int> n_bins(n_nodes_in_level + 1);
     n_bins[0] = 0;
     auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
@@ -228,7 +228,7 @@ void HistTreeBuilder::find_split_by_predefined_features(int level) {
     SyncArray<GHPair> hist(n_split);
 
     SyncArray<GHPair> &gh_pair = gradients;
-    Tree &tree = trees;
+    Tree &tree = tree;
     SyncArray<SplitPoint> &sp = this->sp;
 
     auto &dense_bin_id = this->dense_bin_id;
@@ -548,7 +548,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
 
     SyncArray<int> &nid = ins2node_id;
     SyncArray<GHPair> &gh_pair = gradients;
-    Tree &tree = trees;
+    Tree &tree = this->tree;
     SyncArray<SplitPoint> &sp = this->sp;
     HistCut &cut = this->cut;
     auto &dense_bin_id = this->dense_bin_id;
@@ -739,7 +739,7 @@ HistTreeBuilder::compute_gain_in_a_level(SyncArray<float_type> &gain, int n_node
         else
             return 0;
     };
-    const Tree::TreeNode *nodes_data = trees.nodes.host_data();
+    const Tree::TreeNode *nodes_data = tree.nodes.host_data();
     GHPair *gh_prefix_sum_data = hist.host_data();
     float_type *gain_data = gain.host_data();
     const auto missing_gh_data = missing_gh.host_data();
@@ -817,7 +817,7 @@ void HistTreeBuilder::get_split_points(SyncArray<int_float> &best_idx_gain, int 
 
     sp.resize(n_nodes_in_level);
     auto sp_data = sp.host_data();
-    auto nodes_data = trees.nodes.host_data();
+    auto nodes_data = tree.nodes.host_data();
 
     auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
 #pragma omp parallel for
@@ -857,7 +857,7 @@ void HistTreeBuilder::get_split_points_in_a_node(int node_id, int best_idx, floa
 
 //    sp.resize(n_nodes_in_level);
     auto sp_data = sp.host_data();
-    auto nodes_data = trees.nodes.host_data();
+    auto nodes_data = tree.nodes.host_data();
 
     auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
 
@@ -890,7 +890,7 @@ void HistTreeBuilder::update_ins2node_id() {
     {
 //        TIMED_SCOPE(timerObj, "get new node id");
         auto nid_data = ins2node_id.host_data();
-        Tree::TreeNode *nodes_data = trees.nodes.host_data();
+        Tree::TreeNode *nodes_data = tree.nodes.host_data();
         has_splittable.host_data()[0] = false;
         bool *h_s_data = has_splittable.host_data();
         int column_offset = 0;
@@ -936,7 +936,7 @@ void HistTreeBuilder::update_ins2node_id_in_a_node(int node_id) {
     {
 //        TIMED_SCOPE(timerObj, "get new node id");
         auto nid_data = ins2node_id.host_data();
-        const Tree::TreeNode *nodes_data = trees.nodes.host_data();
+        const Tree::TreeNode *nodes_data = tree.nodes.host_data();
         has_splittable.host_data()[0] = false;
         bool *h_s_data = has_splittable.host_data();
         int column_offset = 0;

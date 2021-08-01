@@ -23,9 +23,9 @@
 
 class Booster {
 public:
-    void init(DataSet &dataSet, const GBDTParam &param, bool get_cut_points = 1);
+    virtual void init(DataSet &dataSet, const GBDTParam &param, bool get_cut_points = true);
 
-    void init (const GBDTParam &param, int n_instances);
+    void init(const GBDTParam &param, int n_instances);
 
     SyncArray<GHPair> get_gradients();
 
@@ -47,7 +47,7 @@ public:
     SyncArray<GHPair> gradients;
 
     std::unique_ptr<Metric> metric;
-private:
+protected:
     int n_devices;
     std::unique_ptr<ObjectiveFunction> obj;
     SyncArray<float_type> y;

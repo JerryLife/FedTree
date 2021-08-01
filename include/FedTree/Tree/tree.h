@@ -112,7 +112,7 @@ public:
 
     void init_CPU(const SyncArray<GHPair> &gradients, const GBDTParam &param);
 
-    void init_structure(int depth);
+    virtual void init_structure(int depth);
 
     // TODO: GPU initialization 
     // void init2(const SyncArray<GHPair> &gradients, const GBDTParam &param);
@@ -125,19 +125,84 @@ public:
     vector<int> n_nodes_level;
     int final_depth;
 
-
-
-
-    void prune_self(float_type gamma);
+    virtual void prune_self(float_type gamma);
 
     void compute_leaf_value();
 
-    private:
+protected:
     void preorder_traversal(int nid, int max_depth, int depth, string &s) const;
 
-    int try_prune_leaf(int nid, int np, float_type gamma, vector<int> &leaf_child_count);
+    virtual int try_prune_leaf(int nid, int np, float_type gamma, vector<int> &leaf_child_count);
 
-    void reorder_nid();
+    virtual void reorder_nid();
 };
+
+struct DeltaTree : public Tree {
+    struct DeltaNode : TreeNode {
+
+        vector<int> potential_trees_vec_idx;
+
+        HOST_DEVICE DeltaNode(const DeltaNode& copy):
+                TreeNode(copy), potential_trees_vec_idx(copy.potential_trees_vec_idx){ }
+
+        HOST_DEVICE DeltaNode &operator=(const DeltaNode& copy) {
+            final_id = copy.final_id;
+            lch_index = copy.lch_index;
+            rch_index = copy.rch_index;
+            parent_index = copy.parent_index;
+            gain = copy.gain;
+            base_weight = copy.base_weight;
+            split_feature_id = copy.split_feature_id;
+            pid = copy.pid;
+            split_value = copy.split_value;
+            split_bid = copy.split_bid;
+            default_right = copy.default_right;
+            is_leaf = copy.is_leaf;
+            is_valid = copy.is_valid;
+            is_pruned = copy.is_pruned;
+            sum_gh_pair.g = copy.sum_gh_pair.g;
+            sum_gh_pair.h = copy.sum_gh_pair.h;
+            n_instances = copy.n_instances;
+            potential_trees_vec_idx = copy.potential_trees_vec_idx;
+
+            return *this;
+        }
+
+        inline bool is_robust() const { return potential_trees_vec_idx.empty(); }
+    };
+
+    DeltaTree() = default;
+
+    DeltaTree(const DeltaTree& other)  {
+        nodes.resize(other.nodes.size());
+        nodes.copy_from(other.nodes);
+        n_nodes_level = other.n_nodes_level;
+        final_depth = other.final_depth;
+        potential_trees = other.potential_trees;
+    }
+
+    DeltaTree &operator=(const DeltaTree &tree) {
+        nodes.resize(tree.nodes.size());
+        nodes.copy_from(tree.nodes);
+        n_nodes_level = tree.n_nodes_level;
+        final_depth = tree.final_depth;
+        potential_trees = tree.potential_trees;
+        return *this;
+    }
+
+    void init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostParam &param);
+
+    void init_structure(int depth) override;
+
+    void prune_self(float_type gamma) override;
+
+    int try_prune_leaf(int nid, int np, float_type gamma, vector<int> &leaf_child_count) override;
+
+    void reorder_nid() override;
+
+    SyncArray<DeltaNode> nodes;
+    vector<vector<DeltaTree>> potential_trees;
+};
+
 
 #endif //FEDTREE_TREE_H
