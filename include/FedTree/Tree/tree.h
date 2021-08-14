@@ -69,6 +69,8 @@ public:
             return !is_leaf && is_valid;
         }
 
+        TreeNode() = default;
+
         HOST_DEVICE TreeNode(const TreeNode& copy){
             final_id = copy.final_id;
             lch_index = copy.lch_index;
@@ -140,12 +142,13 @@ protected:
 struct DeltaTree : public Tree {
     struct DeltaNode : TreeNode {
 
-        vector<int> potential_trees_vec_idx;
+        vector<int> potential_nodes_indices;    // the indices is sorted by the value of priority
 
-        HOST_DEVICE DeltaNode(const DeltaNode& copy):
-                TreeNode(copy), potential_trees_vec_idx(copy.potential_trees_vec_idx){ }
+        DeltaNode() = default;
 
-        HOST_DEVICE DeltaNode &operator=(const DeltaNode& copy) {
+        DeltaNode(const DeltaNode& copy) = default;
+
+        DeltaNode &operator=(const DeltaNode& copy) {
             final_id = copy.final_id;
             lch_index = copy.lch_index;
             rch_index = copy.rch_index;
@@ -163,30 +166,26 @@ struct DeltaTree : public Tree {
             sum_gh_pair.g = copy.sum_gh_pair.g;
             sum_gh_pair.h = copy.sum_gh_pair.h;
             n_instances = copy.n_instances;
-            potential_trees_vec_idx = copy.potential_trees_vec_idx;
+            potential_nodes_indices = copy.potential_nodes_indices;
 
             return *this;
         }
 
-        inline bool is_robust() const { return potential_trees_vec_idx.empty(); }
+        inline bool is_robust() const { return potential_nodes_indices.empty(); }
     };
 
     DeltaTree() = default;
 
-    DeltaTree(const DeltaTree& other)  {
-        nodes.resize(other.nodes.size());
-        nodes.copy_from(other.nodes);
+    DeltaTree(const DeltaTree& other) : Tree(other) {
+        nodes = other.nodes;
         n_nodes_level = other.n_nodes_level;
         final_depth = other.final_depth;
-        potential_trees = other.potential_trees;
     }
 
     DeltaTree &operator=(const DeltaTree &tree) {
-        nodes.resize(tree.nodes.size());
-        nodes.copy_from(tree.nodes);
+        nodes = tree.nodes;
         n_nodes_level = tree.n_nodes_level;
         final_depth = tree.final_depth;
-        potential_trees = tree.potential_trees;
         return *this;
     }
 
@@ -200,8 +199,7 @@ struct DeltaTree : public Tree {
 
     void reorder_nid() override;
 
-    SyncArray<DeltaNode> nodes;
-    vector<vector<DeltaTree>> potential_trees;
+    vector<DeltaNode> nodes;    // contains all the nodes including potential nodes
 };
 
 

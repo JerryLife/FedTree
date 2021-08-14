@@ -165,7 +165,7 @@ void HistTreeBuilder::find_split(int level) {
     SyncArray<GHPair> hist(n_max_splits);
     SyncArray<float_type> gain(n_max_splits);
     compute_histogram_in_a_level(level, n_max_splits, n_bins, n_nodes_in_level, hist_fid_data, missing_gh, hist);
-    //LOG(INFO) << hist;
+    LOG(DEBUG) << hist;
     compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist);
     SyncArray<int_float> best_idx_gain(n_nodes_in_level);
     get_best_gain_in_a_level(gain, best_idx_gain, n_nodes_in_level, n_bins);
@@ -802,6 +802,11 @@ void HistTreeBuilder::get_best_gain_in_a_level(SyncArray<float_type> &gain, Sync
         LOG(DEBUG) << n_split;
         LOG(DEBUG) << "best rank & gain = " << best_idx_gain;
     }
+
+    for (int i = 0; i < best_idx_gain.size(); ++i) {
+        LOG(DEBUG) << thrust::get<0>(best_idx_gain.host_data()[i]) << " " << thrust::get<1>(best_idx_gain.host_data()[i]);
+    }
+
     return;
 }
 

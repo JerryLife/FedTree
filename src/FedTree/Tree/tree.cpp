@@ -195,10 +195,9 @@ void Tree::prune_self(float_type gamma) {
 
 void DeltaTree::prune_self(float_type gamma) {
     vector<int> leaf_child_count(nodes.size(), 0);
-    DeltaTree::DeltaNode *nodes_data = nodes.host_data();
     int n_pruned = 0;
     for (int i = 0; i < nodes.size(); ++i) {
-        if (nodes_data[i].is_leaf && nodes_data[i].is_valid) {
+        if (nodes[i].is_leaf && nodes[i].is_valid) {
             n_pruned = try_prune_leaf(i, n_pruned, gamma, leaf_child_count);
         }
     }
@@ -214,8 +213,7 @@ void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostPar
     LOG(DEBUG) << "init_CPU: " << sum_gh;
 
     float_type lambda = param.lambda;
-    auto node_data = nodes.host_data();
-    DeltaNode &root_node = node_data[0];
+    DeltaNode &root_node = nodes[0];
     root_node.sum_gh_pair = sum_gh;
     root_node.is_valid = true;
     root_node.calc_weight(lambda); // TODO: check here
@@ -223,37 +221,46 @@ void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostPar
 }
 
 void DeltaTree::init_structure(int depth) {
-    int n_max_nodes = static_cast<int>(pow(2, depth + 1) - 1);
-    nodes = SyncArray<DeltaNode>(n_max_nodes);
-    auto node_data = nodes.host_data();
-#pragma omp parallel for
-    for (int i = 0; i < n_max_nodes; i++) {
-        node_data[i].final_id = i;
-        node_data[i].split_feature_id = -1;
-        node_data[i].is_valid = false;
-        node_data[i].parent_index = i == 0 ? -1 : (i - 1) / 2;
-        node_data[i].n_instances = 0;
-        if (i < n_max_nodes / 2) {
-            node_data[i].is_leaf = false;
-            node_data[i].lch_index = i * 2 + 1;
-            node_data[i].rch_index = i * 2 + 2;
-        } else {
-            //leaf nodes
-            node_data[i].is_leaf = true;
-            node_data[i].lch_index = -1;
-            node_data[i].rch_index = -1;
-        }
-    }
+    DeltaNode root_node;
+    root_node.is_leaf = false;
+    root_node.lch_index = -1;
+    root_node.rch_index = -1;
+    root_node.parent_index = -1;
+    root_node.split_feature_id = -1;
+    root_node.final_id = 0;
+    root_node.is_valid = false;
+    root_node.n_instances = 0;
+    nodes.emplace_back(root_node);
+
+//    int n_max_nodes = static_cast<int>(pow(2, depth + 1) - 1);
+//    nodes = vector<DeltaNode>(n_max_nodes);
+//#pragma omp parallel for
+//    for (int i = 0; i < n_max_nodes; i++) {
+//        nodes[i].final_id = i;
+//        nodes[i].split_feature_id = -1;
+//        nodes[i].is_valid = false;
+//        nodes[i].parent_index = i == 0 ? -1 : (i - 1) / 2;
+//        nodes[i].n_instances = 0;
+//        if (i < n_max_nodes / 2) {
+//            nodes[i].is_leaf = false;
+//            nodes[i].lch_index = i * 2 + 1;
+//            nodes[i].rch_index = i * 2 + 2;
+//        } else {
+//            //leaf nodes
+//            nodes[i].is_leaf = true;
+//            nodes[i].lch_index = -1;
+//            nodes[i].rch_index = -1;
+//        }
+//    }
 }
 
 
 int DeltaTree::try_prune_leaf(int nid, int np, float_type gamma, vector<int> &leaf_child_count) {
-    DeltaNode *nodes_data = nodes.host_data();
-    int p_nid = nodes_data[nid].parent_index;
+    int p_nid = nodes[nid].parent_index;
     if (p_nid == -1) return np;// is root
-    DeltaNode &p_node = nodes_data[p_nid];
-    DeltaNode &lch = nodes_data[p_node.lch_index];
-    DeltaNode &rch = nodes_data[p_node.rch_index];
+    DeltaNode &p_node = nodes[p_nid];
+    DeltaNode &lch = nodes[p_node.lch_index];
+    DeltaNode &rch = nodes[p_node.rch_index];
     leaf_child_count[p_nid]++;
     if (leaf_child_count[p_nid] >= 2 && p_node.gain < gamma) {
         //do pruning
@@ -270,10 +277,9 @@ int DeltaTree::try_prune_leaf(int nid, int np, float_type gamma, vector<int> &le
 
 void DeltaTree::reorder_nid() {
     int nid = 0;
-    DeltaNode *nodes_data = nodes.host_data();
     for (int i = 0; i < nodes.size(); ++i) {
-        if (nodes_data[i].is_valid && !nodes_data[i].is_pruned) {
-            nodes_data[i].final_id = nid;
+        if (nodes[i].is_valid && !nodes[i].is_pruned) {
+            nodes[i].final_id = nid;
             nid++;
         }
     }

@@ -4,6 +4,10 @@
 
 #include "FedTree/Tree/delta_tree_builder.h"
 #include "thrust/sequence.h"
+#include "thrust/iterator/discard_iterator.h"
+#include <algorithm>
+#include <utility>
+#include <numeric>
 
 void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     HistTreeBuilder::init(dataset, param);
@@ -20,11 +24,17 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
     TIMED_FUNC(timerObj);
 
     for (int k = 0; k < param.tree_per_rounds; ++k) {
-        DeltaTree &tree = trees[k];
+        DeltaTree &tree_k = trees[k];
 
         this->ins2node_id.resize(n_instances);
         this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_instances));
         this->tree.init_CPU(this->gradients, param);
+
+        // initialize ins2node_indices
+        for (int i = 0; i < n_instances; ++i) {
+            vector<int> vec_i = {0};    // all the instances belong to root node 0
+            ins2node_indices.emplace_back(vec_i);
+        }
 
         for (int level = 0; level < param.depth; ++level) {
             //LOG(INFO)<<"in level:"<<level;
@@ -48,12 +58,11 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
             }
         }
         //here
-        this->tree.prune_self(param.gamma);
+        tree.prune_self(param.gamma);
 //        LOG(INFO) << "y_predict: " << y_predict;
         if(update_y_predict)
             predict_in_training(k);
-        tree.nodes.resize(this->tree.nodes.size());
-        tree.nodes.copy_from(this->tree.nodes);
+        tree_k.nodes = tree.nodes;
     }
     return trees;
 }
@@ -61,12 +70,13 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
 void DeltaTreeBuilder::find_split(int level) {
     TIMED_FUNC(timerObj);
     std::chrono::high_resolution_clock timer;
-    int n_nodes_in_level = 1 << level;
+    int n_nodes_in_level = level == 0 ? 1 : num_nodes_per_level[level - 1] * 2;
+//    int n_nodes_in_level = 1 << level;
 //    int nid_offset = static_cast<int>(pow(2, level) - 1);
     int n_column = sorted_dataset.n_features();
     int n_partition = n_column * n_nodes_in_level;
     int n_bins = cut.cut_points_val.size();
-    int n_max_nodes = 2 << param.depth;
+    int n_max_nodes = n_nodes_in_level * 2;
     int n_max_splits = n_max_nodes * n_bins;
 
     auto cut_fid_data = cut.cut_fid.host_data();
@@ -91,14 +101,90 @@ void DeltaTreeBuilder::find_split(int level) {
     SyncArray<GHPair> hist(n_max_splits);
     SyncArray<float_type> gain(n_max_splits);
     compute_histogram_in_a_level(level, n_max_splits, n_bins, n_nodes_in_level, hist_fid_data, missing_gh, hist);
-    //LOG(INFO) << hist;
+    LOG(DEBUG) << hist;
     compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist);
-    SyncArray<int_float> best_idx_gain(n_nodes_in_level);
-    get_best_gain_in_a_level(gain, best_idx_gain, n_nodes_in_level, n_bins);
+//    SyncArray<int_float> best_idx_gain(n_nodes_in_level);
+//    get_best_gain_in_a_level(gain, best_idx_gain, n_nodes_in_level, n_bins);
+    vector<vector<gain_pair>> candidate_idx_gain;
+    get_topk_gain_in_a_level(gain, candidate_idx_gain, n_nodes_in_level, n_bins, 10);
+
+    vector<vector<gain_pair>> potential_idx_gain;
+    int update_n_nodes_in_a_level;
+    update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 1, 3);
     //LOG(INFO) << best_idx_gain;
-    get_split_points(best_idx_gain, n_nodes_in_level, hist_fid_data, missing_gh, hist);
+    get_potential_split_points(potential_idx_gain, update_n_nodes_in_a_level, hist_fid_data, missing_gh, hist, level);
     //LOG(INFO) << this->sp;
+
+    num_nodes_per_level.emplace_back(update_n_nodes_in_a_level);
 }
+
+void DeltaTreeBuilder::get_topk_gain_in_a_level(const SyncArray<float_type> &gain, vector<vector<gain_pair>> &topk_idx_gain,
+                              int n_nodes_in_level, int n_bins, int k) {
+    /**
+     * gain: size of gain is equal to the number of bins (n_nodes_in_a_level x max_bins)
+     * topk_idx_gain: the int refers to the index in the gain vector (i.e., bid)
+     */
+    auto arg_abs_max = [](const gain_pair &a, const gain_pair &b) {
+        if (fabsf(a.second) == fabsf(b.second))
+            return a.first < b.first;
+        else
+            return fabsf(a.second) > fabsf(b.second);
+    };
+
+    // make tuple with indices and gains
+    vector<gain_pair> idx_gain;
+    for (int i = 0; i < gain.size(); ++i) {
+        idx_gain.emplace_back(std::make_pair(i, gain.host_data()[i]));
+    }
+
+    for (int i = 0; i < n_bins * n_nodes_in_level; i += n_bins) {
+        std::partial_sort(idx_gain.begin() + i, idx_gain.begin() + i + k,
+                          idx_gain.begin() + i + n_bins, arg_abs_max);
+        std::vector<gain_pair> topk_idx_gain_per_bin(idx_gain.begin() + i, idx_gain.begin() + i + k);
+        topk_idx_gain.emplace_back(topk_idx_gain_per_bin);
+    }
+
+    for (int i = 0; i < topk_idx_gain.size(); ++i) {
+        for (int j = 0; j < topk_idx_gain[i].size(); ++j) {
+            LOG(DEBUG) << topk_idx_gain[i][j].first << " " << topk_idx_gain[i][j].second;
+        }
+    }
+
+    return;
+}
+
+
+int DeltaTreeBuilder::filter_potential_idx_gain(const vector<vector<gain_pair>>& candidate_idx_gain,
+                               vector<vector<gain_pair>>& potential_idx_gain,
+                               float_type quantized_width, int max_num_potential) {
+    int total_size = 0;
+    for (const auto& idx_gain_list: candidate_idx_gain) {
+        vector<gain_pair> potential_idx_gain_per_node;
+        if (idx_gain_list.empty()) {
+            potential_idx_gain.emplace_back(potential_idx_gain_per_node);
+            continue;
+        }
+
+        potential_idx_gain_per_node.emplace_back(idx_gain_list[0]);
+        double last_gain = fabs(idx_gain_list[0].second);
+        for (size_t i = 1; i < idx_gain_list.size(); ++i) {
+            if (fabs(idx_gain_list[i].second) > last_gain - quantized_width) {
+                continue;
+            } else {
+                last_gain = fabs(idx_gain_list[i].second);
+                potential_idx_gain_per_node.emplace_back(idx_gain_list[i]);
+            }
+
+            if (potential_idx_gain_per_node.size() >= max_num_potential) {
+                break;
+            }
+        }
+        potential_idx_gain.emplace_back(potential_idx_gain_per_node);
+        total_size += potential_idx_gain_per_node.size();
+    }
+    return total_size;
+}
+
 
 //todo: reduce hist size according to current level (not n_max_split)
 void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, int n_bins, int n_nodes_in_level,
@@ -106,17 +192,17 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                                                    SyncArray<GHPair> &hist) {
     std::chrono::high_resolution_clock timer;
 
-    SyncArray<int> &nid = ins2node_id;
-    SyncArray<GHPair> &gh_pair = gradients;
-    DeltaTree &tree = this->tree;
-    SyncArray<SplitPoint> &sp = this->sp;
-    HistCut &cut = this->cut;
-    auto &dense_bin_id = this->dense_bin_id;
-    auto &last_hist = this->last_hist;
+    const SyncArray<int> &nid = ins2node_id;
+    const SyncArray<GHPair> &gh_pair = gradients;
+//    DeltaTree &tree = this->tree;
+    const SyncArray<SplitPoint> &sp = this->sp;
+    const HistCut &cut = this->cut;
+    const auto &dense_bin_id = this->dense_bin_id;
+//    auto &last_hist = this->last_hist;
 
     TIMED_FUNC(timerObj);
 //    int n_nodes_in_level = static_cast<int>(pow(2, level));
-    int nid_offset = static_cast<int>(pow(2, level) - 1);
+//    int nid_offset = static_cast<int>(pow(2, level) - 1);
     int n_column = sorted_dataset.n_features();
     int n_partition = n_column * n_nodes_in_level;
 //    int n_bins = cut.cut_points_val.size();
@@ -126,109 +212,80 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 
     LOG(TRACE) << "start finding split";
 
-    {
+    {   // redefine timerObj
         TIMED_SCOPE(timerObj, "build hist");
         if (n_nodes_in_level == 1) {
             auto hist_data = hist.host_data();
             auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
             auto gh_data = gh_pair.host_data();
             auto dense_bin_id_data = dense_bin_id.host_data();
-            auto max_num_bin = param.max_num_bin;
-            auto n_instances = this->n_instances;
-//                ThunderGBM: check size of histogram.
-            //has bug if using openmp
-//            #pragma omp parallel for
+
             for (int i = 0; i < n_instances * n_column; i++) {
                 int iid = i / n_column;
                 int fid = i % n_column;
                 unsigned char bid = dense_bin_id_data[iid * n_column + fid];
-                if (bid != max_num_bin) {
+                if (bid < param.max_num_bin) {
                     int feature_offset = cut_col_ptr_data[fid];
-                    const GHPair src = gh_data[iid];
-                    GHPair &dest = hist_data[feature_offset + bid];
-                    dest = dest + src;
-//                    g and h values are 0 if after HE encryption
-//                    if (src.h != 0) {
-////                        #pragma omp atomic
-//                        dest.h += src.h;
-//                    }
-//                    if (src.g != 0) {
-////                        #pragma omp atomic
-//                        dest.g += src.g;
-//                    }
-
+                    hist_data[feature_offset + bid] += gh_data[iid];
                 }
             }
         } else {
             auto t_dp_begin = timer.now();
-            SyncArray<int> node_idx(n_instances);
-            SyncArray<int> node_ptr(n_nodes_in_level + 1);
+            // sort the indices of instance s.t. each node can be split by node_ptr
+            // E.g., node_idx=[1,3,5,7, 2,4,6,8], node_ptr=[4,8], represents two nodes. In node 1, the instances are
+            // 1,3,5,7; in node 2, the instances are 2,4,6,8
+//            SyncArray<int> node_idx(n_instances);
+//            SyncArray<int> node_ptr(n_nodes_in_level + 1);
+            vector<vector<int>> nid_to_iid(tree.nodes.size(), vector<int>());
             {
                 TIMED_SCOPE(timerObj, "data partitioning");
-                SyncArray<int> nid4sort(n_instances);
-                nid4sort.copy_from(ins2node_id);
-                sequence(thrust::host, node_idx.host_data(), node_idx.host_end(), 0);
-                thrust::stable_sort_by_key(thrust::host, nid4sort.host_data(), nid4sort.host_end(),
-                                           node_idx.host_data());
-                auto counting_iter = thrust::make_counting_iterator<int>(nid_offset);
-                node_ptr.host_data()[0] =
-                        thrust::lower_bound(thrust::host, nid4sort.host_data(), nid4sort.host_end(), nid_offset) -
-                        nid4sort.host_data();
-
-                thrust::upper_bound(thrust::host, nid4sort.host_data(), nid4sort.host_end(), counting_iter,
-                                    counting_iter + n_nodes_in_level, node_ptr.host_data() + 1);
+                for (int i = 0; i < n_instances; ++i) {
+                    for (int node_id: ins2node_indices[i]) {
+                        nid_to_iid[node_id].emplace_back(i);
+                    }
+                }
             }
             auto t_dp_end = timer.now();
             std::chrono::duration<double> dp_used_time = t_dp_end - t_dp_begin;
             this->total_dp_time += dp_used_time.count();
 
 
-            auto node_ptr_data = node_ptr.host_data();
-            auto node_idx_data = node_idx.host_data();
+//            auto node_ptr_data = node_ptr.host_data();
+//            auto node_idx_data = node_idx.host_data();
             auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
             auto gh_data = gh_pair.host_data();
             auto dense_bin_id_data = dense_bin_id.host_data();
             auto max_num_bin = param.max_num_bin;
+            int nid_offset = tree.nodes.size() - n_nodes_in_level;
 
             for (int i = 0; i < n_nodes_in_level / 2; ++i) {
 
                 int nid0_to_compute = i * 2;
                 int nid0_to_substract = i * 2 + 1;
                 //node_ptr_data[i+1] - node_ptr_data[i] is the number of instances in node i, i is the node id in current level (start from 0)
-                int n_ins_left = node_ptr_data[nid0_to_compute + 1] - node_ptr_data[nid0_to_compute];
-                int n_ins_right = node_ptr_data[nid0_to_substract + 1] - node_ptr_data[nid0_to_substract];
+//                int n_ins_left = node_ptr_data[nid0_to_compute + 1] - node_ptr_data[nid0_to_compute];
+//                int n_ins_right = node_ptr_data[nid0_to_substract + 1] - node_ptr_data[nid0_to_substract];
+                int n_ins_left = nid_to_iid[nid0_to_compute + nid_offset].size();
+                int n_ins_right = nid_to_iid[nid0_to_substract + nid_offset].size();
                 if (std::max(n_ins_left, n_ins_right) == 0) continue;
                 //only compute the histogram on the node with the smaller data
                 if (n_ins_left > n_ins_right)
                     std::swap(nid0_to_compute, nid0_to_substract);
                 //compute histogram
                 {
-                    int nid0 = nid0_to_compute;
-                    auto idx_begin = node_ptr.host_data()[nid0];
-                    auto idx_end = node_ptr.host_data()[nid0 + 1];
-                    auto hist_data = hist.host_data() + nid0 * n_bins;
+                    int nid0 = nid0_to_compute + nid_offset;
+//                    auto idx_begin = node_ptr.host_data()[nid0];
+//                    auto idx_end = node_ptr.host_data()[nid0 + 1];
+                    auto hist_data = hist.host_data() + nid0_to_compute * n_bins;
                     this->total_hist_num++;
-                    //                ThunderGBM: check size of histogram.
-                    //has bug if using openmp
-//#pragma omp parallel for
-                    for (int i = 0; i < (idx_end - idx_begin) * n_column; i++) {
 
-                        int iid = node_idx_data[i / n_column + idx_begin];
-                        int fid = i % n_column;
+                    for (int j = 0; j < nid_to_iid[nid0].size() * n_column; j++) {
+                        int iid = nid_to_iid[nid0][j / n_column];
+                        int fid = j % n_column;
                         unsigned char bid = dense_bin_id_data[iid * n_column + fid];
                         if (bid != max_num_bin) {
                             int feature_offset = cut_col_ptr_data[fid];
-                            const GHPair src = gh_data[iid];
-                            GHPair &dest = hist_data[feature_offset + bid];
-//                            if (src.h != 0) {
-////                                #pragma omp atomic
-//                                dest.h += src.h;
-//                            }
-//                            if (src.g != 0) {
-////                                #pragma omp atomic
-//                                dest.g += src.g;
-//                            }
-                            dest = dest + src;
+                            hist_data[feature_offset + bid] += gh_data[iid];
                         }
                     }
                 }
@@ -263,27 +320,30 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                           hist.host_data(), hist.host_data());
     LOG(DEBUG) << hist;
 
-    auto nodes_data = tree.nodes.host_data();
-    auto missing_gh_data = missing_gh.host_data();
-    auto cut_col_ptr = cut.cut_col_ptr.host_data();
-    auto hist_data = hist.host_data();
-//#pragma omp parallel for
-    for (int pid = 0; pid < n_partition; pid++) {
-        int nid0 = pid / n_column;
-        int nid = nid0 + nid_offset;
-        //            todo: check, ThunderGBM uses return;
-        if (!nodes_data[nid].splittable()) continue;
-        int fid = pid % n_column;
-        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
-            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
-            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
-        }
-    }
+//    // deal with missing data. Not sure if it can be safely delete
+//    auto &nodes_data = tree.nodes;
+//    auto missing_gh_data = missing_gh.host_data();
+//    auto cut_col_ptr = cut.cut_col_ptr.host_data();
+//    auto hist_data = hist.host_data();
+
+//    for (int pid = 0; pid < n_partition; pid++) {
+//        int nid0 = pid / n_column;
+//        int nid = nid0 + nid_offset;
+//        //            todo: check, ThunderGBM uses return;
+//        if (!nodes_data[nid].splittable()) continue;
+//        int fid = pid % n_column;
+//        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
+//            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
+//            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
+//        }
+//    }
     return;
 }
 
 
 void DeltaTreeBuilder::update_ins2node_id() {
+    // update indices_in_node simultaneously
+
     TIMED_FUNC(timerObj);
     SyncArray<bool> has_splittable(1);
 //    auto &columns = shards.columns;
@@ -291,23 +351,22 @@ void DeltaTreeBuilder::update_ins2node_id() {
     {
 //        TIMED_SCOPE(timerObj, "get new node id");
         auto nid_data = ins2node_id.host_data();
-        DeltaTree::DeltaNode *nodes_data = tree.nodes.host_data();
+        auto &nodes_data = tree.nodes;
         has_splittable.host_data()[0] = false;
         bool *h_s_data = has_splittable.host_data();
-        int column_offset = 0;
 
         int n_column = sorted_dataset.n_features();
         auto dense_bin_id_data = dense_bin_id.host_data();
         int max_num_bin = param.max_num_bin;
-#pragma omp parallel for
+//#pragma omp parallel for // remove for debug
         for (int iid = 0; iid < n_instances; iid++) {
             int nid = nid_data[iid];
             const DeltaTree::DeltaNode &node = nodes_data[nid];
             int split_fid = node.split_feature_id;
-            if (node.splittable() && ((split_fid - column_offset < n_column) && (split_fid >= column_offset))) {
+            if (node.splittable() && ((split_fid < n_column) && (split_fid >= 0))) {
                 h_s_data[0] = true;
                 unsigned char split_bid = node.split_bid;
-                unsigned char bid = dense_bin_id_data[iid * n_column + split_fid - column_offset];
+                unsigned char bid = dense_bin_id_data[iid * n_column + split_fid];
                 bool to_left = true;
                 if ((bid == max_num_bin && node.default_right) || (bid <= split_bid))
                     to_left = false;
@@ -316,11 +375,19 @@ void DeltaTreeBuilder::update_ins2node_id() {
                     nid_data[iid] = node.lch_index;
 //                    #pragma omp atomic
                     nodes_data[node.lch_index].n_instances += 1;
+
+                    for (int &potential_nid: ins2node_indices[iid]) {
+                        potential_nid = nodes_data[potential_nid].lch_index;
+                    }
                 } else {
                     //right child
                     nid_data[iid] = node.rch_index;
 //                    #pragma omp atomic
                     nodes_data[node.rch_index].n_instances += 1;
+
+                    for (int &potential_nid: ins2node_indices[iid]) {
+                        potential_nid = nodes_data[potential_nid].rch_index;
+                    }
                 }
             }
         }
@@ -332,16 +399,16 @@ void DeltaTreeBuilder::update_ins2node_id() {
 
 void DeltaTreeBuilder::update_tree() {
     TIMED_FUNC(timerObj);
-    auto& sp = this->sp;
-    auto& tree = this->tree;
+//    auto& sp = this->sp;
+//    auto& tree = this->tree;
     auto sp_data = sp.host_data();
     int n_nodes_in_level = sp.size();
 
-    DeltaTree::DeltaNode *nodes_data = tree.nodes.host_data();
+    auto &nodes_data = tree.nodes;
     float_type rt_eps = param.rt_eps;
     float_type lambda = param.lambda;
 
-#pragma omp parallel for
+//#pragma omp parallel for  // remove for debug
     for(int i = 0; i < n_nodes_in_level; i++){
         float_type best_split_gain = sp_data[i].gain;
         if (best_split_gain > rt_eps) {
@@ -389,7 +456,7 @@ void DeltaTreeBuilder::update_tree() {
 void DeltaTreeBuilder::predict_in_training(int k) {
     auto y_predict_data = y_predict.host_data() + k * n_instances;
     auto nid_data = ins2node_id.host_data();
-    const DeltaTree::DeltaNode *nodes_data = tree.nodes.host_data();
+    const auto &nodes_data = tree.nodes;
     auto lr = param.learning_rate;
 #pragma omp parallel for
     for(int i = 0; i < n_instances; i++){
@@ -403,11 +470,12 @@ void DeltaTreeBuilder::predict_in_training(int k) {
 void
 DeltaTreeBuilder::compute_gain_in_a_level(SyncArray<float_type> &gain, int n_nodes_in_level, int n_bins, int *hist_fid,
                                          SyncArray<GHPair> &missing_gh, SyncArray<GHPair> &hist, int n_column) {
-//    SyncArray<compute_gainfloat_type> gain(n_max_splits);
+
     if (n_column == 0)
         n_column = sorted_dataset.n_features();
     int n_split = n_nodes_in_level * n_bins;
-    int nid_offset = static_cast<int>(n_nodes_in_level - 1);
+    const int nid_offset = num_nodes_per_level.empty() ? 0 :
+                           std::accumulate(num_nodes_per_level.begin(), num_nodes_per_level.end(), 0);
     auto compute_gain = []__host__(GHPair father, GHPair lch, GHPair rch, float_type min_child_weight,
                                    float_type lambda) -> float_type {
         if (lch.h >= min_child_weight && rch.h >= min_child_weight)
@@ -416,8 +484,8 @@ DeltaTreeBuilder::compute_gain_in_a_level(SyncArray<float_type> &gain, int n_nod
         else
             return 0;
     };
-    const DeltaTree::DeltaNode * nodes_data = tree.nodes.host_data();
-    GHPair *gh_prefix_sum_data = hist.host_data();
+    const auto &nodes_data = tree.nodes;
+    const GHPair *gh_prefix_sum_data = hist.host_data();
     float_type *gain_data = gain.host_data();
     const auto missing_gh_data = missing_gh.host_data();
 //    auto ignored_set_data = ignored_set.host_data();
@@ -425,7 +493,7 @@ DeltaTreeBuilder::compute_gain_in_a_level(SyncArray<float_type> &gain, int n_nod
     float_type mcw = param.min_child_weight;
     float_type l = param.lambda;
 
-#pragma omp parallel for
+//#pragma omp parallel for  // comment for debug
     for (int i = 0; i < n_split; i++) {
         int nid0 = i / n_bins;
         int nid = nid0 + nid_offset;
@@ -442,6 +510,8 @@ DeltaTreeBuilder::compute_gain_in_a_level(SyncArray<float_type> &gain, int n_nod
             rch_gh.h += p_missing_gh.h;
             float_type default_to_right_gain = std::max(0.f,
                                                         compute_gain(father_gh, father_gh - rch_gh, rch_gh, mcw, l));
+
+            // assert(default_to_right_gain >= 0 && default_to_left_gain >= 0);
             if (default_to_left_gain > default_to_right_gain)
                 gain_data[i] = default_to_left_gain;
             else
@@ -450,6 +520,130 @@ DeltaTreeBuilder::compute_gain_in_a_level(SyncArray<float_type> &gain, int n_nod
     }
     return;
 }
+
+
+void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>> &candidate_idx_gain,
+                                                  const int n_nodes_in_level,
+                                                  const int *hist_fid, SyncArray<GHPair> &missing_gh,
+                                                  SyncArray<GHPair> &hist, int level) {
+    /**
+     * Update sp and tree.nodes, ins2nodes_indices should also be updated by duplication
+     * sp should always keep the same size as nodes
+    */
+    const int nid_offset = num_nodes_per_level.empty() ? 0 :
+            std::accumulate(num_nodes_per_level.begin(), num_nodes_per_level.end(), 0);
+    const auto hist_data = hist.host_data();
+    const auto missing_gh_data = missing_gh.host_data();
+    const auto cut_val_data = cut.cut_points_val.host_data();
+    const auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
+
+    sp.resize(n_nodes_in_level);
+    auto sp_data = sp.host_data();
+    vector<DeltaTree::DeltaNode> updated_nodes;
+    const int n_bins = cut.cut_points_val.size();
+
+    assert(nid_offset + candidate_idx_gain.size() == tree.nodes.size());
+    int child_offset = 0;       // number of current child nodes
+    int potential_offset = 0;   // number of current potential nodes
+    /*
+     * nodes from previous levels
+     * [nid_offset]
+     * prior nodes in this level (with the best gain among children)
+     * [potential_offset]
+     * potential nodes with these prior nodes
+     * [child offset]
+     * child nodes of both prior and potential nodes
+     */
+    vector<GHPair> old_last_hist = last_hist.to_vec();
+    for (int i = 0; i < candidate_idx_gain.size(); ++i) {
+        // store the indices of all the potential nodes generated from the same node to a vector
+//        auto& candidate_indices = tree.nodes[nid_offset + i].potential_nodes_indices;
+//        candidate_indices = *(new vector<int>(candidate_idx_gain[i].size()));
+//        std::iota(candidate_indices.begin(), candidate_indices.end(), nid_offset);
+
+        int num_potential_nodes = candidate_idx_gain[i].size();
+
+        vector<GHPair> base_hist;
+        for (int j = 0; j < num_potential_nodes; ++j) {
+            int idx_in_level;
+            if (j > 0) {    // not prior node
+                // duplicate potential nodes
+                DeltaTree::DeltaNode node(tree.nodes[nid_offset + i]);
+                node.lch_index = nid_offset + n_nodes_in_level + child_offset;     // index of future children (not allocated yet)
+                node.rch_index = nid_offset + n_nodes_in_level + child_offset + 1;
+                node.final_id = tree.nodes.size();
+                tree.nodes.emplace_back(node);
+                idx_in_level = node.final_id - nid_offset;
+
+                // update last_hist (initially, last_hist should be of size n_nodes_in_a_level, now it should be expanded to
+                // updated_n_nodes_in_a_level in the end)
+                old_last_hist.insert(old_last_hist.end(), base_hist.begin(), base_hist.end());
+
+                // update the list of potential nodes in prior node
+                tree.nodes[nid_offset + i].potential_nodes_indices.emplace_back(node.final_id);
+            } else {
+                tree.nodes[nid_offset + i].lch_index = nid_offset + n_nodes_in_level + child_offset;
+                tree.nodes[nid_offset + i].rch_index = nid_offset + n_nodes_in_level + child_offset + 1;
+                idx_in_level = i;
+
+                base_hist = {old_last_hist.begin() + idx_in_level * n_bins,
+                             old_last_hist.begin() + (idx_in_level + 1) * n_bins};
+
+                tree.nodes[nid_offset + i].potential_nodes_indices.emplace_back(nid_offset + i);
+            }
+
+            gain_pair bst = candidate_idx_gain[i][j];
+            float_type best_split_gain = bst.second;
+            int split_index = bst.first;
+            if (!tree.nodes[nid_offset + i].is_valid) {
+                sp_data[idx_in_level].split_fea_id = -1;
+                sp_data[idx_in_level].nid = -1;
+                // todo: check, ThunderGBM uses return;
+                continue;
+            }
+            int fid = hist_fid[split_index];
+            sp_data[idx_in_level].split_fea_id = fid;
+            sp_data[idx_in_level].nid = idx_in_level + nid_offset;
+            sp_data[idx_in_level].gain = fabsf(best_split_gain);
+            int n_column = sorted_dataset.n_features();
+            sp_data[idx_in_level].fval = cut_val_data[split_index % n_bins];
+            sp_data[idx_in_level].split_bid = (unsigned char) (split_index % n_bins - cut_col_ptr_data[fid]);
+            sp_data[idx_in_level].fea_missing_gh = missing_gh_data[i * n_column + hist_fid[split_index]];
+            sp_data[idx_in_level].default_right = best_split_gain < 0;
+            sp_data[idx_in_level].rch_sum_gh = hist_data[split_index];
+            sp_data[idx_in_level].no_split_value_update = 0;
+
+            child_offset += 2;
+        }
+
+        // update ins2node_indices
+        for (int j = 0; j < n_instances; ++j) {
+            auto it = std::find(ins2node_indices[j].begin(), ins2node_indices[j].end(), nid_offset + i);
+            if (it != ins2node_indices[j].end()) {
+                // substitute each node to its potential nodes
+                int idx = it - ins2node_indices[j].begin();
+                ins2node_indices[j].erase(it);
+                ins2node_indices[j].insert(ins2node_indices[j].begin() + idx,
+                                           tree.nodes[nid_offset + i].potential_nodes_indices.begin(),
+                                           tree.nodes[nid_offset + i].potential_nodes_indices.end());
+            }
+        }
+    }
+
+    last_hist.load_from_vec(old_last_hist);
+
+    // insert placeholders for children
+    vector<DeltaTree::DeltaNode> child_nodes(2 * n_nodes_in_level);
+    for (int i = 0; i < child_nodes.size(); ++i) {
+        child_nodes[i].parent_index = nid_offset + i / 2;
+        child_nodes[i].final_id = nid_offset + n_nodes_in_level + i;
+        child_nodes[i].is_leaf = (level >= param.depth);
+    }
+    tree.nodes.insert(tree.nodes.end(), child_nodes.begin(), child_nodes.end());
+
+    LOG(DEBUG) << "split points (gain/fea_id/nid): " << sp;
+}
+
 
 void DeltaTreeBuilder::get_split_points(SyncArray<int_float> &best_idx_gain, int n_nodes_in_level, int *hist_fid,
                                        SyncArray<GHPair> &missing_gh, SyncArray<GHPair> &hist) {
@@ -462,10 +656,10 @@ void DeltaTreeBuilder::get_split_points(SyncArray<int_float> &best_idx_gain, int
 
     sp.resize(n_nodes_in_level);
     auto sp_data = sp.host_data();
-    auto nodes_data = tree.nodes.host_data();
+    auto &nodes_data = tree.nodes;
 
     auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int i = 0; i < n_nodes_in_level; i++) {
         int_float bst = best_idx_gain_data[i];
         float_type best_split_gain = thrust::get < 1 > (bst);

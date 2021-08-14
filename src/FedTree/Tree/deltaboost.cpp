@@ -69,12 +69,11 @@ void DeltaBoost::predict_raw(const GBDTParam &model_param, const DataSet &dataSe
     //TODO: reduce the output size for binary classification
     y_predict.resize(n_instances * num_class);
 
-    SyncArray<DeltaTree::DeltaNode> model(total_num_node);
-    auto model_data = model.host_data();
+    vector<DeltaTree::DeltaNode> model(total_num_node, DeltaTree::DeltaNode());
     int tree_cnt = 0;
     for (auto &vtree:trees) {
         for (auto &t:vtree) {
-            memcpy(model_data + num_node * tree_cnt, t.nodes.host_data(), sizeof(DeltaTree::DeltaNode) * num_node);
+            memcpy(model.data() + num_node * tree_cnt, t.nodes.data(), sizeof(DeltaTree::DeltaNode) * num_node);
             tree_cnt++;
         }
     }
@@ -89,7 +88,7 @@ void DeltaBoost::predict_raw(const GBDTParam &model_param, const DataSet &dataSe
     csr_row_ptr.copy_from(dataSet.csr_row_ptr.data(), dataSet.csr_row_ptr.size());
 
     //do prediction
-    auto model_host_data = model.host_data();
+    auto model_host_data = model.data();
     auto predict_data = y_predict.host_data();
     auto csr_col_idx_data = csr_col_idx.host_data();
     auto csr_val_data = csr_val.host_data();

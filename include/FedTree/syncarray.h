@@ -187,6 +187,16 @@ public:
 
     SyncArray &operator=(const SyncArray<T> &) = delete;
 
+    std::vector<T> to_vec() {
+        std::vector<T> vec_copy(host_data(), host_data() + size());
+        return vec_copy;
+    }
+
+    void load_from_vec(std::vector<T> vec) {
+        this->resize(vec.size());
+        this->copy_from(vec.data(), vec.size());
+    }
+
 private:
     SyncMem *mem;
     size_t size_;
@@ -194,7 +204,7 @@ private:
 
 //SyncArray for multiple devices
 template<typename T>
-class MSyncArray : public vector<SyncArray<T>> {
+class MSyncArray : public std::vector<SyncArray<T>> {
 public:
     explicit MSyncArray(size_t n_device) : base_class(n_device) {};
 
@@ -216,6 +226,6 @@ public:
     MSyncArray &operator=(const MSyncArray<T> &) = delete;
 
 private:
-    typedef vector<SyncArray<T>> base_class;
+    typedef std::vector<SyncArray<T>> base_class;
 };
 #endif //FEDTREE_SYNCARRAY_H
