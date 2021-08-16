@@ -41,17 +41,17 @@ class Tree{
 public:
     struct TreeNode {
         int final_id;// node id after pruning, may not equal to node index
-        int lch_index;// index of left child
-        int rch_index;// index of right child
+        int lch_index = -1;// index of left child
+        int rch_index = -1;// index of right child
         int parent_index;// index of parent node
-        float_type gain;// gain of splitting this node
+        float_type gain = 0;// gain of splitting this node
         float_type base_weight;
         int split_feature_id;
         int pid;
         float_type split_value;
         unsigned char split_bid;
         bool default_right;
-        bool is_leaf;
+        bool is_leaf = true;
         bool is_valid;// non-valid nodes are those that are "children" of leaf nodes
         bool is_pruned;// pruned after pruning
 

@@ -48,6 +48,8 @@ public:
                                   vector<vector<gain_pair>>& potential_idx_gain,
                                   float_type quantized_width, int max_num_potential);
 
+    void broadcast_potential_node_indices(int node_id);
+
     DeltaTree tree;
     DeltaBoostParam param;
 

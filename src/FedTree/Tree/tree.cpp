@@ -230,7 +230,7 @@ void DeltaTree::init_structure(int depth) {
     root_node.final_id = 0;
     root_node.is_valid = false;
     root_node.n_instances = 0;
-    nodes.emplace_back(root_node);
+    nodes = {root_node};
 
 //    int n_max_nodes = static_cast<int>(pow(2, depth + 1) - 1);
 //    nodes = vector<DeltaNode>(n_max_nodes);

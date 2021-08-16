@@ -65,18 +65,18 @@ void DeltaBoost::predict_raw(const GBDTParam &model_param, const DataSet &dataSe
     int num_class = trees.front().size();
     int num_node = trees[0][0].nodes.size();
 
-    int total_num_node = num_iter * num_class * num_node;
+//    int total_num_node = num_iter * num_class * num_node;
     //TODO: reduce the output size for binary classification
     y_predict.resize(n_instances * num_class);
 
-    vector<DeltaTree::DeltaNode> model(total_num_node, DeltaTree::DeltaNode());
-    int tree_cnt = 0;
-    for (auto &vtree:trees) {
-        for (auto &t:vtree) {
-            memcpy(model.data() + num_node * tree_cnt, t.nodes.data(), sizeof(DeltaTree::DeltaNode) * num_node);
-            tree_cnt++;
-        }
-    }
+//    vector<DeltaTree::DeltaNode> model(total_num_node, DeltaTree::DeltaNode());
+//    int tree_cnt = 0;
+//    for (auto &vtree:trees) {
+//        for (auto &t:vtree) {
+//            memcpy(model.data() + num_node * tree_cnt, t.nodes.data(), sizeof(DeltaTree::DeltaNode) * num_node);
+//            tree_cnt++;
+//        }
+//    }
 
     PERFORMANCE_CHECKPOINT_WITH_ID(timerObj, "init trees");
     //copy instances from to GPU
@@ -88,7 +88,7 @@ void DeltaBoost::predict_raw(const GBDTParam &model_param, const DataSet &dataSe
     csr_row_ptr.copy_from(dataSet.csr_row_ptr.data(), dataSet.csr_row_ptr.size());
 
     //do prediction
-    auto model_host_data = model.data();
+//    auto model_host_data = model.data();
     auto predict_data = y_predict.host_data();
     auto csr_col_idx_data = csr_col_idx.host_data();
     auto csr_val_data = csr_val.host_data();
@@ -134,20 +134,22 @@ void DeltaBoost::predict_raw(const GBDTParam &model_param, const DataSet &dataSe
             auto predict_data_class = predict_data + t * n_instances;
             float_type sum = 0;
             for (int iter = 0; iter < num_iter; iter++) {
-                const DeltaTree::DeltaNode *node_data = model_host_data + iter * num_class * num_node + t * num_node;
-                DeltaTree::DeltaNode curNode = node_data[0];
+//                const DeltaTree::DeltaNode *node_data = model_host_data + iter * num_class * num_node + t * num_node;
+//                DeltaTree::DeltaNode curNode = node_data[0];
+                DeltaTree::DeltaNode cur_node = trees[iter][t].nodes[0];
+                const DeltaTree::DeltaNode* node_data = trees[iter][t].nodes.data();
                 int cur_nid = 0; //node id
-                while (!curNode.is_leaf) {
-                    int fid = curNode.split_feature_id;
+                while (!cur_node.is_leaf) {
+                    int fid = cur_node.split_feature_id;
                     bool is_missing;
                     float_type fval = get_val(col_idx, row_val, row_len, fid, &is_missing);
                     if (!is_missing)
-                        cur_nid = get_next_child(curNode, fval);
-                    else if (curNode.default_right)
-                        cur_nid = curNode.rch_index;
+                        cur_nid = get_next_child(cur_node, fval);
+                    else if (cur_node.default_right)
+                        cur_nid = cur_node.rch_index;
                     else
-                        cur_nid = curNode.lch_index;
-                    curNode = node_data[cur_nid];
+                        cur_nid = cur_node.lch_index;
+                    cur_node = node_data[cur_nid];
                 }
                 sum += lr * node_data[cur_nid].base_weight;
             }
