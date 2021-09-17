@@ -49,4 +49,9 @@ public:
         return output;
     }
 };
+
+class DeltaSplitPoint : public SplitPoint {
+public:
+    DeltaTree::DeltaGain gain;      // hide the float_type gain
+};
 #endif //FEDTREE_SPLITPOINT_H

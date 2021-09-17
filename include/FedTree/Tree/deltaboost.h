@@ -17,11 +17,13 @@ public:
         trees = gbdt;
     }
 
-    void train(GBDTParam &param, DataSet &dataset) override;
+    void train(DeltaBoostParam &param, DataSet &dataset);
 
-    float_type predict_score(const GBDTParam &model_param, const DataSet &dataSet) override;
+    float_type predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet);
 
-    void predict_raw(const GBDTParam &model_param, const DataSet &dataSet, SyncArray<float_type> &y_predict) override;
+    void predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, SyncArray<float_type> &y_predict);
+
+    void remove_samples(const vector<int>& sample_indices);
 };
 
 #endif //FEDTREE_DELTABOOST_H

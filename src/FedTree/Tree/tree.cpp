@@ -262,7 +262,7 @@ int DeltaTree::try_prune_leaf(int nid, int np, float_type gamma, vector<int> &le
     DeltaNode &lch = nodes[p_node.lch_index];
     DeltaNode &rch = nodes[p_node.rch_index];
     leaf_child_count[p_nid]++;
-    if (leaf_child_count[p_nid] >= 2 && p_node.gain < gamma) {
+    if (leaf_child_count[p_nid] >= 2 && p_node.gain.gain_value < gamma) {
         //do pruning
         //delete two children
         CHECK(lch.is_leaf);

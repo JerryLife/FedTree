@@ -53,6 +53,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
 
     DeltaBoostParam *deltaboost_param = &fl_param.deltaboost_param;
     deltaboost_param->enable_delta = "false";
+    deltaboost_param->remove_ratio = 0.0;
 
     if (argc < 2) {
         printf("Usage: <config>\n");
@@ -132,6 +133,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 gbdt_param->metric = val;
             else if (str_name.compare("enable_delta") == 0)
                 deltaboost_param->enable_delta = (strcasecmp("true", val) == 0);
+            else if (str_name.compare("remove_ratio") == 0)
+                deltaboost_param->remove_ratio = atof(val);
             else
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {
@@ -155,15 +158,16 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
         //LOG(INFO) << line;
         parse_value(line.c_str());
     }
-    if (deltaboost_param->enable_delta) {
-        // copy gbdt params into deltaboost params
-        fl_param.deltaboost_param = *(new DeltaBoostParam(*gbdt_param, true));
-    }
 
     //TODO: confirm handling spaces around "="
     for (int i = 0; i < argc; ++i) {
         parse_value(argv[i]);
     }//end parsing parameters
+
+    if (deltaboost_param->enable_delta) {
+        // copy gbdt params into deltaboost params
+        fl_param.deltaboost_param = *(new DeltaBoostParam(*gbdt_param, true, deltaboost_param->remove_ratio));
+    }
 }
 
 // TODO: implement Tree and DataSet; check data structure compatibility

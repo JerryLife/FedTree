@@ -8,7 +8,7 @@
 #ifndef FEDTREE_DELTA_TREE_BUILDER_H
 #define FEDTREE_DELTA_TREE_BUILDER_H
 
-typedef std::pair<int, float_type> gain_pair;
+typedef std::pair<int, DeltaTree::DeltaGain> gain_pair;
 
 class DeltaTreeBuilder: public HistTreeBuilder {
 public:
@@ -24,13 +24,13 @@ public:
                                       int *hist_fid, SyncArray<GHPair> &missing_gh,
                                       SyncArray<GHPair> &hist) override;
 
-    void compute_gain_in_a_level(SyncArray<float_type> &gain, int n_nodes_in_level, int n_bins, int *hist_fid,
-            SyncArray<GHPair> &missing_gh, SyncArray<GHPair> &hist, int n_column = 0) override;
+    void compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, int n_nodes_in_level, int n_bins, int *hist_fid,
+            SyncArray<GHPair> &missing_gh, SyncArray<GHPair> &hist, int n_column = 0);
 
-    void get_split_points(SyncArray<int_float> &best_idx_gain, int n_nodes_in_level, int *hist_fid,
-                          SyncArray<GHPair> &missing_gh, SyncArray<GHPair> &hist) override;
+    void get_split_points(vector<gain_pair> &best_idx_gain, int n_nodes_in_level, int *hist_fid,
+                          SyncArray<GHPair> &missing_gh, SyncArray<GHPair> &hist);
 
-    void get_topk_gain_in_a_level(const SyncArray<float_type> &gain, vector<vector<gain_pair>> &topk_idx_gain,
+    void get_topk_gain_in_a_level(const vector<DeltaTree::DeltaGain> &gain, vector<vector<gain_pair>> &topk_idx_gain,
                                   int n_nodes_in_level, int n_bins, int k = 1);
 
     void update_ins2node_id() override;
@@ -52,6 +52,7 @@ public:
 
     DeltaTree tree;
     DeltaBoostParam param;
+    SyncArray<DeltaSplitPoint> sp;
 
     vector<int> num_nodes_per_level;    // number of nodes in each level, including potential nodes
     vector<vector<int>> ins2node_indices;   // each instance may be in multiple nodes

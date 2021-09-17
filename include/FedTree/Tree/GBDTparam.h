@@ -35,15 +35,17 @@ struct GBDTParam {
 
     std::string tree_method;
     std::string metric;
+
 };
 
 struct DeltaBoostParam : public GBDTParam {
     bool enable_delta = false;
+    float_type remove_ratio = 0.0;
 
     DeltaBoostParam() = default;
 
-    DeltaBoostParam(const GBDTParam & gbdt_param, bool enable_delta):
-    GBDTParam(gbdt_param), enable_delta(enable_delta) {}
+    DeltaBoostParam(const GBDTParam & gbdt_param, bool enable_delta, float_type remove_ratio):
+    GBDTParam(gbdt_param), enable_delta(enable_delta), remove_ratio(remove_ratio) {}
 };
 
 #endif //FEDTREE_GBDTPARAM_H

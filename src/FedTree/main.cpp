@@ -230,26 +230,40 @@ int main(int argc, char** argv){
         }
     }
     else if(fl_param.mode == "centralized"){
-        std::unique_ptr<GBDT> gbdt;
-        if (fl_param.deltaboost_param.enable_delta) {
-            gbdt = std::unique_ptr<DeltaBoost>(new DeltaBoost());
-            gbdt->train(fl_param.deltaboost_param, dataset);
-        } else {
-            gbdt = std::unique_ptr<GBDT>(new GBDT());
-            gbdt->train(fl_param.gbdt_param, dataset);
-        }
 
-        float_type score;
-        if(use_global_test_set) {
-            score = gbdt->predict_score(fl_param.gbdt_param, test_dataset);
-            scores.push_back(score);
-        }
-        else {
-            for(int i = 0; i < n_parties; i++) {
-                score = gbdt->predict_score(fl_param.gbdt_param, test_subsets[i]);
+        if (fl_param.deltaboost_param.enable_delta) {
+            auto deltaboost = std::unique_ptr<DeltaBoost>(new DeltaBoost());
+            deltaboost->train(fl_param.deltaboost_param, dataset);
+
+            float_type score;
+            if(use_global_test_set) {
+                score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);
                 scores.push_back(score);
             }
+            else {
+                for(int i = 0; i < n_parties; i++) {
+                    score = deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i]);
+                    scores.push_back(score);
+                }
+            }
+        } else {
+            auto gbdt = std::unique_ptr<GBDT>(new GBDT());
+            gbdt->train(fl_param.gbdt_param, dataset);
+
+            float_type score;
+            if(use_global_test_set) {
+                score = gbdt->predict_score(fl_param.gbdt_param, test_dataset);
+                scores.push_back(score);
+            }
+            else {
+                for(int i = 0; i < n_parties; i++) {
+                    score = gbdt->predict_score(fl_param.gbdt_param, test_subsets[i]);
+                    scores.push_back(score);
+                }
+            }
         }
+
+
     } else if (fl_param.mode == "vertical") {
         trainer.vertical_fl_trainer(parties, server, fl_param);
         float_type score;

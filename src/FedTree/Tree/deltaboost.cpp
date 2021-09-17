@@ -6,7 +6,7 @@
 #include "FedTree/booster.h"
 #include "FedTree/deltabooster.h"
 
-void DeltaBoost::train(GBDTParam &param, DataSet &dataset) {
+void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     if (param.tree_method == "auto")
         param.tree_method = "hist";
     else if (param.tree_method != "hist") {
@@ -33,7 +33,7 @@ void DeltaBoost::train(GBDTParam &param, DataSet &dataset) {
 //
 
     DeltaBooster booster;
-    booster.init(dataset, *(reinterpret_cast<DeltaBoostParam*>(&param)));   // todo: too ugly and unsafe, fix it
+    booster.init(dataset, param);   // todo: too ugly and unsafe, fix it
     std::chrono::high_resolution_clock timer;
     auto start = timer.now();
     for (int i = 0; i < param.n_trees; ++i) {
@@ -47,15 +47,39 @@ void DeltaBoost::train(GBDTParam &param, DataSet &dataset) {
     auto stop = timer.now();
     std::chrono::duration<float> training_time = stop - start;
     LOG(INFO) << "training time = " << training_time.count();
+
+    auto start_pred = timer.now();
+
+    int num_removals = static_cast<int>(param.remove_ratio * dataset.n_instances());
+    LOG(INFO) << num_removals << " samples to be removed from model";
+    vector<int> removing_indices(static_cast<int>(param.remove_ratio * dataset.n_instances()));
+    std::iota(removing_indices.begin(), removing_indices.end(), 0);
+
+    remove_samples(removing_indices);
+
+    auto stop_pred = timer.now();
+    std::chrono::duration<float> removing_time = stop - start;
+    LOG(INFO) << "removing time = " << removing_time.count();
+
     return;
 }
 
-float_type DeltaBoost::predict_score(const GBDTParam &model_param, const DataSet &dataset) {
+
+void DeltaBoost::remove_samples(const vector<int>& sample_indices) {
+    for (int sample_id: sample_indices) {
+        for (int i = 0; i < trees.size(); ++i) {
+            DeltaTree& tree = trees[i][0];
+
+        }
+    }
+}
+
+float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const DataSet &dataset) {
     return GBDT::predict_score(model_param, dataset);
     // todo: implement prediction
 }
 
-void DeltaBoost::predict_raw(const GBDTParam &model_param, const DataSet &dataSet, SyncArray<float_type> &y_predict) {
+void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, SyncArray<float_type> &y_predict) {
     TIMED_SCOPE(timerObj, "predict");
     int n_instances = dataSet.n_instances();
 //    int n_features = dataSet.n_features();

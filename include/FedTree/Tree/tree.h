@@ -140,9 +140,35 @@ protected:
 };
 
 struct DeltaTree : public Tree {
+    // can be edited
+    struct DeltaGain {
+        float_type gain_value = 0;
+        float_type lch_g = 0;
+        float_type lch_h = 0;
+        float_type rch_g = 0;
+        float_type rch_h = 0;
+        float_type self_g = 0;
+        float_type self_h = 0;
+        float_type lambda = 0;
+
+        DeltaGain() = default;
+
+        DeltaGain(float_type gainValue, float_type lchG, float_type lchH, float_type rchG, float_type rchH,
+                  float_type selfG, float_type selfH, float_type lambda) : gain_value(gainValue), lch_g(lchG),
+                                                                           lch_h(lchH), rch_g(rchG), rch_h(rchH),
+                                                                           self_g(selfG), self_h(selfH),
+                                                                           lambda(lambda) {}
+
+        float_type cal_gain_value() const {
+            return (lch_g * lch_g) / (lch_h + lambda) + (rch_g * rch_g) / (rch_h + lambda) -
+                   (self_g * self_g) / (self_h + lambda);
+        }
+    };
+
     struct DeltaNode : TreeNode {
 
         vector<int> potential_nodes_indices;    // the indices is sorted by the value of priority
+        DeltaGain gain;     // hide the float_type gain
 
         DeltaNode() = default;
 
@@ -172,6 +198,10 @@ struct DeltaTree : public Tree {
         }
 
         inline bool is_robust() const { return potential_nodes_indices.empty(); }
+
+        void calc_weight_(float_type lambda) {
+            this->base_weight = -sum_gh_pair.g / (sum_gh_pair.h + lambda);
+        }
     };
 
     DeltaTree() = default;
