@@ -45,6 +45,7 @@ void DeltaBooster::boost(vector<vector<DeltaTree>> &boosted_model) {
 
     PERFORMANCE_CHECKPOINT(timerObj);
     //show metric on training set
+
     std::ofstream myfile;
     myfile.open ("data.txt", std::ios_base::app);
     myfile << metric->get_score(fbuilder->get_y_predict()) << "\n";

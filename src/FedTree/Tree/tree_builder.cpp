@@ -92,7 +92,7 @@ void TreeBuilder::predict_in_training(int k) {
     auto nid_data = ins2node_id.host_data();
     const Tree::TreeNode *nodes_data = tree.nodes.host_data();
     auto lr = param.learning_rate;
-#pragma omp parallel for
+//#pragma omp parallel for
     for(int i = 0; i < n_instances; i++){
         int nid = nid_data[i];
         while (nid != -1 && (nodes_data[nid].is_pruned)) nid = nodes_data[nid].parent_index;

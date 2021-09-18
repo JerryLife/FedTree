@@ -13,6 +13,7 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     HistTreeBuilder::init(dataset, param);
     this->param = param;
     this->sp = SyncArray<DeltaSplitPoint>();
+
 }
 
 void DeltaTreeBuilder::init_nocutpoints(DataSet &dataset, const DeltaBoostParam &param) {
@@ -438,7 +439,7 @@ void DeltaTreeBuilder::update_tree() {
 //#pragma omp parallel for  // remove for debug
     for(int i = 0; i < n_nodes_in_level; i++){
         DeltaTree::DeltaGain best_split_gain = sp_data[i].gain;
-        if (best_split_gain.gain_value > rt_eps) {
+        if (fabs(best_split_gain.gain_value) > rt_eps) {
             //do split
             //todo: check, thundergbm uses return
             if (sp_data[i].nid == -1) continue;
@@ -550,7 +551,6 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
             gain[i] = base_gain;
         }
     }
-    return;
 }
 
 

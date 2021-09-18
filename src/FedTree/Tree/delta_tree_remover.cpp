@@ -31,7 +31,7 @@ bool DeltaTreeRemover::remove_sample_by_id(int id) {
             // update leaf value
             node.sum_gh_pair.g -= gradient;
             node.sum_gh_pair.h -= hessian;
-            node.calc_weight_(param.lambda);    // update node.base_weight
+            node.calc_weight(param.lambda);    // update node.base_weight
         } else {
             for (int i = 0; i < node.potential_nodes_indices.size(); ++i) {
                 // update the gain in each potential node

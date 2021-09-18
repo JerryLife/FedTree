@@ -198,10 +198,6 @@ struct DeltaTree : public Tree {
         }
 
         inline bool is_robust() const { return potential_nodes_indices.empty(); }
-
-        void calc_weight_(float_type lambda) {
-            this->base_weight = -sum_gh_pair.g / (sum_gh_pair.h + lambda);
-        }
     };
 
     DeltaTree() = default;
