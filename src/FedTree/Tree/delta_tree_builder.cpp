@@ -672,6 +672,7 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
         child_nodes[i].gain = *(new DeltaTree::DeltaGain());
         child_nodes[i].final_id = nid_offset + n_nodes_in_level + i;
         child_nodes[i].is_leaf = is_last_layer;
+        child_nodes[i].potential_nodes_indices = {nid_offset + n_nodes_in_level + i};
     }
     tree.nodes.insert(tree.nodes.end(), child_nodes.begin(), child_nodes.end());
 

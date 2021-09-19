@@ -160,8 +160,24 @@ struct DeltaTree : public Tree {
                                                                            lambda(lambda) {}
 
         float_type cal_gain_value() const {
-            return (lch_g * lch_g) / (lch_h + lambda) + (rch_g * rch_g) / (rch_h + lambda) -
-                   (self_g * self_g) / (self_h + lambda);
+            return std::max(0.f, (lch_g * lch_g) / (lch_h + lambda) + (rch_g * rch_g) / (rch_h + lambda) -
+                   (self_g * self_g) / (self_h + lambda));
+        }
+
+        void delta_left_(float_type gradient, float_type hessian) {
+            lch_g += gradient;
+            lch_h += hessian;
+            self_g += gradient;
+            self_h += hessian;
+            gain_value = cal_gain_value();
+        }
+
+        void delta_right(float_type gradient, float_type hessian) {
+            rch_g += gradient;
+            rch_h += hessian;
+            self_g += gradient;
+            self_h += hessian;
+            gain_value = cal_gain_value();
         }
     };
 

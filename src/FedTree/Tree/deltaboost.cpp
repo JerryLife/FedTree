@@ -74,9 +74,24 @@ void DeltaBoost::remove_samples(const vector<int>& sample_indices) {
     }
 }
 
-float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const DataSet &dataset) {
-    return GBDT::predict_score(model_param, dataset);
-    // todo: implement prediction
+float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet) {
+    SyncArray<float_type> y_predict;
+    predict_raw(model_param, dataSet, y_predict);
+    LOG(DEBUG) << "y_predict:" << y_predict;
+    //convert the aggregated values to labels, probabilities or ranking scores.
+    std::unique_ptr<ObjectiveFunction> obj;
+    obj.reset(ObjectiveFunction::create(model_param.objective));
+    obj->configure(model_param, dataSet);
+
+    //compute metric
+    std::unique_ptr<Metric> metric;
+    metric.reset(Metric::create(obj->default_metric_name()));
+    metric->configure(model_param, dataSet);
+    float_type score = metric->get_score(y_predict);
+
+//    LOG(INFO) << metric->get_name().c_str() << " = " << score;
+    LOG(INFO) << "Test: " << metric->get_name() << " = " << score;
+    return score;
 }
 
 void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, SyncArray<float_type> &y_predict) {
@@ -127,9 +142,9 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
 //    int NUM_BLOCK = (n_instances - 1) / BLOCK_SIZE + 1;
 
     //use sparse format and binary search
-#pragma omp parallel for
+//#pragma omp parallel for      // remove for debug
     for (int iid = 0; iid < n_instances; iid++) {
-        auto get_next_child = [&](DeltaTree::DeltaNode node, float_type feaValue) {
+        auto get_next_child = [&](const DeltaTree::DeltaNode& node, float_type feaValue) {
             return feaValue < node.split_value ? node.lch_index : node.rch_index;
         };
         auto get_val = [&](const int *row_idx, const float_type *row_val, int row_len, int idx,
@@ -163,6 +178,7 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
                 DeltaTree::DeltaNode cur_node = trees[iter][t].nodes[0];
                 const DeltaTree::DeltaNode* node_data = trees[iter][t].nodes.data();
                 int cur_nid = 0; //node id
+                int depth = 0;
                 while (!cur_node.is_leaf) {
                     int fid = cur_node.split_feature_id;
                     bool is_missing;
@@ -173,7 +189,10 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
                         cur_nid = cur_node.rch_index;
                     else
                         cur_nid = cur_node.lch_index;
-                    cur_node = node_data[cur_nid];
+                    const auto& cur_potential_node = node_data[cur_nid];
+                    int cur_node_idx = cur_potential_node.potential_nodes_indices[0];
+                    cur_node = node_data[cur_node_idx];
+                    depth++;
                 }
                 sum += lr * node_data[cur_nid].base_weight;
             }

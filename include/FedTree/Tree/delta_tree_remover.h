@@ -3,6 +3,7 @@
 //
 
 #include <utility>
+#include <FedTree/dataset.h>
 
 #include "FedTree/Tree/tree.h"
 
@@ -22,6 +23,7 @@ public:
     DeltaBoostParam param;
     vector<GHPair> gh_pairs;
 
+    const DataSet* dataSet;
 };
 
 #endif //FEDTREE_DELTA_TREE_REMOVER_H
