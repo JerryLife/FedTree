@@ -235,6 +235,7 @@ int main(int argc, char** argv){
             auto deltaboost = std::unique_ptr<DeltaBoost>(new DeltaBoost());
             deltaboost->train(fl_param.deltaboost_param, dataset);
 
+//            deltaboost->trees.erase(deltaboost->trees.begin() + 5, deltaboost->trees.end());
             float_type score;
             if(use_global_test_set) {
                 score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);
@@ -246,6 +247,30 @@ int main(int argc, char** argv){
                     scores.push_back(score);
                 }
             }
+
+            std::chrono::high_resolution_clock timer;
+            auto start_rm = timer.now();
+            int num_removals = static_cast<int>(fl_param.deltaboost_param.remove_ratio * dataset.n_instances());
+            LOG(INFO) << num_removals << " samples to be removed from model";
+            vector<int> removing_indices(static_cast<int>(fl_param.deltaboost_param.remove_ratio * dataset.n_instances()));
+            std::iota(removing_indices.begin(), removing_indices.end(), 0);
+            deltaboost->remove_samples(fl_param.deltaboost_param, dataset, removing_indices);
+            auto stop_rm = timer.now();
+            std::chrono::duration<float> removing_time = stop_rm - start_rm;
+            LOG(INFO) << "removing time = " << removing_time.count();
+
+            LOG(INFO) << "Predict after removals";
+            if(use_global_test_set) {
+                score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);
+                scores.push_back(score);
+            }
+            else {
+                for(int i = 0; i < n_parties; i++) {
+                    score = deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i]);
+                    scores.push_back(score);
+                }
+            }
+
         } else {
             auto gbdt = std::unique_ptr<GBDT>(new GBDT());
             gbdt->train(fl_param.gbdt_param, dataset);
@@ -262,7 +287,6 @@ int main(int argc, char** argv){
                 }
             }
         }
-
 
     } else if (fl_param.mode == "vertical") {
         trainer.vertical_fl_trainer(parties, server, fl_param);

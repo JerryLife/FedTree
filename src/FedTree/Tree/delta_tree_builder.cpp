@@ -577,7 +577,7 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
     assert(nid_offset + candidate_idx_gain.size() == tree.nodes.size());
     int child_offset = 0;       // number of current child nodes
     int potential_offset = 0;   // number of current potential nodes
-    bool is_last_layer = (level == param.depth - 1);
+    bool is_last_layer = (level == param.depth - 2);
     /*
      * nodes from previous levels
      * [nid_offset]

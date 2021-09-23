@@ -14,12 +14,13 @@ class DeltaTreeRemover {
 public:
     DeltaTreeRemover() = default;
 
-    DeltaTreeRemover(const DeltaTree& tree, DeltaBoostParam param, vector<GHPair> gh_pairs):
-    tree(tree), param(std::move(param)), gh_pairs(std::move(gh_pairs)) { }
+    DeltaTreeRemover(DeltaTree* tree_ptr, const DataSet* dataSet, DeltaBoostParam param, vector<GHPair> gh_pairs):
+    tree_ptr(tree_ptr), dataSet(dataSet), param(std::move(param)), gh_pairs(std::move(gh_pairs)) { }
 
-    bool remove_sample_by_id(int id);
+    vector<int> remove_sample_by_id(int id);
+    vector<int> adjust_gradients_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs);
 
-    DeltaTree tree;
+    DeltaTree *tree_ptr;
     DeltaBoostParam param;
     vector<GHPair> gh_pairs;
 

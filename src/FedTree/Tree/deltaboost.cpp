@@ -5,6 +5,7 @@
 #include "FedTree/Tree/deltaboost.h"
 #include "FedTree/booster.h"
 #include "FedTree/deltabooster.h"
+#include "FedTree/Tree/delta_tree_remover.h"
 
 void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     if (param.tree_method == "auto")
@@ -38,7 +39,7 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     auto start = timer.now();
     for (int i = 0; i < param.n_trees; ++i) {
         //one iteration may produce multiple trees, depending on objectives
-        booster.boost(trees);
+        booster.boost(trees, gh_pairs_per_sample);
     }
 
 //    float_type score = predict_score(param, dataset);
@@ -48,35 +49,53 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     std::chrono::duration<float> training_time = stop - start;
     LOG(INFO) << "training time = " << training_time.count();
 
-    auto start_pred = timer.now();
-
-    int num_removals = static_cast<int>(param.remove_ratio * dataset.n_instances());
-    LOG(INFO) << num_removals << " samples to be removed from model";
-    vector<int> removing_indices(static_cast<int>(param.remove_ratio * dataset.n_instances()));
-    std::iota(removing_indices.begin(), removing_indices.end(), 0);
-
-    remove_samples(removing_indices);
-
-    auto stop_pred = timer.now();
-    std::chrono::duration<float> removing_time = stop - start;
-    LOG(INFO) << "removing time = " << removing_time.count();
-
     return;
 }
 
 
-void DeltaBoost::remove_samples(const vector<int>& sample_indices) {
+void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const vector<int>& sample_indices) {
+    SyncArray<float_type> y = SyncArray<float_type>(dataset.n_instances());
+    y.copy_from(dataset.y.data(), dataset.n_instances());
+    std::unique_ptr<ObjectiveFunction> obj(ObjectiveFunction::create(param.objective));
+    obj->configure(param, dataset);     // slicing param
+
     for (int sample_id: sample_indices) {
+        vector<GHPair> delta_gh_pairs(dataset.n_instances(), 0);
         for (int i = 0; i < trees.size(); ++i) {
             DeltaTree& tree = trees[i][0];
+            vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
+            DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs);
+            tree_remover.remove_sample_by_id(sample_id);
 
+            if (i > 0) {
+                SyncArray<float_type> y_predict;
+                y_predict.resize(dataset.n_instances());
+                predict_raw(param, dataset, y_predict, i);
+
+                SyncArray<GHPair> updated_gh_pairs_array;
+                updated_gh_pairs_array.resize(y.size());
+                obj->get_gradient(y, y_predict, updated_gh_pairs_array);
+                delta_gh_pairs = updated_gh_pairs_array.to_vec();
+
+                vector<int> adjust_indices;
+                vector<GHPair> adjust_values;
+                for (int j = 0; j < delta_gh_pairs.size(); ++j) {
+                    if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
+                            std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
+                        adjust_indices.emplace_back(j);
+                        adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
+                    }
+                }
+
+                tree_remover.adjust_gradients_by_indices(adjust_indices, adjust_values);
+            }
         }
     }
 }
 
-float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet) {
+float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet, int num_trees) {
     SyncArray<float_type> y_predict;
-    predict_raw(model_param, dataSet, y_predict);
+    predict_raw(model_param, dataSet, y_predict, num_trees);
     LOG(DEBUG) << "y_predict:" << y_predict;
     //convert the aggregated values to labels, probabilities or ranking scores.
     std::unique_ptr<ObjectiveFunction> obj;
@@ -94,15 +113,15 @@ float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const D
     return score;
 }
 
-void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, SyncArray<float_type> &y_predict) {
+void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, SyncArray<float_type> &y_predict,
+                             int num_trees) {
     TIMED_SCOPE(timerObj, "predict");
     int n_instances = dataSet.n_instances();
 //    int n_features = dataSet.n_features();
 
     //the whole model to an array
-    int num_iter = trees.size();
+    int num_iter = num_trees == -1 ? trees.size() : num_trees;
     int num_class = trees.front().size();
-    int num_node = trees[0][0].nodes.size();
 
 //    int total_num_node = num_iter * num_class * num_node;
     //TODO: reduce the output size for binary classification
@@ -145,6 +164,9 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
 //#pragma omp parallel for      // remove for debug
     for (int iid = 0; iid < n_instances; iid++) {
         auto get_next_child = [&](const DeltaTree::DeltaNode& node, float_type feaValue) {
+            if (node.lch_index == -1 || node.rch_index == -1) {
+                printf("NOOOOOOOOOO");
+            }
             return feaValue < node.split_value ? node.lch_index : node.rch_index;
         };
         auto get_val = [&](const int *row_idx, const float_type *row_val, int row_len, int idx,

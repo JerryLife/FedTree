@@ -114,6 +114,12 @@ struct GHPair {
         return *this;
     }
 
+    HOST_DEVICE GHPair operator-() {
+        g = -g;
+        h = -h;
+        return *this;
+    }
+
     HOST_DEVICE GHPair operator-(const GHPair &rhs) const {
         GHPair res;
         if (!encrypted && !rhs.encrypted) {

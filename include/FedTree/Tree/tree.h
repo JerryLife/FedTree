@@ -172,7 +172,7 @@ struct DeltaTree : public Tree {
             gain_value = cal_gain_value();
         }
 
-        void delta_right(float_type gradient, float_type hessian) {
+        void delta_right_(float_type gradient, float_type hessian) {
             rch_g += gradient;
             rch_h += hessian;
             self_g += gradient;
@@ -188,7 +188,26 @@ struct DeltaTree : public Tree {
 
         DeltaNode() = default;
 
-        DeltaNode(const DeltaNode& copy) = default;
+        DeltaNode(const DeltaNode& copy) {
+            final_id = copy.final_id;
+            lch_index = copy.lch_index;
+            rch_index = copy.rch_index;
+            parent_index = copy.parent_index;
+            gain = copy.gain;
+            base_weight = copy.base_weight;
+            split_feature_id = copy.split_feature_id;
+            pid = copy.pid;
+            split_value = copy.split_value;
+            split_bid = copy.split_bid;
+            default_right = copy.default_right;
+            is_leaf = copy.is_leaf;
+            is_valid = copy.is_valid;
+            is_pruned = copy.is_pruned;
+            sum_gh_pair.g = copy.sum_gh_pair.g;
+            sum_gh_pair.h = copy.sum_gh_pair.h;
+            n_instances = copy.n_instances;
+            potential_nodes_indices = copy.potential_nodes_indices;
+        }
 
         DeltaNode &operator=(const DeltaNode& copy) {
             final_id = copy.final_id;

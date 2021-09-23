@@ -32,11 +32,12 @@ void DeltaBooster::init(DataSet &dataSet, const DeltaBoostParam &delta_param, bo
 //
 //}
 
-void DeltaBooster::boost(vector<vector<DeltaTree>> &boosted_model) {
+void DeltaBooster::boost(vector<vector<DeltaTree>> &boosted_model, vector<vector<GHPair>>& gh_pairs_per_sample) {
     TIMED_FUNC(timerObj);
 //    std::unique_lock<std::mutex> lock(mtx);
     //update gradients
     obj->get_gradient(y, fbuilder->get_y_predict(), gradients);
+    gh_pairs_per_sample.push_back(gradients.to_vec());
 
 //    if (param.bagging) rowSampler.do_bagging(gradients);
     PERFORMANCE_CHECKPOINT(timerObj);
