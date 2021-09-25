@@ -190,6 +190,7 @@ void seg_sort_by_key_cpu(vector<T1> &keys, vector<T2> &values, vector<int> &ptr)
     auto values_data = values.data();
     auto offset_data = ptr.data();
 //    LOG(INFO) << ptr;
+//#pragma omp parallel for
     for(int i = 0; i < ptr.size() - 2; i++)
     {
         int seg_len = offset_data[i + 1] - offset_data[i];

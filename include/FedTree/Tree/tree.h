@@ -232,7 +232,7 @@ struct DeltaTree : public Tree {
             return *this;
         }
 
-        inline bool is_robust() const { return potential_nodes_indices.empty(); }
+        inline bool is_robust() const { return potential_nodes_indices.size() <= 1; }
     };
 
     DeltaTree() = default;

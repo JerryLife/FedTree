@@ -261,13 +261,11 @@ int main(int argc, char** argv){
 
             LOG(INFO) << "Predict after removals";
             if(use_global_test_set) {
-                score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);
-                scores.push_back(score);
+                deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);
             }
             else {
                 for(int i = 0; i < n_parties; i++) {
-                    score = deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i]);
-                    scores.push_back(score);
+                    deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i]);
                 }
             }
 

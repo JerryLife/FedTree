@@ -32,9 +32,10 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
 //    vector<DataSet> subsets(3);
 //    partition.homo_partition(dataset, 3, true, subsets, batch_idxs);
 //
+    LOG(INFO) << "starting building trees";
 
     DeltaBooster booster;
-    booster.init(dataset, param);   // todo: too ugly and unsafe, fix it
+    booster.init(dataset, param);   
     std::chrono::high_resolution_clock timer;
     auto start = timer.now();
     for (int i = 0; i < param.n_trees; ++i) {
@@ -59,38 +60,67 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
     std::unique_ptr<ObjectiveFunction> obj(ObjectiveFunction::create(param.objective));
     obj->configure(param, dataset);     // slicing param
 
-    for (int sample_id: sample_indices) {
-        vector<GHPair> delta_gh_pairs(dataset.n_instances(), 0);
-        for (int i = 0; i < trees.size(); ++i) {
-            DeltaTree& tree = trees[i][0];
-            vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
-            DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs);
-            tree_remover.remove_sample_by_id(sample_id);
+    for (int i = 0; i < trees.size(); ++i) {
+        DeltaTree &tree = trees[i][0];
+        vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
+        DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs);
+        tree_remover.remove_samples_by_indices(sample_indices);
 
-            if (i > 0) {
-                SyncArray<float_type> y_predict;
-                y_predict.resize(dataset.n_instances());
-                predict_raw(param, dataset, y_predict, i);
+        if (i > 0) {
+            SyncArray<float_type> y_predict;
+            y_predict.resize(dataset.n_instances());
+            predict_raw(param, dataset, y_predict, i);
 
-                SyncArray<GHPair> updated_gh_pairs_array;
-                updated_gh_pairs_array.resize(y.size());
-                obj->get_gradient(y, y_predict, updated_gh_pairs_array);
-                delta_gh_pairs = updated_gh_pairs_array.to_vec();
+            SyncArray<GHPair> updated_gh_pairs_array(y.size());
+            obj->get_gradient(y, y_predict, updated_gh_pairs_array);
+            vector<GHPair> delta_gh_pairs = updated_gh_pairs_array.to_vec();
 
-                vector<int> adjust_indices;
-                vector<GHPair> adjust_values;
-                for (int j = 0; j < delta_gh_pairs.size(); ++j) {
-                    if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
-                            std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
-                        adjust_indices.emplace_back(j);
-                        adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
-                    }
+            vector<int> adjust_indices;
+            vector<GHPair> adjust_values;
+            for (int j = 0; j < delta_gh_pairs.size(); ++j) {
+                if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
+                    std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
+                    adjust_indices.emplace_back(j);
+                    adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
                 }
-
-                tree_remover.adjust_gradients_by_indices(adjust_indices, adjust_values);
             }
+
+            tree_remover.adjust_gradients_by_indices(adjust_indices, adjust_values);
         }
     }
+
+//    for (int sample_id: sample_indices) {
+//        vector<GHPair> delta_gh_pairs(dataset.n_instances(), 0);
+//        for (int i = 0; i < trees.size(); ++i) {
+//            DeltaTree& tree = trees[i][0];
+//            vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
+//            DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs);
+//            tree_remover.remove_sample_by_id(sample_id);
+//
+//            if (i > 0) {
+//                SyncArray<float_type> y_predict;
+//                y_predict.resize(dataset.n_instances());
+//                predict_raw(param, dataset, y_predict, i);
+//
+//                SyncArray<GHPair> updated_gh_pairs_array;
+//                updated_gh_pairs_array.resize(y.size());
+//                obj->get_gradient(y, y_predict, updated_gh_pairs_array);
+//                delta_gh_pairs = updated_gh_pairs_array.to_vec();
+//
+//                vector<int> adjust_indices;
+//                vector<GHPair> adjust_values;
+//                for (int j = 0; j < delta_gh_pairs.size(); ++j) {
+//                    if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
+//                            std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
+//                        adjust_indices.emplace_back(j);
+//                        adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
+//                    }
+//                }
+//
+//                tree_remover.adjust_gradients_by_indices(adjust_indices, adjust_values);
+//            }
+//        }
+//    }
 }
 
 float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet, int num_trees) {
@@ -164,9 +194,6 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
 //#pragma omp parallel for      // remove for debug
     for (int iid = 0; iid < n_instances; iid++) {
         auto get_next_child = [&](const DeltaTree::DeltaNode& node, float_type feaValue) {
-            if (node.lch_index == -1 || node.rch_index == -1) {
-                printf("NOOOOOOOOOO");
-            }
             return feaValue < node.split_value ? node.lch_index : node.rch_index;
         };
         auto get_val = [&](const int *row_idx, const float_type *row_val, int row_len, int idx,

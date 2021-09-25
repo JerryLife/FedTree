@@ -218,6 +218,7 @@ void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostPar
     root_node.is_valid = true;
     root_node.calc_weight(lambda); // TODO: check here
     root_node.n_instances = static_cast<int>(gradients.size());
+    root_node.potential_nodes_indices.emplace_back(0);
 }
 
 void DeltaTree::init_structure(int depth) {

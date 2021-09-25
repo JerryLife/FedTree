@@ -172,11 +172,11 @@ void DeltaTreeBuilder::get_topk_gain_in_a_level(const vector<DeltaTree::DeltaGai
         topk_idx_gain.emplace_back(topk_idx_gain_per_bin);
     }
 
-    for (int i = 0; i < topk_idx_gain.size(); ++i) {
-        for (int j = 0; j < topk_idx_gain[i].size(); ++j) {
-            LOG(DEBUG) << topk_idx_gain[i][j].first << " " << topk_idx_gain[i][j].second.gain_value;
-        }
-    }
+//    for (int i = 0; i < topk_idx_gain.size(); ++i) {
+//        for (int j = 0; j < topk_idx_gain[i].size(); ++j) {
+//            LOG(DEBUG) << topk_idx_gain[i][j].first << " " << topk_idx_gain[i][j].second.gain_value;
+//        }
+//    }
 
     return;
 }
@@ -386,7 +386,7 @@ void DeltaTreeBuilder::update_ins2node_id() {
         int n_column = sorted_dataset.n_features();
         auto dense_bin_id_data = dense_bin_id.host_data();
         int max_num_bin = param.max_num_bin;
-//#pragma omp parallel for // remove for debug
+#pragma omp parallel for
         for (int iid = 0; iid < n_instances; iid++) {
             int nid = nid_data[iid];
             const DeltaTree::DeltaNode &node = nodes_data[nid];
@@ -436,7 +436,7 @@ void DeltaTreeBuilder::update_tree() {
     float_type rt_eps = param.rt_eps;
     float_type lambda = param.lambda;
 
-//#pragma omp parallel for  // remove for debug
+#pragma omp parallel for
     for(int i = 0; i < n_nodes_in_level; i++){
         DeltaTree::DeltaGain best_split_gain = sp_data[i].gain;
         if (fabs(best_split_gain.gain_value) > rt_eps) {
@@ -589,10 +589,6 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
      */
     vector<GHPair> old_last_hist = last_hist.to_vec();
     for (int i = 0; i < candidate_idx_gain.size(); ++i) {
-        // store the indices of all the potential nodes generated from the same node to a vector
-//        auto& candidate_indices = tree.nodes[nid_offset + i].potential_nodes_indices;
-//        candidate_indices = *(new vector<int>(candidate_idx_gain[i].size()));
-//        std::iota(candidate_indices.begin(), candidate_indices.end(), nid_offset);
 
         int num_potential_nodes = candidate_idx_gain[i].size();
 
@@ -622,7 +618,7 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
                 base_hist = {old_last_hist.begin() + idx_in_level * n_bins,
                              old_last_hist.begin() + (idx_in_level + 1) * n_bins};
 
-                tree.nodes[nid_offset + i].potential_nodes_indices.emplace_back(nid_offset + i);
+//                tree.nodes[nid_offset + i].potential_nodes_indices.emplace_back(nid_offset + i);
             }
 
             gain_pair bst = candidate_idx_gain[i][j];
