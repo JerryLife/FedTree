@@ -233,11 +233,21 @@ struct DeltaTree : public Tree {
         }
 
         inline bool is_robust() const { return potential_nodes_indices.size() <= 1; }
+
+//        size_t to_chars(char* bytes) {
+//            char buf[sizeof(size_t) + potential_nodes_indices.size() * sizeof(int) + sizeof(DeltaNode)];
+//            size_t potential_node_size = potential_nodes_indices.size();
+//            memcpy(buf, &potential_node_size, sizeof(size_t));
+//            memcpy(buf + sizeof(size_t), potential_nodes_indices.data(), potential_node_size * sizeof(int));
+//            memcpy(buf + sizeof(size_t) + potential_nodes_indices.size() * sizeof(int), this, sizeof(DeltaNode));
+//        }
+//
+//        DeltaNode from_chars(char *bytes, size_t len);
     };
 
     DeltaTree() = default;
 
-    DeltaTree(const DeltaTree& other) : Tree(other) {
+    DeltaTree(const DeltaTree& other) {
         nodes = other.nodes;
         n_nodes_level = other.n_nodes_level;
         final_depth = other.final_depth;

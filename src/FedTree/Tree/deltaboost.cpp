@@ -85,10 +85,18 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
                 }
             }
 
+            // debug only
+            SyncArray<int> adjust_indices_array;
+            SyncArray<GHPair> adjust_values_array;
+            adjust_indices_array.load_from_vec(adjust_indices);
+            adjust_values_array.load_from_vec(adjust_values);
+            LOG(DEBUG) << "Adjusted indices" << adjust_indices_array;
+            LOG(DEBUG) << "Adjusted values" << adjust_values_array;
+
             tree_remover.adjust_gradients_by_indices(adjust_indices, adjust_values);
         }
     }
-
+//    // serial deletion
 //    for (int sample_id: sample_indices) {
 //        vector<GHPair> delta_gh_pairs(dataset.n_instances(), 0);
 //        for (int i = 0; i < trees.size(); ++i) {
@@ -228,10 +236,15 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
                 const DeltaTree::DeltaNode* node_data = trees[iter][t].nodes.data();
                 int cur_nid = 0; //node id
                 int depth = 0;
+                int last_idx = -1;
                 while (!cur_node.is_leaf) {
+                    if (cur_node.lch_index == -1 || cur_node.rch_index == -1) {
+                        LOG(FATAL);
+                    }
                     int fid = cur_node.split_feature_id;
                     bool is_missing;
                     float_type fval = get_val(col_idx, row_val, row_len, fid, &is_missing);
+                    last_idx = cur_node.final_id;
                     if (!is_missing)
                         cur_nid = get_next_child(cur_node, fval);
                     else if (cur_node.default_right)
@@ -249,3 +262,4 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
         }//end all tree prediction
     }
 }
+

@@ -28,6 +28,7 @@ public:
                                  int num_trees=-1);
 
     void remove_samples(DeltaBoostParam &param, DataSet &dataset, const vector<int>& sample_indices);
+
 };
 
 #endif //FEDTREE_DELTABOOST_H

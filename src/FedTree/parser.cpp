@@ -171,7 +171,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
 }
 
 // TODO: implement Tree and DataSet; check data structure compatibility
-void Parser::load_model(string model_path, GBDTParam &model_param, vector<vector<Tree>> &boosted_model, DataSet & dataset) {
+void Parser::load_model(const string& model_path, GBDTParam &model_param, vector<vector<Tree>> &boosted_model, DataSet & dataset) {
     ifstream ifs(model_path, ios::binary);
     CHECK_EQ(ifs.is_open(), true);
     int length;
@@ -217,7 +217,7 @@ void Parser::load_model(string model_path, GBDTParam &model_param, vector<vector
 
 
 
-void Parser::save_model(string model_path, GBDTParam &model_param, vector<vector<Tree>> &boosted_model, DataSet &dataset) {
+void Parser::save_model(const string& model_path, GBDTParam &model_param, vector<vector<Tree>> &boosted_model, DataSet &dataset) {
     ofstream out_model_file(model_path, ios::binary);
     CHECK_EQ(out_model_file.is_open(), true);
     int length = model_param.objective.length();
@@ -243,3 +243,100 @@ void Parser::save_model(string model_path, GBDTParam &model_param, vector<vector
     out_model_file.close();
 }
 
+void Parser::load_model(const string& model_path, DeltaBoostParam &model_param, vector<vector<DeltaTree>> &boosted_model, DataSet & dataset) {
+    LOG(INFO) << "Loading from " << model_path;
+
+    boosted_model.clear();
+    ifstream ifs(model_path, ios::binary);
+    CHECK_EQ(ifs.is_open(), true);
+    int length;
+    ifs.read((char*)&length, sizeof(length));
+    char * temp = new char[length+1];
+    temp[length] = '\0';
+    // read param.objective
+    ifs.read(temp, length);
+    string str(temp);
+    model_param.objective = str;
+    ifs.read((char*)&model_param.learning_rate, sizeof(model_param.learning_rate));
+    ifs.read((char*)&model_param.num_class, sizeof(model_param.num_class));
+    ifs.read((char*)&model_param.n_trees, sizeof(model_param.n_trees));
+    int label_size;
+    ifs.read((char*)&label_size, sizeof(label_size));
+    float_type f;
+    dataset.label.clear();
+    for (int i = 0; i < label_size; ++i) {
+        ifs.read((char*)&f, sizeof(float_type));
+        dataset.label.push_back(f);
+    }
+    int boosted_model_size;
+    ifs.read((char*)&boosted_model_size, sizeof(boosted_model_size));
+    boosted_model.resize(boosted_model_size);
+    for (int i = 0; i < boosted_model_size; ++i) {
+        int boost_model_i_size;
+        ifs.read((char*)&boost_model_i_size, sizeof(boost_model_i_size));
+        vector<DeltaTree> v(boost_model_i_size);
+        for (int j = 0; j < boost_model_i_size; ++j) {
+            DeltaTree tree;
+            size_t syn_node_size;
+            ifs.read((char*)&syn_node_size, sizeof(syn_node_size));
+            tree.nodes.resize(syn_node_size);
+
+            for (int k = 0; k < syn_node_size; ++k) {
+                DeltaTree::DeltaNode tmp_node;
+                size_t potential_nodes_indices_size;
+                ifs.read((char*)(&potential_nodes_indices_size), sizeof(size_t));
+                vector<int> potential_node_indices(potential_nodes_indices_size);
+                for (int t = 0, idx = -1; t < potential_nodes_indices_size; ++t) {
+                    ifs >> idx;
+                    potential_node_indices.push_back(idx);
+                }
+                ifs.read((char*)(&tmp_node), sizeof(DeltaTree::DeltaNode));
+
+                if (!tree.nodes[0].potential_nodes_indices.empty() && tree.nodes[0].potential_nodes_indices[2] != 2) {
+                    LOG(INFO);
+                }
+                tree.nodes[k].potential_nodes_indices = potential_node_indices;
+                tree.nodes[k] = tmp_node;
+            }
+            v[j] = tree;
+        }
+        boosted_model[i] = v;
+    }
+    ifs.close();
+
+    LOG(INFO) << "Loaded.";
+}
+
+
+void Parser::save_model(const string& model_path, DeltaBoostParam &model_param, vector<vector<DeltaTree>> &boosted_model, DataSet &dataset) {
+    ofstream out_model_file(model_path, ios::binary);
+    CHECK_EQ(out_model_file.is_open(), true);
+    int length = model_param.objective.length();
+    out_model_file.write((char*)&length, sizeof(length));
+    out_model_file.write(model_param.objective.c_str(), model_param.objective.length());
+    out_model_file.write((char*)&model_param.learning_rate, sizeof(model_param.learning_rate));
+    out_model_file.write((char*)&model_param.num_class, sizeof(model_param.num_class));
+    out_model_file.write((char*)&model_param.n_trees, sizeof(model_param.n_trees));
+    int label_size = dataset.label.size();
+    out_model_file.write((char*)&label_size, sizeof(label_size));
+    out_model_file.write((char*)&dataset.label[0], dataset.label.size() * sizeof(float_type));
+    int boosted_model_size = boosted_model.size();
+    out_model_file.write((char*)&boosted_model_size, sizeof(boosted_model_size));
+    for(int j = 0; j < boosted_model.size(); ++j) {
+        int boosted_model_j_size = boosted_model[j].size();
+        out_model_file.write((char*)&boosted_model_j_size, sizeof(boosted_model_j_size));
+        for (int i = 0; i < boosted_model_j_size; ++i) {
+            size_t syn_node_size = boosted_model[j][i].nodes.size();
+            out_model_file.write((char*)&syn_node_size, sizeof(syn_node_size));
+            for (int k = 0; k < syn_node_size; ++k) {
+                size_t potential_nodes_indices_size = boosted_model[j][i].nodes[k].potential_nodes_indices.size();
+                out_model_file.write((char*)(&potential_nodes_indices_size), sizeof(size_t));
+                out_model_file.write((char*)boosted_model[j][i].nodes[k].potential_nodes_indices.data(), potential_nodes_indices_size * sizeof(int));
+                out_model_file.write((char*)(&boosted_model[j][i].nodes[k]), sizeof(DeltaTree::DeltaNode));
+            }
+        }
+    }
+    out_model_file.close();
+
+    LOG(INFO) << "saved to " << model_path;
+}
