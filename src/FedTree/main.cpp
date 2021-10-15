@@ -234,21 +234,10 @@ int main(int argc, char** argv){
         if (fl_param.deltaboost_param.enable_delta) {
             auto deltaboost = std::unique_ptr<DeltaBoost>(new DeltaBoost());
             float_type score;
-            deltaboost->train(fl_param.deltaboost_param, dataset);
+//            deltaboost->train(fl_param.deltaboost_param, dataset);
 
-            if(use_global_test_set) {
-                score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);
-                scores.push_back(score);
-            }
-            else {
-                for(int i = 0; i < n_parties; i++) {
-                    score = deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i]);
-                    scores.push_back(score);
-                }
-            }
-
-            parser.save_model("cache/breast.model", fl_param.deltaboost_param, deltaboost->trees, dataset);
-            parser.load_model("cache/breast.model", fl_param.deltaboost_param, deltaboost->trees, dataset);
+//            parser.save_model("cache/codrna.model", fl_param.deltaboost_param, *deltaboost, dataset);
+            parser.load_model("cache/codrna.model", fl_param.deltaboost_param, *deltaboost, dataset);
 
             if(use_global_test_set) {
                 score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);

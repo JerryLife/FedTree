@@ -5,6 +5,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 file(GLOB SRC util/*.c* DP/*.c* FL/*.c* Tree/*.c* Encryption/*.c* objective/*.c* metric/*.c* *.c*)
 list(REMOVE_ITEM SRC "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
 
+find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+
+
 find_library(NTL_LIB ntl)
 if(NOT NTL_LIB)
     message(FATAL_ERROR "ntl library not found.  Rerun cmake with -DCMAKE_PREFIX_PATH=\"<path to lib1>;<path to lib2>\"")
@@ -32,5 +36,4 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
 endif()
 target_link_libraries(${PROJECT_NAME}-train ${PROJECT_NAME})
-
 

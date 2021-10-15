@@ -6,6 +6,9 @@
 #ifndef FEDTREE_TREE_H
 #define FEDTREE_TREE_H
 
+#include "boost/serialization/vector.hpp"
+#include "boost/serialization/base_object.hpp"
+
 #include "sstream"
 #include "FedTree/syncarray.h"
 #include "GBDTparam.h"
@@ -53,7 +56,7 @@ public:
         bool default_right;
         bool is_leaf = true;
         bool is_valid;// non-valid nodes are those that are "children" of leaf nodes
-        bool is_pruned;// pruned after pruning
+        bool is_pruned = false;// pruned after pruning
 
         GHPair sum_gh_pair;
         int n_instances = 0; // number of instances inside the node.
@@ -179,6 +182,19 @@ struct DeltaTree : public Tree {
             self_h += hessian;
             gain_value = cal_gain_value();
         }
+
+        friend class boost::serialization::access;
+
+        template<class Archive> void serialize(Archive &ar, const unsigned int /*version*/) {
+            ar & gain_value;
+            ar & lch_g;
+            ar & lch_h;
+            ar & rch_g;
+            ar & rch_h;
+            ar & self_g;
+            ar & self_h;
+            ar & lambda;
+        }
     };
 
     struct DeltaNode : TreeNode {
@@ -243,6 +259,29 @@ struct DeltaTree : public Tree {
 //        }
 //
 //        DeltaNode from_chars(char *bytes, size_t len);
+    private:
+        friend class boost::serialization::access;
+        template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+            ar & final_id;
+            ar & lch_index;
+            ar & rch_index;
+            ar & parent_index;
+            ar & gain;
+            ar & base_weight;
+            ar & split_feature_id;
+            ar & pid;
+            ar & split_value;
+            ar & split_bid;
+            ar & default_right;
+            ar & is_leaf;
+            ar & is_valid;
+            ar & is_pruned;
+            ar & sum_gh_pair.g;
+            ar & sum_gh_pair.h;
+            ar & n_instances;
+            ar & potential_nodes_indices;
+        }
+
     };
 
     DeltaTree() = default;
@@ -271,6 +310,15 @@ struct DeltaTree : public Tree {
     void reorder_nid() override;
 
     vector<DeltaNode> nodes;    // contains all the nodes including potential nodes
+
+private:
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+        ar & nodes;
+        ar & n_nodes_level;
+        ar & final_depth;
+    }
+
 };
 
 

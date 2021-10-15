@@ -10,12 +10,15 @@
 
 #define THRUST_IGNORE_DEPRECATED_CPP_DIALECT
 
+#include "boost/serialization/vector.hpp"
+
 #include "FedTree/util/log.h"
 #include "cstdlib"
 #include "config.h"
 #include "thrust/tuple.h"
 //#include "FedTree/Encryption/HE.h"
 #include "FedTree/Encryption/paillier.h"
+
 
 using std::vector;
 using std::string;
@@ -183,6 +186,24 @@ struct GHPair {
                                     const GHPair &p) {
         os << string_format("%f/%f", p.g, p.h);
         return os;
+    }
+
+    HOST_DEVICE GHPair& operator=(const GHPair& other) {
+        this->g = other.g;
+        this->h = other.h;
+        g_enc = other.g_enc;
+        h_enc= other.h_enc;
+        paillier = other.paillier;
+        encrypted = other.encrypted;
+        return *this;
+    }
+
+private:
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+        ar & g;
+        ar & h;
+        ar & encrypted;
     }
 };
 

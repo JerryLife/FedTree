@@ -3,6 +3,9 @@
 //
 
 #include "gbdt.h"
+#include "boost/archive/text_oarchive.hpp"
+#include "boost/archive/text_iarchive.hpp"
+#include "boost/serialization/vector.hpp"
 
 #ifndef FEDTREE_DELTABOOST_H
 #define FEDTREE_DELTABOOST_H
@@ -28,6 +31,14 @@ public:
                                  int num_trees=-1);
 
     void remove_samples(DeltaBoostParam &param, DataSet &dataset, const vector<int>& sample_indices);
+
+private:
+    friend class boost::serialization::access;
+
+    template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+        ar & trees;
+        ar & gh_pairs_per_sample;
+    }
 
 };
 
