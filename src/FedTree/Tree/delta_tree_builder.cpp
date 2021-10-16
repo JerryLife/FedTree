@@ -138,7 +138,7 @@ void DeltaTreeBuilder::find_split(int level) {
 
     vector<vector<gain_pair>> potential_idx_gain;
     int update_n_nodes_in_a_level;
-    update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 1, 3);
+    update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 10, 3);
     //LOG(INFO) << best_idx_gain;
     get_potential_split_points(potential_idx_gain, update_n_nodes_in_a_level, hist_fid_data, missing_gh, hist, level);
     //LOG(INFO) << this->sp;
@@ -171,14 +171,48 @@ void DeltaTreeBuilder::get_topk_gain_in_a_level(const vector<DeltaTree::DeltaGai
         std::vector<gain_pair> topk_idx_gain_per_bin(idx_gain.begin() + i, idx_gain.begin() + i + k);
         topk_idx_gain.emplace_back(topk_idx_gain_per_bin);
     }
+}
 
-//    for (int i = 0; i < topk_idx_gain.size(); ++i) {
-//        for (int j = 0; j < topk_idx_gain[i].size(); ++j) {
-//            LOG(DEBUG) << topk_idx_gain[i][j].first << " " << topk_idx_gain[i][j].second.gain_value;
-//        }
-//    }
+void DeltaTreeBuilder::get_threshold_gain_in_a_level(const vector<DeltaTree::DeltaGain> &gain,
+                                                     vector<vector<gain_pair>> &potential_idx_gain, int n_nodes_in_level,
+                                                     int n_bins, float_type min_diff, float_type max_range, int level) {
+    /**
+     * @param min_diff: the min difference between two gains. |gain1 - gain2| >= min_diff
+     * @param max_range: the max tolerable range of gains. All gains should be in range [max_gain - max_range, max_gain]
+     */
+    auto arg_abs_max = [](const gain_pair &a, const gain_pair &b) {
+        if (fabsf(a.second.gain_value) == fabsf(b.second.gain_value))
+            return a.first < b.first;
+        else
+            return fabsf(a.second.gain_value) > fabsf(b.second.gain_value);
+    };
 
-    return;
+    // make tuple with indices and gains
+    vector<gain_pair> idx_gain(gain.size());
+#pragma omp parallel for
+    for (int i = 0; i < gain.size(); ++i) {
+        idx_gain[i] = std::make_pair(i, gain[i]);
+    }
+
+    for (int i = 0; i < n_bins * n_nodes_in_level; i += n_bins) {
+        vector<gain_pair> potential_idx_gain_per_node;
+        std::sort(idx_gain.begin() + i, idx_gain.begin() + i + n_bins, arg_abs_max);
+        float_type last_gain = fabs(idx_gain[i].second.gain_value);
+        for (int j = i; j < i + n_bins; ++j) {
+            if (fabs(idx_gain[i + j].second.gain_value) < fabs(idx_gain[i].second.gain_value) - max_range) {
+                break;  // gain too small, unacceptable
+            }
+
+            if (fabs(idx_gain[i + j].second.gain_value) > last_gain - min_diff) {
+                continue;
+            } else {
+                last_gain = fabs(idx_gain[i + j].second.gain_value);
+                potential_idx_gain_per_node.emplace_back(idx_gain[i + j]);
+            }
+        }
+
+        potential_idx_gain.emplace_back(potential_idx_gain_per_node);
+    }
 }
 
 
@@ -324,7 +358,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                     auto hist_data_computed = hist.host_data() + nid0_to_compute * n_bins;
                     auto hist_data_to_compute = hist.host_data() + nid0_to_substract * n_bins;
                     auto father_hist_data = last_hist.host_data() + (nid0_to_substract / 2) * n_bins;
-//#pragma omp parallel for
+#pragma omp parallel for
                     for (int i = 0; i < n_bins; i++) {
                         hist_data_to_compute[i] = father_hist_data[i] - hist_data_computed[i];
                     }
@@ -715,3 +749,5 @@ void DeltaTreeBuilder::get_split_points(vector<gain_pair> &best_idx_gain, int n_
     }
     LOG(DEBUG) << "split points (gain/fea_id/nid): " << sp;
 }
+
+

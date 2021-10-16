@@ -24,7 +24,8 @@ void DataSet::group_label() {
     label.clear();
     for (int i = 0; i < y.size(); ++i) {
         if(label_map.find(y[i]) == label_map.end()) {
-            label_map[y[i]] = label.size();
+//            label_map[y[i]] = label.size();
+            label_map[y[i]] = y[i];
             label.push_back(y[i]);
         }
         y[i] = label_map[y[i]];
