@@ -141,6 +141,10 @@ void DeltaTreeRemover::sort_potential_nodes_by_gain(int root_idx) {
     processing_nodes.push(root_idx);    // start from root node
     while(!processing_nodes.empty()) {
         int nid = processing_nodes.front();
+        if (nid == 141) {
+            LOG(INFO);
+        }
+
         processing_nodes.pop();
         auto& node = tree_ptr->nodes[nid];
 
@@ -148,23 +152,45 @@ void DeltaTreeRemover::sort_potential_nodes_by_gain(int root_idx) {
             continue;
         }
 
+        if (!node.is_valid) {
+            continue;
+        }
+
         if (!node.is_robust()) {
             // sort the nodes by descending order of gain
             std::sort(node.potential_nodes_indices.begin(), node.potential_nodes_indices.end(),
                       [&](int i, int j){
-                          return tree_ptr->nodes[i].gain.gain_value > tree_ptr->nodes[j].gain.gain_value;
+                          return fabs(tree_ptr->nodes[i].gain.gain_value) > fabs(tree_ptr->nodes[j].gain.gain_value);
                       });
 
             // sync the order through potential nodes
             for (int j: node.potential_nodes_indices) {
                 auto &potential_node = tree_ptr->nodes[j];
                 potential_node.potential_nodes_indices = node.potential_nodes_indices;
-                processing_nodes.push(potential_node.lch_index);
-                processing_nodes.push(potential_node.rch_index);
+                if (!potential_node.is_leaf) {
+                    processing_nodes.push(potential_node.lch_index);
+                    processing_nodes.push(potential_node.rch_index);
+                    if (potential_node.lch_index <= 0 || potential_node.rch_index <= 0) {
+                        LOG(FATAL);
+                    }
+
+                    if (potential_node.lch_index ==141 || potential_node.rch_index ==141) {
+                        LOG(INFO); /* todo: in tree 2, the left child of 57 is 141, while the parent of 141 is 55;
+                         the children of 55 and 57 are the same, there must be an index problem of nodes!
+                         this is caused by the training*/
+                    }
+                }
             }
         } else {
             processing_nodes.push(node.lch_index);
             processing_nodes.push(node.rch_index);
+            if (node.lch_index <= 0 || node.rch_index <= 0) {
+                LOG(FATAL);
+            }
+
+            if (node.lch_index ==141 || node.rch_index ==141) {
+                LOG(INFO);
+            }
         }
     }
 }

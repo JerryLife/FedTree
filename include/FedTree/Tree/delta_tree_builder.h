@@ -33,9 +33,9 @@ public:
     void get_topk_gain_in_a_level(const vector<DeltaTree::DeltaGain> &gain, vector<vector<gain_pair>> &topk_idx_gain,
                                   int n_nodes_in_level, int n_bins, int k = 1);
 
-    void get_threshold_gain_in_a_level(const vector<DeltaTree::DeltaGain> &gain, vector<vector<gain_pair>> &topk_idx_gain,
+    int get_threshold_gain_in_a_level(const vector<DeltaTree::DeltaGain> &gain, vector<vector<gain_pair>> &topk_idx_gain,
                                        int n_nodes_in_level, int n_bins, float_type min_diff, float_type max_range,
-                                       int level);
+                                       const vector<int> &n_samples_in_nodes);
 
     void update_ins2node_id() override;
 

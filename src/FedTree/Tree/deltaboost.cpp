@@ -41,6 +41,7 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     for (int i = 0; i < param.n_trees; ++i) {
         //one iteration may produce multiple trees, depending on objectives
         booster.boost(trees, gh_pairs_per_sample);
+        LOG(INFO) << "Number of nodes:" << trees[trees.size() - 1][0].nodes.size();
     }
 
 //    float_type score = predict_score(param, dataset);
@@ -238,7 +239,7 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
                 int depth = 0;
                 int last_idx = -1;
                 while (!cur_node.is_leaf) {
-                    if (cur_node.lch_index == -1 || cur_node.rch_index == -1) {
+                    if (cur_node.lch_index < 0 || cur_node.rch_index < 0) {
                         LOG(FATAL);
                     }
                     int fid = cur_node.split_feature_id;

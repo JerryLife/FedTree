@@ -142,6 +142,10 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 deltaboost_param->enable_delta = (strcasecmp("true", val) == 0);
             else if (str_name.compare("remove_ratio") == 0)
                 deltaboost_param->remove_ratio = atof(val);
+            else if (str_name.compare("min_diff_gain") == 0)
+                deltaboost_param->min_diff_gain = atof(val);
+            else if (str_name.compare("max_range_gain") == 0)
+                deltaboost_param->max_range_gain = atof(val);
             else
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {
@@ -173,7 +177,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
 
     if (deltaboost_param->enable_delta) {
         // copy gbdt params into deltaboost params
-        fl_param.deltaboost_param = *(new DeltaBoostParam(*gbdt_param, true, deltaboost_param->remove_ratio));
+        fl_param.deltaboost_param = *(std::unique_ptr<DeltaBoostParam>(
+                new DeltaBoostParam(gbdt_param, deltaboost_param)));
     }
 }
 

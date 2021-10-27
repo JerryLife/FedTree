@@ -41,11 +41,16 @@ struct GBDTParam {
 struct DeltaBoostParam : public GBDTParam {
     bool enable_delta = false;
     float_type remove_ratio = 0.0;
+    float_type min_diff_gain = 0;
+    float_type max_range_gain = 0;
 
     DeltaBoostParam() = default;
 
-    DeltaBoostParam(const GBDTParam & gbdt_param, bool enable_delta, float_type remove_ratio):
-    GBDTParam(gbdt_param), enable_delta(enable_delta), remove_ratio(remove_ratio) {}
+    DeltaBoostParam(const GBDTParam *gbdt_param, const DeltaBoostParam *deltaboost_param):
+    GBDTParam(*gbdt_param), enable_delta(deltaboost_param->enable_delta),
+    remove_ratio(deltaboost_param->remove_ratio),
+    min_diff_gain(deltaboost_param->min_diff_gain),
+    max_range_gain(deltaboost_param->max_range_gain) { }
 };
 
 #endif //FEDTREE_GBDTPARAM_H
