@@ -98,6 +98,7 @@ void TreeBuilder::predict_in_training(int k) {
         while (nid != -1 && (nodes_data[nid].is_pruned)) nid = nodes_data[nid].parent_index;
         y_predict_data[i] += lr * nodes_data[nid].base_weight;
     }
+    LOG(DEBUG) << y_predict;
 }
 
 void TreeBuilder::build_init(const GHPair sum_gh, int k) {
@@ -145,7 +146,7 @@ vector<Tree> TreeBuilder::build_approximate(const SyncArray<GHPair> &gradients, 
             }
         }
         //here
-        this->tree.prune_self(param.gamma);
+//        this->tree.prune_self(param.gamma); // disable prune
 //        LOG(INFO) << "y_predict: " << y_predict;
         if(update_y_predict)
             predict_in_training(k);

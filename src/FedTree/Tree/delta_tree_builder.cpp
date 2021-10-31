@@ -137,20 +137,20 @@ void DeltaTreeBuilder::find_split(int level) {
     LOG(DEBUG) << hist;
     compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist, 0);
 
-    vector<vector<gain_pair>> candidate_idx_gain;
-    get_topk_gain_in_a_level(gain, candidate_idx_gain, n_nodes_in_level, n_bins, 10);
-    vector<vector<gain_pair>> potential_idx_gain;
-    int update_n_nodes_in_a_level;
-    update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 3, 3);
-
-//    vector<int> n_samples_in_nodes(n_nodes_in_level);
-//    for (int i = nid_start_idx; i < nid_start_idx + n_nodes_in_level; ++i) {
-//        n_samples_in_nodes[i - nid_start_idx] = tree.nodes[i].n_instances;
-//    }
+//    vector<vector<gain_pair>> candidate_idx_gain;
+//    get_topk_gain_in_a_level(gain, candidate_idx_gain, n_nodes_in_level, n_bins, 10);
 //    vector<vector<gain_pair>> potential_idx_gain;
 //    int update_n_nodes_in_a_level;
-//    update_n_nodes_in_a_level = get_threshold_gain_in_a_level(gain, potential_idx_gain, n_nodes_in_level, n_bins,
-//                                                              param.min_diff_gain, param.max_range_gain, n_samples_in_nodes);
+//    update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 3, 3);
+
+    vector<int> n_samples_in_nodes(n_nodes_in_level);
+    for (int i = nid_start_idx; i < nid_start_idx + n_nodes_in_level; ++i) {
+        n_samples_in_nodes[i - nid_start_idx] = tree.nodes[i].n_instances;
+    }
+    vector<vector<gain_pair>> potential_idx_gain;
+    int update_n_nodes_in_a_level;
+    update_n_nodes_in_a_level = get_threshold_gain_in_a_level(gain, potential_idx_gain, n_nodes_in_level, n_bins,
+                                                              param.min_diff_gain, param.max_range_gain, n_samples_in_nodes);
 
     //LOG(INFO) << best_idx_gain;
     get_potential_split_points(potential_idx_gain, update_n_nodes_in_a_level, hist_fid_data, missing_gh, hist, level);
@@ -193,6 +193,7 @@ int DeltaTreeBuilder::get_threshold_gain_in_a_level(const vector<DeltaTree::Delt
     /**
      * @param min_diff: the min difference between two gains. |gain1 - gain2| >= min_diff
      * @param max_range: the max tolerable range of gains. All gains should be in range [max_gain - max_range, max_gain]
+     * @param n_samples_in_nodes: number of instances in nodes in this level (of size n_nodes_in_level)
      */
     auto arg_abs_max = [](const gain_pair &a, const gain_pair &b) {
         if (fabsf(a.second.gain_value) == fabsf(b.second.gain_value))
@@ -210,17 +211,21 @@ int DeltaTreeBuilder::get_threshold_gain_in_a_level(const vector<DeltaTree::Delt
 
     int total_size = 0;
     for (int i = 0; i < n_bins * n_nodes_in_level; i += n_bins) {
+        int nid = i / n_bins;
+        float_type min_diff_node = min_diff / (float)(n_samples_in_nodes[nid]) * (float)n_instances;
+
         vector<gain_pair> potential_idx_gain_per_node;
         std::sort(idx_gain.begin() + i, idx_gain.begin() + i + n_bins, arg_abs_max);
         float_type last_gain = fabsf(idx_gain[i].second.gain_value);
-        for (int j = i; j < i + n_bins; ++j) {
-            if (fabs(idx_gain[i + j].second.gain_value) < fabs(idx_gain[i].second.gain_value) - max_range) {
+        potential_idx_gain_per_node.emplace_back(idx_gain[i]);
+        for (int j = i + 1; j < i + n_bins; ++j) {
+            if (fabs(idx_gain[j].second.gain_value) < fabs(idx_gain[i].second.gain_value) - max_range) {
                 break;  // gain too small, unacceptable
             }
 
-            if (fabs(idx_gain[i + j].second.gain_value) <= last_gain - min_diff) {
-                last_gain = fabsf(idx_gain[i + j].second.gain_value);
-                potential_idx_gain_per_node.emplace_back(idx_gain[i + j]);
+            if (fabs(idx_gain[j].second.gain_value) <= last_gain - min_diff_node) {
+                last_gain = fabs(idx_gain[j].second.gain_value);
+                potential_idx_gain_per_node.emplace_back(idx_gain[j]);
             }
         }
 
@@ -555,6 +560,7 @@ void DeltaTreeBuilder::predict_in_training(int k) {
         while (nid != -1 && (nodes_data[nid].is_pruned)) nid = nodes_data[nid].parent_index;
         y_predict_data[i] += lr * nodes_data[nid].base_weight;
     }
+    LOG(DEBUG) << y_predict;
 }
 
 
