@@ -823,7 +823,7 @@ namespace el {
 #if ELPP_VARIADIC_TEMPLATES_SUPPORTED
             static const char kFormatSpecifierCharValue = 'v';
 #endif  // ELPP_VARIADIC_TEMPLATES_SUPPORTED
-            static const unsigned int kMaxLogPerContainer = 100;
+            static const unsigned int kMaxLogPerContainer = 700;
             static const unsigned int kMaxLogPerCounter = 100000;
             static const unsigned int kDefaultSubsecondPrecision = 3;
             static const base::type::VerboseLevel kMaxVerboseLevel = 9;

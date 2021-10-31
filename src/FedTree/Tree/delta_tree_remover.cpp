@@ -141,9 +141,6 @@ void DeltaTreeRemover::sort_potential_nodes_by_gain(int root_idx) {
     processing_nodes.push(root_idx);    // start from root node
     while(!processing_nodes.empty()) {
         int nid = processing_nodes.front();
-        if (nid == 141) {
-            LOG(INFO);
-        }
 
         processing_nodes.pop();
         auto& node = tree_ptr->nodes[nid];
@@ -173,12 +170,6 @@ void DeltaTreeRemover::sort_potential_nodes_by_gain(int root_idx) {
                     if (potential_node.lch_index <= 0 || potential_node.rch_index <= 0) {
                         LOG(FATAL);
                     }
-
-                    if (potential_node.lch_index ==141 || potential_node.rch_index ==141) {
-                        LOG(INFO); /* todo: in tree 2, the left child of 57 is 141, while the parent of 141 is 55;
-                         the children of 55 and 57 are the same, there must be an index problem of nodes!
-                         this is caused by the training*/
-                    }
                 }
             }
         } else {
@@ -186,10 +177,6 @@ void DeltaTreeRemover::sort_potential_nodes_by_gain(int root_idx) {
             processing_nodes.push(node.rch_index);
             if (node.lch_index <= 0 || node.rch_index <= 0) {
                 LOG(FATAL);
-            }
-
-            if (node.lch_index ==141 || node.rch_index ==141) {
-                LOG(INFO);
             }
         }
     }

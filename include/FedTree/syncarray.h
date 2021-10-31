@@ -10,6 +10,7 @@
 
 #include "FedTree/util/log.h"
 #include "syncmem.h"
+#include <cstdio>
 
 /**
  * @brief Wrapper of SyncMem with a type
@@ -148,17 +149,18 @@ public:
 
     void log(el::base::type::ostream_t &ostream) const override {
         int i;
+        size_t maxLogPerContainer = 700;
         ostream << "[";
         const T *data = host_data();
-        for (i = 0; i < size() - 1 && i < el::base::consts::kMaxLogPerContainer - 1; ++i) {
+        for (i = 0; i < size() - 1 && i < maxLogPerContainer - 1; ++i) {
 //    for (i = 0; i < size() - 1; ++i) {
             ostream << data[i] << ",";
         }
         ostream << host_data()[i];
-        if (size() <= el::base::consts::kMaxLogPerContainer) {
+        if (size_ <= maxLogPerContainer) {
             ostream << "]";
         } else {
-            ostream << ", ...(" << size() - el::base::consts::kMaxLogPerContainer << " more)";
+            ostream << ", ...(" << size_ - maxLogPerContainer << " more)";
         }
     };
 #ifdef USE_CUDA

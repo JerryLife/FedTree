@@ -135,14 +135,13 @@ void DeltaTreeBuilder::find_split(int level) {
     vector<DeltaTree::DeltaGain> gain(n_max_splits);
     compute_histogram_in_a_level(level, n_max_splits, n_bins, n_nodes_in_level, hist_fid_data, missing_gh, hist);
     LOG(DEBUG) << hist;
-    compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist);
+    compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist, 0);
 
     vector<vector<gain_pair>> candidate_idx_gain;
     get_topk_gain_in_a_level(gain, candidate_idx_gain, n_nodes_in_level, n_bins, 10);
     vector<vector<gain_pair>> potential_idx_gain;
     int update_n_nodes_in_a_level;
     update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 3, 3);
-
 
 //    vector<int> n_samples_in_nodes(n_nodes_in_level);
 //    for (int i = nid_start_idx; i < nid_start_idx + n_nodes_in_level; ++i) {
@@ -271,7 +270,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                                                    SyncArray<GHPair> &hist) {
     std::chrono::high_resolution_clock timer;
 
-    const SyncArray<int> &nid = ins2node_id;
+//    const SyncArray<int> &nid = ins2node_id;
     const SyncArray<GHPair> &gh_pair = gradients;
 //    DeltaTree &tree = this->tree;
     const SyncArray<DeltaSplitPoint> &sp = this->sp;
@@ -374,7 +373,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                 {
                     auto hist_data_computed = hist.host_data() + nid0_to_compute * n_bins;
                     auto hist_data_to_compute = hist.host_data() + nid0_to_substract * n_bins;
-                    auto father_hist_data = last_hist.host_data() + (nid0_to_substract / 2) * n_bins;
+                    auto father_hist_data = last_hist.host_data() + parent_indices[nid0_to_substract] * n_bins;   // bug, this is not corresponding!
 #pragma omp parallel for
                     for (int i = 0; i < n_bins; i++) {
                         hist_data_to_compute[i] = father_hist_data[i] - hist_data_computed[i];
@@ -422,8 +421,8 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 
 void DeltaTreeBuilder::update_ins2node_id() {
     // update indices_in_node simultaneously
-
     TIMED_FUNC(timerObj);
+
     SyncArray<bool> has_splittable(1);
 //    auto &columns = shards.columns;
     //set new node id for each instance
@@ -500,10 +499,6 @@ void DeltaTreeBuilder::update_tree() {
 //#pragma omp parallel for
     for(int i = 0; i < n_nodes_in_level; i++){
         DeltaTree::DeltaGain best_split_gain = sp_data[i].gain;
-
-        if (sp_data[i].nid == 56) {
-            LOG(INFO);
-        }
 
         if (fabs(best_split_gain.gain_value) > rt_eps) {
             //do split
@@ -616,6 +611,7 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
             else {
                 base_gain.gain_value = -default_to_right_gain;  //negative means default split to right
             }
+
             gain[i] = base_gain;
         }
     }
@@ -656,7 +652,8 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
      * child nodes of both prior and potential nodes
      */
     vector<GHPair> old_last_hist = last_hist.to_vec();
-    vector<int> parent_index;
+    parent_indices.clear();
+
     for (int i = 0; i < candidate_idx_gain.size(); ++i) {
 
         int num_potential_nodes = candidate_idx_gain[i].size();
@@ -694,16 +691,12 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
             auto& best_split_gain = bst.second;
             int split_index = bst.first;
 
-            if (idx_in_level + nid_offset == 56) {
-                LOG(INFO);
-            }
-
             if (!tree.nodes[nid_offset + i].is_valid) {
                 sp_data[idx_in_level].split_fea_id = -1;
                 sp_data[idx_in_level].nid = -1;
                 child_offset += 2;
-                parent_index.push_back(idx_in_level + nid_offset);  // the parent of these two children
-                parent_index.push_back(idx_in_level + nid_offset);
+                parent_indices.push_back(idx_in_level);  // the relative index parent of these two children in layer
+                parent_indices.push_back(idx_in_level);
 
                 // todo: check, ThunderGBM uses return;
                 continue;
@@ -721,8 +714,8 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
             sp_data[idx_in_level].no_split_value_update = 0;
 
             child_offset += 2;
-            parent_index.push_back(idx_in_level + nid_offset);  // the parent of these two children
-            parent_index.push_back(idx_in_level + nid_offset);
+            parent_indices.push_back(idx_in_level);  // the relative index parent of these two children in layer
+            parent_indices.push_back(idx_in_level);
         }
 
         // update ins2node_indices
@@ -744,7 +737,7 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
     // insert placeholders for children
     vector<DeltaTree::DeltaNode> child_nodes(2 * n_nodes_in_level);
     for (int i = 0; i < child_nodes.size(); ++i) {
-        child_nodes[i].parent_index = parent_index[i];
+        child_nodes[i].parent_index = parent_indices[i] + nid_offset;
         child_nodes[i].gain = *(new DeltaTree::DeltaGain());
         child_nodes[i].final_id = nid_offset + n_nodes_in_level + i;        // false calculation
         child_nodes[i].is_leaf = is_last_layer;

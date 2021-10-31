@@ -60,6 +60,9 @@ public:
 
     vector<int> num_nodes_per_level;    // number of nodes in each level, including potential nodes
     vector<vector<int>> ins2node_indices;   // each instance may be in multiple nodes
+
+    vector<int> parent_indices;     // ID: the relative index of child in the layer
+                                    // Value: the relative index of its parent in the layer
 };
 
 #endif //FEDTREE_DELTA_TREE_BUILDER_H

@@ -546,7 +546,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                                                    SyncArray<GHPair> &hist) {
     std::chrono::high_resolution_clock timer;
 
-    SyncArray<int> &nid = ins2node_id;
+//    SyncArray<int> &nid = ins2node_id;
     SyncArray<GHPair> &gh_pair = gradients;
     Tree &tree = this->tree;
     SyncArray<SplitPoint> &sp = this->sp;
@@ -898,7 +898,7 @@ void HistTreeBuilder::update_ins2node_id() {
         int n_column = sorted_dataset.n_features();
         auto dense_bin_id_data = dense_bin_id.host_data();
         int max_num_bin = param.max_num_bin;
-#pragma omp parallel for
+//#pragma omp parallel for // bug in computing n_instances
         for (int iid = 0; iid < n_instances; iid++) {
             int nid = nid_data[iid];
             const Tree::TreeNode &node = nodes_data[nid];
