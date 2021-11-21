@@ -513,6 +513,10 @@ void DeltaTreeBuilder::update_tree() {
             DeltaTree::DeltaNode &node = nodes_data[nid];
             node.gain = best_split_gain;
 
+            if (node.lch_index == 77 || node.rch_index == 77) {
+                printf("\n");
+            }
+
             DeltaTree::DeltaNode &lch = nodes_data[node.lch_index];//left child
             DeltaTree::DeltaNode &rch = nodes_data[node.rch_index];//right child
             lch.is_valid = node.is_valid;
@@ -524,6 +528,9 @@ void DeltaTreeBuilder::update_tree() {
             node.split_bid = sp_data[i].split_bid;
             rch.sum_gh_pair = sp_data[i].rch_sum_gh;
             if (sp_data[i].default_right) {
+                if (fabs(p_missing_gh.g) > 1e-7 && fabs(p_missing_gh.h) > 1e-7) {
+                    LOG(FATAL);
+                }
                 rch.sum_gh_pair = rch.sum_gh_pair + p_missing_gh;
                 // LOG(INFO) << "RCH" << rch.sum_gh_pair;
                 node.default_right = true;
@@ -554,7 +561,7 @@ void DeltaTreeBuilder::predict_in_training(int k) {
     auto nid_data = ins2node_id.host_data();
     const auto &nodes_data = tree.nodes;
     auto lr = param.learning_rate;
-#pragma omp parallel for
+//#pragma omp parallel for
     for(int i = 0; i < n_instances; i++){
         int nid = nid_data[i];
         while (nid != -1 && (nodes_data[nid].is_pruned)) nid = nodes_data[nid].parent_index;
@@ -647,7 +654,7 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
     assert(nid_offset + candidate_idx_gain.size() == tree.nodes.size());
     int child_offset = 0;       // number of current child nodes
     int potential_offset = 0;   // number of current potential nodes
-    bool is_last_layer = (level == param.depth - 2);
+    bool is_last_layer = (level == param.depth - 1);
     /*
      * nodes from previous levels
      * [nid_offset]

@@ -236,10 +236,13 @@ int main(int argc, char** argv){
         if (fl_param.deltaboost_param.enable_delta) {
             auto deltaboost = std::unique_ptr<DeltaBoost>(new DeltaBoost());
             float_type score;
-//            deltaboost->train(fl_param.deltaboost_param, dataset);
-//
-//            parser.save_model("cache/gisette.model", fl_param.deltaboost_param, *deltaboost, dataset);
-            parser.load_model("cache/gisette.model", fl_param.deltaboost_param, *deltaboost, dataset);
+            deltaboost->train(fl_param.deltaboost_param, dataset);
+
+            string model_path = string_format("cache/%s.model",
+                                              fl_param.deltaboost_param.dataset_name.c_str());
+
+            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
+            parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
 
             if(use_global_test_set) {
                 score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);

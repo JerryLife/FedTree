@@ -258,7 +258,7 @@ void TreeBuilder::update_tree() {
     float_type rt_eps = param.rt_eps;
     float_type lambda = param.lambda;
 
-    #pragma omp parallel for
+//    #pragma omp parallel for
     for(int i = 0; i < n_nodes_in_level; i++){
         float_type best_split_gain = sp_data[i].gain;
         if (best_split_gain > rt_eps) {
@@ -268,6 +268,10 @@ void TreeBuilder::update_tree() {
             int nid = sp_data[i].nid;
             Tree::TreeNode &node = nodes_data[nid];
             node.gain = best_split_gain;
+
+            if (node.lch_index == 25 || node.rch_index == 25) {
+                printf("\n");
+            }
 
             Tree::TreeNode &lch = nodes_data[node.lch_index];//left child
             Tree::TreeNode &rch = nodes_data[node.rch_index];//right child
@@ -280,6 +284,9 @@ void TreeBuilder::update_tree() {
             node.split_bid = sp_data[i].split_bid;
             rch.sum_gh_pair = sp_data[i].rch_sum_gh;
             if (sp_data[i].default_right) {
+                if (fabs(p_missing_gh.g) > 1e-7 || fabs(p_missing_gh.h) > 1e-7) {
+                    LOG(FATAL);
+                }
                 rch.sum_gh_pair = rch.sum_gh_pair + p_missing_gh;
                // LOG(INFO) << "RCH" << rch.sum_gh_pair;
                 node.default_right = true;

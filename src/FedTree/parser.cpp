@@ -61,6 +61,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     DeltaBoostParam *deltaboost_param = &fl_param.deltaboost_param;
     deltaboost_param->enable_delta = "false";
     deltaboost_param->remove_ratio = 0.0;
+    deltaboost_param->dataset_name = "";
 
     if (argc < 2) {
         printf("Usage: <config>\n");
@@ -146,6 +147,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 deltaboost_param->min_diff_gain = atof(val);
             else if (str_name.compare("max_range_gain") == 0)
                 deltaboost_param->max_range_gain = atof(val);
+            else if (str_name.compare("dataset_name") == 0)
+                deltaboost_param->dataset_name = val;
             else
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {

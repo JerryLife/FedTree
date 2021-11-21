@@ -49,7 +49,7 @@ void DeltaBooster::boost(vector<vector<DeltaTree>> &boosted_model, vector<vector
 
     std::ofstream myfile;
     myfile.open ("data.txt", std::ios_base::app);
-    myfile << metric->get_score(fbuilder->get_y_predict()) << "\n";
+    myfile << fbuilder->get_y_predict() << "\n";
     myfile.close();
     LOG(INFO) << metric->get_name() << " = " << metric->get_score(fbuilder->get_y_predict());
 }

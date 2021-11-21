@@ -95,8 +95,8 @@ void Booster::boost(vector<vector<Tree>> &boosted_model) {
     PERFORMANCE_CHECKPOINT(timerObj);
     //show metric on training set
     std::ofstream myfile;
-    myfile.open ("data.txt", std::ios_base::app);
-    myfile << metric->get_score(fbuilder->get_y_predict()) << "\n";
+    myfile.open ("data-base.txt", std::ios_base::app);
+    myfile << fbuilder->get_y_predict() << "\n";
     myfile.close();
     LOG(INFO) << metric->get_name() << " = " << metric->get_score(fbuilder->get_y_predict());
 }

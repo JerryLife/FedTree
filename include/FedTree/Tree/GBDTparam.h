@@ -40,6 +40,7 @@ struct GBDTParam {
 
 struct DeltaBoostParam : public GBDTParam {
     bool enable_delta = false;
+    std::string dataset_name;
     float_type remove_ratio = 0.0;
     float_type min_diff_gain = 0;
     float_type max_range_gain = 0;
@@ -50,7 +51,8 @@ struct DeltaBoostParam : public GBDTParam {
     GBDTParam(*gbdt_param), enable_delta(deltaboost_param->enable_delta),
     remove_ratio(deltaboost_param->remove_ratio),
     min_diff_gain(deltaboost_param->min_diff_gain),
-    max_range_gain(deltaboost_param->max_range_gain) { }
+    max_range_gain(deltaboost_param->max_range_gain),
+    dataset_name(deltaboost_param->dataset_name) { }
 };
 
 #endif //FEDTREE_GBDTPARAM_H

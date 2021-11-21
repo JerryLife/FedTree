@@ -703,23 +703,23 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                           hist.host_data(), hist.host_data());
     LOG(DEBUG) << hist;
 
-    auto nodes_data = tree.nodes.host_data();
-    auto missing_gh_data = missing_gh.host_data();
-    auto cut_col_ptr = cut.cut_col_ptr.host_data();
-    auto hist_data = hist.host_data();
-//#pragma omp parallel for
-    for (int pid = 0; pid < n_partition; pid++) {
-        int nid0 = pid / n_column;
-        int nid = nid0 + nid_offset;
-        //            todo: check, ThunderGBM uses return;
-        if (!nodes_data[nid].splittable()) continue;
-        int fid = pid % n_column;
-        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
-            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
-            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
-        }
-    }
-    return;
+//    auto nodes_data = tree.nodes.host_data();
+//    auto missing_gh_data = missing_gh.host_data();
+//    auto cut_col_ptr = cut.cut_col_ptr.host_data();
+//    auto hist_data = hist.host_data();
+////#pragma omp parallel for
+//    for (int pid = 0; pid < n_partition; pid++) {
+//        int nid0 = pid / n_column;
+//        int nid = nid0 + nid_offset;
+//        //            todo: check, ThunderGBM uses return;
+//        if (!nodes_data[nid].splittable()) continue;
+//        int fid = pid % n_column;
+//        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
+//            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
+//            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
+//        }
+//    }
+//    return;
 }
 
 
