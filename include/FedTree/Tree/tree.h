@@ -53,7 +53,7 @@ public:
         int pid;
         float_type split_value;
         unsigned char split_bid;
-        bool default_right;
+        bool default_right = false;
         bool is_leaf = true;
         bool is_valid;// non-valid nodes are those that are "children" of leaf nodes
         bool is_pruned = false;// pruned after pruning

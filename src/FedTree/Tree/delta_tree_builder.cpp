@@ -134,7 +134,6 @@ void DeltaTreeBuilder::find_split(int level) {
     SyncArray<GHPair> hist(n_max_splits);
     vector<DeltaTree::DeltaGain> gain(n_max_splits);
     compute_histogram_in_a_level(level, n_max_splits, n_bins, n_nodes_in_level, hist_fid_data, missing_gh, hist);
-    LOG(DEBUG) << hist;
     compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist, 0);
 
 //    vector<vector<gain_pair>> candidate_idx_gain;
@@ -281,6 +280,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
     const SyncArray<DeltaSplitPoint> &sp = this->sp;
     const HistCut &cut = this->cut;
     const auto &dense_bin_id = this->dense_bin_id;
+    int nid_offset = tree.nodes.size() - n_nodes_in_level;
 //    auto &last_hist = this->last_hist;
 
     TIMED_FUNC(timerObj);
@@ -339,7 +339,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
             auto gh_data = gh_pair.host_data();
             auto dense_bin_id_data = dense_bin_id.host_data();
             auto max_num_bin = param.max_num_bin;
-            int nid_offset = tree.nodes.size() - n_nodes_in_level;
+
 
             for (int i = 0; i < n_nodes_in_level / 2; ++i) {
 
@@ -378,7 +378,8 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                 {
                     auto hist_data_computed = hist.host_data() + nid0_to_compute * n_bins;
                     auto hist_data_to_compute = hist.host_data() + nid0_to_substract * n_bins;
-                    auto father_hist_data = last_hist.host_data() + parent_indices[nid0_to_substract] * n_bins;   // bug, this is not corresponding!
+                    auto father_hist_data = last_hist.host_data() + parent_indices[nid0_to_substract] *
+                                                                    n_bins;   // bug, this is not corresponding!
 #pragma omp parallel for
                     for (int i = 0; i < n_bins; i++) {
                         hist_data_to_compute[i] = father_hist_data[i] - hist_data_computed[i];
@@ -396,31 +397,31 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
         for (int i = 0; i < n_nodes_in_level * n_bins; i++) {
             last_hist_data[i] = hist_data[i];
         }
+
+
+        this->build_n_hist++;
+        inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
+                              hist.host_data(), hist.host_data());
+        LOG(DEBUG) << hist;
     }
 
-    this->build_n_hist++;
-    inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
-                          hist.host_data(), hist.host_data());
-    LOG(DEBUG) << hist;
+    // handle missing data
+    auto &nodes_data = tree.nodes;
+    auto missing_gh_data = missing_gh.host_data();
+    auto cut_col_ptr = cut.cut_col_ptr.host_data();
+    auto hist_data = hist.host_data();
 
-//    // deal with missing data. Not sure if it can be safely delete
-//    auto &nodes_data = tree.nodes;
-//    auto missing_gh_data = missing_gh.host_data();
-//    auto cut_col_ptr = cut.cut_col_ptr.host_data();
-//    auto hist_data = hist.host_data();
-
-//    for (int pid = 0; pid < n_partition; pid++) {
-//        int nid0 = pid / n_column;
-//        int nid = nid0 + nid_offset;
-//        //            todo: check, ThunderGBM uses return;
-//        if (!nodes_data[nid].splittable()) continue;
-//        int fid = pid % n_column;
-//        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
-//            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
-//            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
-//        }
-//    }
-    return;
+    for (int pid = 0; pid < n_partition; pid++) {
+        int nid0 = pid / n_column;
+        int nid = nid0 + nid_offset;
+        //            todo: check, ThunderGBM uses return;
+        if (!nodes_data[nid].splittable()) continue;
+        int fid = pid % n_column;
+        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
+            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
+            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
+        }
+    }
 }
 
 
@@ -513,10 +514,6 @@ void DeltaTreeBuilder::update_tree() {
             DeltaTree::DeltaNode &node = nodes_data[nid];
             node.gain = best_split_gain;
 
-            if (node.lch_index == 77 || node.rch_index == 77) {
-                printf("\n");
-            }
-
             DeltaTree::DeltaNode &lch = nodes_data[node.lch_index];//left child
             DeltaTree::DeltaNode &rch = nodes_data[node.rch_index];//right child
             lch.is_valid = node.is_valid;
@@ -528,9 +525,6 @@ void DeltaTreeBuilder::update_tree() {
             node.split_bid = sp_data[i].split_bid;
             rch.sum_gh_pair = sp_data[i].rch_sum_gh;
             if (sp_data[i].default_right) {
-                if (fabs(p_missing_gh.g) > 1e-7 && fabs(p_missing_gh.h) > 1e-7) {
-                    LOG(FATAL);
-                }
                 rch.sum_gh_pair = rch.sum_gh_pair + p_missing_gh;
                 // LOG(INFO) << "RCH" << rch.sum_gh_pair;
                 node.default_right = true;
@@ -617,7 +611,6 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
             auto lch_gh = father_gh - rch_gh;
             DeltaTree::DeltaGain base_gain(0, lch_gh.g, lch_gh.h, rch_gh.g, rch_gh.h,
                                            father_gh.g, father_gh.h, param.lambda);
-            // assert(default_to_right_gain >= 0 && default_to_left_gain >= 0);
             if (default_to_left_gain > default_to_right_gain) {
                 base_gain.gain_value = default_to_left_gain;
             }
@@ -633,7 +626,7 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
 
 void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>> &candidate_idx_gain,
                                                   const int n_nodes_in_level,
-                                                  const int *hist_fid, SyncArray<GHPair> &/*missing_gh*/,
+                                                  const int *hist_fid, SyncArray<GHPair> &missing_gh,
                                                   SyncArray<GHPair> &hist, int level) {
     /**
      * Update sp and tree.nodes, ins2nodes_indices should also be updated by duplication
@@ -642,7 +635,7 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
     const int nid_offset = num_nodes_per_level.empty() ? 0 :
             std::accumulate(num_nodes_per_level.begin(), num_nodes_per_level.end(), 0);
     const auto hist_data = hist.host_data();
-//    const auto missing_gh_data = missing_gh.host_data();
+    const auto missing_gh_data = missing_gh.host_data();
     const auto cut_val_data = cut.cut_points_val.host_data();
     const auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
 
@@ -718,10 +711,10 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
             sp_data[idx_in_level].split_fea_id = fid;
             sp_data[idx_in_level].nid = idx_in_level + nid_offset;
             sp_data[idx_in_level].gain = best_split_gain;
-            int n_column = sorted_dataset.n_features();
+            size_t n_column = sorted_dataset.n_features();
             sp_data[idx_in_level].fval = cut_val_data[split_index % n_bins];
             sp_data[idx_in_level].split_bid = (unsigned char) (split_index % n_bins - cut_col_ptr_data[fid]);
-//            sp_data[idx_in_level].fea_missing_gh = missing_gh_data[i * n_column + hist_fid[split_index]];
+            sp_data[idx_in_level].fea_missing_gh = missing_gh_data[i * n_column + hist_fid[split_index]];
             sp_data[idx_in_level].default_right = best_split_gain.gain_value < 0;
             sp_data[idx_in_level].rch_sum_gh = hist_data[split_index];
             sp_data[idx_in_level].no_split_value_update = 0;

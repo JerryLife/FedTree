@@ -201,7 +201,7 @@ void TreeBuilder::build_tree_by_predefined_structure(const SyncArray<GHPair> &gr
             }
         }
         //here
-        this->tree.prune_self(param.gamma);
+//        this->tree.prune_self(param.gamma);
         predict_in_training(k);
         tree = this->tree;
 //        tree.nodes.resize(this->trees.nodes.size());
@@ -269,10 +269,6 @@ void TreeBuilder::update_tree() {
             Tree::TreeNode &node = nodes_data[nid];
             node.gain = best_split_gain;
 
-            if (node.lch_index == 25 || node.rch_index == 25) {
-                printf("\n");
-            }
-
             Tree::TreeNode &lch = nodes_data[node.lch_index];//left child
             Tree::TreeNode &rch = nodes_data[node.rch_index];//right child
             lch.is_valid = true; //TODO: broadcast lch and rch
@@ -284,9 +280,6 @@ void TreeBuilder::update_tree() {
             node.split_bid = sp_data[i].split_bid;
             rch.sum_gh_pair = sp_data[i].rch_sum_gh;
             if (sp_data[i].default_right) {
-                if (fabs(p_missing_gh.g) > 1e-7 || fabs(p_missing_gh.h) > 1e-7) {
-                    LOG(FATAL);
-                }
                 rch.sum_gh_pair = rch.sum_gh_pair + p_missing_gh;
                // LOG(INFO) << "RCH" << rch.sum_gh_pair;
                 node.default_right = true;
