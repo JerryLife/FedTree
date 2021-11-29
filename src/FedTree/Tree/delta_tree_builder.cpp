@@ -132,7 +132,7 @@ void DeltaTreeBuilder::find_split(int level) {
     auto t_build_start = timer.now();
 
     SyncArray<GHPair> hist(n_max_splits);
-    vector<DeltaTree::DeltaGain> gain(n_max_splits);
+    vector<DeltaTree::DeltaGain> gain(n_nodes_in_level * n_bins);
     compute_histogram_in_a_level(level, n_max_splits, n_bins, n_nodes_in_level, hist_fid_data, missing_gh, hist);
     compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist, 0);
 
@@ -398,12 +398,12 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
             last_hist_data[i] = hist_data[i];
         }
 
-
-        this->build_n_hist++;
-        inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
-                              hist.host_data(), hist.host_data());
-        LOG(DEBUG) << hist;
     }
+
+    this->build_n_hist++;
+    inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
+                          hist.host_data(), hist.host_data());
+    LOG(DEBUG) << hist;
 
     // handle missing data
     auto &nodes_data = tree.nodes;

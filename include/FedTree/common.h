@@ -16,8 +16,11 @@
 #include "cstdlib"
 #include "config.h"
 #include "thrust/tuple.h"
+#include "boost/json.hpp"
 //#include "FedTree/Encryption/HE.h"
 #include "FedTree/Encryption/paillier.h"
+
+namespace json = boost::json;
 
 
 using std::vector;
@@ -204,6 +207,27 @@ private:
         ar & g;
         ar & h;
         ar & encrypted;
+    }
+
+    // json parser
+    friend GHPair tag_invoke(json::value_to_tag<GHPair>, json::value const& v) {
+        auto &o = v.as_object();
+
+        GHPair gh_pair;
+        gh_pair.g = v.at("g").as_double();
+        gh_pair.h = v.at("h").as_double();
+        gh_pair.encrypted = v.at("encrypted").as_bool();
+
+        return gh_pair;
+    }
+
+    //json parser
+    friend void tag_invoke(json::value_from_tag, json::value& v, GHPair const& gh_pair) {
+        v = json::object{
+                {"g",         gh_pair.g},
+                {"h",         gh_pair.h},
+                {"encrypted", gh_pair.encrypted}
+        };
     }
 };
 

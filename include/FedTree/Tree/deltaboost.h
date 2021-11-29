@@ -40,6 +40,26 @@ private:
         ar & gh_pairs_per_sample;
     }
 
+    // json parser
+    friend DeltaBoost tag_invoke(json::value_to_tag<DeltaBoost>, json::value const& v) {
+        auto &o = v.as_object();
+
+        DeltaBoost deltaBoost;
+
+        deltaBoost.trees = json::value_to<std::vector<std::vector<DeltaTree>>>(v.at("trees"));
+        deltaBoost.gh_pairs_per_sample = json::value_to<std::vector<std::vector<GHPair>>>(v.at("gh_pairs_per_sample"));
+
+        return deltaBoost;
+    }
+
+    //json parser
+    friend void tag_invoke(json::value_from_tag, json::value& v, DeltaBoost const& deltaBoost) {
+        v = json::object {
+                {"trees", json::value_from(deltaBoost.trees)},
+                {"gh_pairs_per_sample", json::value_from(deltaBoost.gh_pairs_per_sample)}
+        };
+    }
+
 };
 
 #endif //FEDTREE_DELTABOOST_H

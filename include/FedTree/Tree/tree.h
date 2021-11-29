@@ -8,10 +8,13 @@
 
 #include "boost/serialization/vector.hpp"
 #include "boost/serialization/base_object.hpp"
+#include <boost/json.hpp>
 
 #include "sstream"
 #include "FedTree/syncarray.h"
 #include "GBDTparam.h"
+
+namespace json = boost::json;
 
 
 //class SplitPoint {
@@ -195,6 +198,33 @@ struct DeltaTree : public Tree {
             ar & self_h;
             ar & lambda;
         }
+
+        friend DeltaGain tag_invoke(json::value_to_tag<DeltaGain>, json::value const& v) {
+            auto &o = v.as_object();
+            return {
+                static_cast<float_type>(o.at("gain_value").as_double()),
+                static_cast<float_type>(o.at("lch_g").as_double()),
+                static_cast<float_type>(o.at("lch_h").as_double()),
+                static_cast<float_type>(o.at("rch_g").as_double()),
+                static_cast<float_type>(o.at("rch_h").as_double()),
+                static_cast<float_type>(o.at("self_g").as_double()),
+                static_cast<float_type>(o.at("self_h").as_double()),
+                static_cast<float_type>(o.at("lambda").as_double())
+            };
+        }
+
+        friend void tag_invoke(json::value_from_tag, json::value& v, DeltaGain const& deltaGain) {
+            v = json::object {
+                    {"gain_value", deltaGain.gain_value},
+                    {"lch_g", deltaGain.lch_g},
+                    {"lch_h", deltaGain.lch_h},
+                    {"rch_g", deltaGain.rch_g},
+                    {"rch_h", deltaGain.rch_h},
+                    {"self_g", deltaGain.self_g},
+                    {"self_h", deltaGain.self_h},
+                    {"lambda", deltaGain.lambda}
+            };
+        }
     };
 
     struct DeltaNode : TreeNode {
@@ -282,6 +312,55 @@ struct DeltaTree : public Tree {
             ar & potential_nodes_indices;
         }
 
+        friend DeltaNode tag_invoke(json::value_to_tag<DeltaNode>, json::value const& v) {
+            auto &o = v.as_object();
+
+            DeltaNode deltaNode;
+
+            deltaNode.final_id = o.at("final_id").as_int64();
+            deltaNode.lch_index = o.at("lch_index").as_int64();
+            deltaNode.rch_index = o.at("rch_index").as_int64();
+            deltaNode.parent_index = o.at("parent_index").as_int64();
+            deltaNode.gain = json::value_to<DeltaGain>(o.at("gain"));
+            deltaNode.base_weight = o.at("base_weight").as_double();
+            deltaNode.split_feature_id = o.at("split_feature_id").as_int64();
+            deltaNode.pid = o.at("pid").as_int64();
+            deltaNode.split_value = o.at("split_value").as_double();
+            deltaNode.split_bid = o.at("split_bid").as_int64();
+            deltaNode.default_right = o.at("default_right").as_bool();
+            deltaNode.is_leaf = o.at("is_leaf").as_bool();
+            deltaNode.is_valid = o.at("is_valid").as_bool();
+            deltaNode.is_pruned = o.at("is_pruned").as_bool();
+            deltaNode.sum_gh_pair.g = o.at("sum_gh_pair.g").as_double();
+            deltaNode.sum_gh_pair.h = o.at("sum_gh_pair.h").as_double();
+            deltaNode.n_instances = o.at("n_instances").as_int64();
+            deltaNode.potential_nodes_indices = boost::json::value_to<std::vector<int>>(o.at("potential_nodes_indices"));
+
+            return deltaNode;
+        }
+
+        friend void tag_invoke(json::value_from_tag, json::value& v, DeltaNode const& deltaNode) {
+            v = json::object {
+                    {"final_id", deltaNode.final_id},
+                    {"lch_index", deltaNode.lch_index},
+                    {"rch_index", deltaNode.rch_index},
+                    {"parent_index", deltaNode.parent_index},
+                    {"gain", json::value_from(deltaNode.gain)},
+                    {"base_weight", deltaNode.base_weight},
+                    {"split_feature_id", deltaNode.split_feature_id},
+                    {"pid", deltaNode.pid},
+                    {"split_value", deltaNode.split_value},
+                    {"split_bid", deltaNode.split_bid},
+                    {"default_right", deltaNode.default_right},
+                    {"is_leaf", deltaNode.is_leaf},
+                    {"is_valid", deltaNode.is_valid},
+                    {"is_pruned", deltaNode.is_pruned},
+                    {"sum_gh_pair.g", deltaNode.sum_gh_pair.g},
+                    {"sum_gh_pair.h", deltaNode.sum_gh_pair.h},
+                    {"n_instances", deltaNode.n_instances},
+                    {"potential_nodes_indices", json::value_from(deltaNode.potential_nodes_indices)}
+            };
+        }
     };
 
     DeltaTree() = default;
@@ -317,6 +396,26 @@ private:
         ar & nodes;
         ar & n_nodes_level;
         ar & final_depth;
+    }
+
+    friend DeltaTree tag_invoke(json::value_to_tag<DeltaTree>, json::value const& v) {
+        auto &o = v.as_object();
+
+        DeltaTree deltaTree;
+
+        deltaTree.nodes = json::value_to<std::vector<DeltaNode>>(v.at("nodes"));
+        deltaTree.n_nodes_level = json::value_to<std::vector<int>>(v.at("n_nodes_level"));
+        deltaTree.final_depth = v.at("final_depth").as_int64();
+
+        return deltaTree;
+    }
+
+    friend void tag_invoke(json::value_from_tag, json::value& v, DeltaTree const& deltaTree) {
+        v = json::object {
+                {"nodes", json::value_from(deltaTree.nodes)},
+                {"n_nodes_level", json::value_from(deltaTree.n_nodes_level)},
+                {"final_depth", deltaTree.final_depth}
+        };
     }
 
 };

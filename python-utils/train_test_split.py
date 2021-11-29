@@ -31,13 +31,22 @@ def load_data(data_path, data_fmt, scale_y=False) -> tuple:
 def split_data(data, labels, val_rate=0.1, test_rate=0.2, seed=0):
     print("Splitting...")
     indices = np.arange(data.shape[0])
-    train_val_data, test_data, train_val_labels, test_labels, train_val_idx, test_idx = \
-        train_test_split(data, labels, indices, test_size=test_rate, random_state=seed)
-    split_val_rate = val_rate / (1. - test_rate)
-    train_data, val_data, train_labels, val_labels, train_idx, val_idx = \
-        train_test_split(train_val_data, train_val_labels, train_val_idx, test_size=split_val_rate,
-                         random_state=seed)
-    return train_data, val_data, test_data, train_labels, val_labels, test_labels, train_idx, val_idx, test_idx
+    if np.isclose(val_rate, 0.0):
+        train_data, test_data, train_labels, test_labels, train_idx, test_idx = \
+            train_test_split(data, labels, indices, test_size=test_rate, random_state=seed)
+        return train_data, None, test_data, train_labels, None, test_labels, train_idx, None, test_idx
+    elif np.isclose(test_rate, 0.0):
+        train_data, val_data, train_labels, val_labels, train_idx, val_idx = \
+            train_test_split(data, labels, indices, test_size=val_rate, random_state=seed)
+        return train_data, val_data, None, train_labels, val_labels, None, train_idx, val_idx, None
+    else:
+        train_val_data, test_data, train_val_labels, test_labels, train_val_idx, test_idx = \
+            train_test_split(data, labels, indices, test_size=test_rate, random_state=seed)
+        split_val_rate = val_rate / (1. - test_rate)
+        train_data, val_data, train_labels, val_labels, train_idx, val_idx = \
+            train_test_split(train_val_data, train_val_labels, train_val_idx, test_size=split_val_rate,
+                             random_state=seed)
+        return train_data, val_data, test_data, train_labels, val_labels, test_labels, train_idx, val_idx, test_idx
 
 
 def save_data(X, y, save_path, save_fmt='libsvm'):
@@ -68,5 +77,7 @@ if __name__ == '__main__':
         X, y, val_rate=args.val_rate, test_rate=args.test_rate, seed=args.seed)
 
     save_data(train_X, train_y, save_path=args.data_path + ".train", save_fmt=args.output_fmt)
-    save_data(val_X, val_y, save_path=args.data_path + ".val", save_fmt=args.output_fmt)
-    save_data(test_X, test_y, save_path=args.data_path + ".test", save_fmt=args.output_fmt)
+    if not np.isclose(args.val_rate, 0):
+        save_data(val_X, val_y, save_path=args.data_path + ".val", save_fmt=args.output_fmt)
+    if not np.isclose(args.test_rate, 0):
+        save_data(test_X, test_y, save_path=args.data_path + ".test", save_fmt=args.output_fmt)

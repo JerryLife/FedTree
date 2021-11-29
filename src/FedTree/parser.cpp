@@ -15,6 +15,8 @@
 #include "boost/archive/text_oarchive.hpp"
 #include "boost/archive/text_iarchive.hpp"
 #include "boost/archive/archive_exception.hpp"
+#include "boost/json/src.hpp"
+#include "boost/json.hpp"
 
 using namespace std;
 
@@ -313,6 +315,30 @@ void Parser::save_model(const string &model_path, DeltaBoostParam &model_param, 
 
     LOG(INFO) << "saved to " << model_path;
 }
+
+void Parser::save_model_to_json(const string &model_path, DeltaBoostParam &model_param, DeltaBoost &model,
+                                DataSet &dataSet) {
+    json::object v;
+    v["objective"] = model_param.objective;
+    v["learning_rate"] = model_param.learning_rate;
+    v["num_class"] = model_param.num_class;
+    v["n_trees"] = model_param.n_trees;
+    v["label_size"] = dataSet.label.size();
+    v["labels"] = json::value_from(dataSet.label);
+
+    v["deltaboost"] = json::value_from(model);
+
+    ofstream out_model_file(model_path);
+    CHECK_EQ(out_model_file.is_open(), true);
+
+    out_model_file << boost::json::serialize(v) << endl;
+    out_model_file.close();
+
+    LOG(INFO) << "saved to " << model_path;
+}
+
+
+
 
 //void Parser::load_model(const string& model_path, DeltaBoostParam &model_param, DeltaBoost &model, DataSet & dataset) {
 //    LOG(INFO) << "Loading from " << model_path;
