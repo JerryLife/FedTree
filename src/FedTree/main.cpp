@@ -242,17 +242,19 @@ int main(int argc, char** argv){
 //            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
             parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
 
-            string model_path_json = string_format("cache/%s.json",
-                                              fl_param.deltaboost_param.dataset_name.c_str());
-            parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
+//            string model_path_json = string_format("cache/%s.json",
+//                                              fl_param.deltaboost_param.dataset_name.c_str());
+//            parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
 
             if(use_global_test_set) {
-                score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);
+                score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
+                                                  fl_param.deltaboost_param.n_used_trees);
                 scores.push_back(score);
             }
             else {
                 for(int i = 0; i < n_parties; i++) {
-                    score = deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i]);
+                    score = deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i],
+                                                      fl_param.deltaboost_param.n_used_trees);
                     scores.push_back(score);
                 }
             }
@@ -270,11 +272,13 @@ int main(int argc, char** argv){
 
             LOG(INFO) << "Predict after removals";
             if(use_global_test_set) {
-                deltaboost->predict_score(fl_param.deltaboost_param, test_dataset);
+                deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
+                                          fl_param.deltaboost_param.n_used_trees);
             }
             else {
                 for(int i = 0; i < n_parties; i++) {
-                    deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i]);
+                    deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i],
+                                              fl_param.deltaboost_param.n_used_trees);
                 }
             }
 

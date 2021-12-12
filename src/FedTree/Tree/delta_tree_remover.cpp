@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <queue>
+#include <random>
+#include <chrono>
 
 #include "FedTree/Tree/delta_tree_remover.h"
 
@@ -55,19 +57,30 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
     const auto csr_val_data = csr_val.host_data();
     const auto csr_row_ptr_data = csr_row_ptr.host_data();
 
-    auto get_val = [&](const int *row_idx, const float_type *row_val, int row_len, int idx,
-                       bool *is_missing) -> float_type {
+    // update the gain of all nodes according to ins2node_indices
+    vector<vector<int>> updating_node_indices(indices.size(), vector<int>(0));
+#pragma omp parallel for
+    for (int i = 0; i < indices.size(); ++i) {
+        updating_node_indices[i] = ins2node_indices[indices[i]];
+    }
+
+    auto get_val = [&](int iid, int fid,
+                   bool *is_missing) -> float_type {
+        int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
+        float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
+        int row_len = csr_row_ptr_data[iid + 1] - csr_row_ptr_data[iid];
+
         //binary search to get feature value
-        const int *left = row_idx;
-        const int *right = row_idx + row_len;
+        const int *left = col_idx;
+        const int *right = col_idx + row_len;
 
         while (left != right) {
             const int *mid = left + (right - left) / 2;
-            if (*mid == idx) {
+            if (*mid == fid) {
                 *is_missing = false;
-                return row_val[mid - row_idx];
+                return row_val[mid - col_idx];
             }
-            if (*mid > idx)
+            if (*mid > fid)
                 right = mid;
             else left = mid + 1;
         }
@@ -75,63 +88,157 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
         return 0;
     };
 
-//    vector<int> modified_leaf_indices;
+    // update GH_pair of node and parent (parallel)
 #pragma omp parallel for
-    for (int i = 0; i < indices.size(); ++i) {
-        int id = indices[i];
-        GHPair delta_gh_pair = delta_gh_pairs[i];
+    for (int i = 0; i < updating_node_indices.size(); ++i) {
+        for (int node_id: updating_node_indices[i]) {
+            // update sum_gh_pair
+            auto &node = tree_ptr->nodes[node_id];
+            node.sum_gh_pair.g += delta_gh_pairs[i].g;
+            node.sum_gh_pair.h += delta_gh_pairs[i].h;
+            node.gain.self_g += delta_gh_pairs[i].g;
+            node.gain.self_h += delta_gh_pairs[i].h;
 
-        const float_type gradient = delta_gh_pair.g;
-        const float_type hessian = delta_gh_pair.h;
+            // update missing_gh
+            bool is_missing;
+            float_type split_fval = get_val(indices[i], node.split_feature_id, &is_missing);
+            if (is_missing) {
+                node.gain.missing_g += delta_gh_pairs[i].g;
+                node.gain.missing_h += delta_gh_pairs[i].h;
+                if (node.default_right) {
+                    
+                } else {
 
-        int *col_idx = csr_col_idx_data + csr_row_ptr_data[id];
-        float_type *row_val = csr_val_data + csr_row_ptr_data[id];
-        int row_len = csr_row_ptr_data[id + 1] - csr_row_ptr_data[id];
-
-        std::queue<int> processing_nodes;
-        processing_nodes.push(0);    // start from root node
-        while (!processing_nodes.empty()) {
-            int nid = processing_nodes.front();
-            processing_nodes.pop();
-            auto& node = tree_ptr->nodes[nid];
-
-            if (!node.is_valid || node.is_robust()) {
-                continue;
-            }
-
-            if (node.is_leaf) {
-                // update leaf value
-                node.sum_gh_pair.g += gradient;
-                node.sum_gh_pair.h += hessian;
-                node.calc_weight(param.lambda);    // update node.base_weight
-//                modified_leaf_indices.emplace_back(nid);
-            } else {
-                for (int j: node.potential_nodes_indices) {
-                    auto &potential_node = tree_ptr->nodes[j];
-
-                    // update the gain in each potential node
-                    potential_node.sum_gh_pair.g += gradient;
-                    potential_node.sum_gh_pair.h += hessian;
-                    potential_node.calc_weight(param.lambda);
-
-                    bool is_missing;
-                    float_type split_fval = get_val(col_idx, row_val, row_len, node.split_feature_id, &is_missing);
-                    if (split_fval < potential_node.split_value) {
-                        // goes left
-                        processing_nodes.push(potential_node.lch_index);
-                        potential_node.gain.delta_left_(gradient, hessian);
-                    }
-                    else {
-                        // goes right
-                        processing_nodes.push(potential_node.rch_index);
-                        potential_node.gain.delta_right_(gradient, hessian);
-                    }
                 }
             }
         }
     }
 
+    // update left or right Gh_Pair of parent
+#pragma omp parallel for
+    for (int i = 0; i < updating_node_indices.size(); ++i) {
+        for (int node_id: updating_node_indices[i]) {
+            auto &node = tree_ptr->nodes[node_id];
+
+            if (node.parent_index == -1) continue;      // root node
+            auto &parent_node = tree_ptr->nodes[node.parent_index];
+            bool is_left_child = (parent_node.lch_index == node_id);
+            if (is_left_child) {
+                parent_node.gain.lch_g += delta_gh_pairs[i].g;
+                parent_node.gain.lch_h += delta_gh_pairs[i].h;
+            } else {
+                parent_node.gain.rch_g += delta_gh_pairs[i].g;
+                parent_node.gain.rch_h += delta_gh_pairs[i].h;
+            }
+        }
+    }
+
+#pragma omp parallel for
+    // calculate gain (parallel)
+    for (int i = 0; i < updating_node_indices.size(); ++i) {
+        for (int node_id: updating_node_indices[i]) {
+            // update sum_gh_pair
+            auto &node = tree_ptr->nodes[node_id];
+            node.calc_weight(param.lambda);
+            if (!node.is_leaf) {
+                node.gain.cal_gain_value();     // calculate new gain
+            }
+        }
+    }
+
     sort_potential_nodes_by_gain(0);
+
+
+//
+//
+//    SyncArray<int> csr_col_idx(dataSet->csr_col_idx.size());
+//    SyncArray<float_type> csr_val(dataSet->csr_val.size());
+//    SyncArray<int> csr_row_ptr(dataSet->csr_row_ptr.size());
+//    csr_col_idx.copy_from(dataSet->csr_col_idx.data(), dataSet->csr_col_idx.size());
+//    csr_val.copy_from(dataSet->csr_val.data(), dataSet->csr_val.size());
+//    csr_row_ptr.copy_from(dataSet->csr_row_ptr.data(), dataSet->csr_row_ptr.size());
+//
+//    const auto csr_col_idx_data = csr_col_idx.host_data();
+//    const auto csr_val_data = csr_val.host_data();
+//    const auto csr_row_ptr_data = csr_row_ptr.host_data();
+//
+//    auto get_val = [&](const int *row_idx, const float_type *row_val, int row_len, int idx,
+//                       bool *is_missing) -> float_type {
+//        //binary search to get feature value
+//        const int *left = row_idx;
+//        const int *right = row_idx + row_len;
+//
+//        while (left != right) {
+//            const int *mid = left + (right - left) / 2;
+//            if (*mid == idx) {
+//                *is_missing = false;
+//                return row_val[mid - row_idx];
+//            }
+//            if (*mid > idx)
+//                right = mid;
+//            else left = mid + 1;
+//        }
+//        *is_missing = true;
+//        return 0;
+//    };
+//
+////    vector<int> modified_leaf_indices;
+////#pragma omp parallel for
+//    for (int i = 0; i < indices.size(); ++i) {
+//        int id = indices[i];
+//        GHPair delta_gh_pair = delta_gh_pairs[i];
+//
+//        const float_type gradient = delta_gh_pair.g;
+//        const float_type hessian = delta_gh_pair.h;
+//
+//        int *col_idx = csr_col_idx_data + csr_row_ptr_data[id];
+//        float_type *row_val = csr_val_data + csr_row_ptr_data[id];
+//        int row_len = csr_row_ptr_data[id + 1] - csr_row_ptr_data[id];
+//
+//        std::queue<int> processing_nodes;
+//        processing_nodes.push(0);    // start from root node
+//        while (!processing_nodes.empty()) {
+//            int nid = processing_nodes.front();
+//            processing_nodes.pop();
+//            auto& node = tree_ptr->nodes[nid];
+//
+//            if (!node.is_valid || node.is_robust()) {
+//                continue;
+//            }
+//
+//            if (node.is_leaf) {
+//                // update leaf value
+//                node.sum_gh_pair.g += gradient;
+//                node.sum_gh_pair.h += hessian;
+//                node.calc_weight(param.lambda);    // update node.base_weight
+////                modified_leaf_indices.emplace_back(nid);
+//            } else {
+//                for (int j: node.potential_nodes_indices) {
+//                    auto &potential_node = tree_ptr->nodes[j];
+//
+//                    // update the gain in each potential node
+//                    potential_node.sum_gh_pair.g += gradient;
+//                    potential_node.sum_gh_pair.h += hessian;
+//                    potential_node.calc_weight(param.lambda);
+//
+//                    bool is_missing;
+//                    float_type split_fval = get_val(col_idx, row_val, row_len, node.split_feature_id, &is_missing);
+//                    if (split_fval < potential_node.split_value) {
+//                        // goes left
+//                        processing_nodes.push(potential_node.lch_index);
+//                        potential_node.gain.delta_left_(gradient, hessian);
+//                    }
+//                    else {
+//                        // goes right
+//                        processing_nodes.push(potential_node.rch_index);
+//                        potential_node.gain.delta_right_(gradient, hessian);
+//                    }
+//                }
+//            }
+//        }
+//    }
+
+//    sort_potential_nodes_by_gain(0);
 
 //    return modified_leaf_indices;
 }

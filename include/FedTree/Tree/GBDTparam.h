@@ -44,6 +44,8 @@ struct DeltaBoostParam : public GBDTParam {
     float_type remove_ratio = 0.0;
     float_type min_diff_gain = 0;
     float_type max_range_gain = 0;
+    int n_used_trees = 0;
+
 
     DeltaBoostParam() = default;
 
@@ -52,7 +54,14 @@ struct DeltaBoostParam : public GBDTParam {
     remove_ratio(deltaboost_param->remove_ratio),
     min_diff_gain(deltaboost_param->min_diff_gain),
     max_range_gain(deltaboost_param->max_range_gain),
-    dataset_name(deltaboost_param->dataset_name) { }
+    dataset_name(deltaboost_param->dataset_name),
+    n_used_trees(deltaboost_param->n_used_trees) {
+        if (deltaboost_param->n_used_trees > 0) {
+            this->n_used_trees = deltaboost_param->n_used_trees;
+        } else {
+            this->n_used_trees = gbdt_param->n_trees;
+        }
+    }
 };
 
 #endif //FEDTREE_GBDTPARAM_H

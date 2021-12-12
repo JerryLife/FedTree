@@ -40,7 +40,7 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     auto start = timer.now();
     for (int i = 0; i < param.n_trees; ++i) {
         //one iteration may produce multiple trees, depending on objectives
-        booster.boost(trees, gh_pairs_per_sample);
+        booster.boost(trees, gh_pairs_per_sample, ins2node_indices_per_tree);
         LOG(INFO) << "Number of nodes:" << trees[trees.size() - 1][0].nodes.size();
     }
 
@@ -64,7 +64,8 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
     for (int i = 0; i < trees.size(); ++i) {
         DeltaTree &tree = trees[i][0];
         vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
-        DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs);
+        auto &ins2node_indices = ins2node_indices_per_tree[i];
+        DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs, ins2node_indices);
         tree_remover.remove_samples_by_indices(sample_indices);
 
         if (i > 0) {
@@ -97,39 +98,6 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
             tree_remover.adjust_gradients_by_indices(adjust_indices, adjust_values);
         }
     }
-//    // serial deletion
-//    for (int sample_id: sample_indices) {
-//        vector<GHPair> delta_gh_pairs(dataset.n_instances(), 0);
-//        for (int i = 0; i < trees.size(); ++i) {
-//            DeltaTree& tree = trees[i][0];
-//            vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
-//            DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs);
-//            tree_remover.remove_sample_by_id(sample_id);
-//
-//            if (i > 0) {
-//                SyncArray<float_type> y_predict;
-//                y_predict.resize(dataset.n_instances());
-//                predict_raw(param, dataset, y_predict, i);
-//
-//                SyncArray<GHPair> updated_gh_pairs_array;
-//                updated_gh_pairs_array.resize(y.size());
-//                obj->get_gradient(y, y_predict, updated_gh_pairs_array);
-//                delta_gh_pairs = updated_gh_pairs_array.to_vec();
-//
-//                vector<int> adjust_indices;
-//                vector<GHPair> adjust_values;
-//                for (int j = 0; j < delta_gh_pairs.size(); ++j) {
-//                    if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
-//                            std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
-//                        adjust_indices.emplace_back(j);
-//                        adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
-//                    }
-//                }
-//
-//                tree_remover.adjust_gradients_by_indices(adjust_indices, adjust_values);
-//            }
-//        }
-//    }
 }
 
 float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet, int num_trees) {
@@ -200,7 +168,7 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
 //    int NUM_BLOCK = (n_instances - 1) / BLOCK_SIZE + 1;
 
     //use sparse format and binary search
-//#pragma omp parallel for      // remove for debug
+#pragma omp parallel for      // remove for debug
     for (int iid = 0; iid < n_instances; iid++) {
         auto get_next_child = [&](const DeltaTree::DeltaNode& node, float_type feaValue) {
             return feaValue < node.split_value ? node.lch_index : node.rch_index;

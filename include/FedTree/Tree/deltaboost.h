@@ -15,7 +15,7 @@ public:
     vector<vector<DeltaTree>> trees;
 
     vector<vector<GHPair>> gh_pairs_per_sample;       // first index is the iteration, second index is the sample ID
-
+    vector<vector<vector<int>>> ins2node_indices_per_tree;  // first index is tree id, second index is sample id, third index is node id
 
     DeltaBoost() = default;
 
@@ -38,6 +38,7 @@ private:
     template<class Archive> void serialize(Archive &ar, const unsigned int version) {
         ar & trees;
         ar & gh_pairs_per_sample;
+        ar & ins2node_indices_per_tree;
     }
 
     // json parser
@@ -48,6 +49,8 @@ private:
 
         deltaBoost.trees = json::value_to<std::vector<std::vector<DeltaTree>>>(v.at("trees"));
         deltaBoost.gh_pairs_per_sample = json::value_to<std::vector<std::vector<GHPair>>>(v.at("gh_pairs_per_sample"));
+        deltaBoost.ins2node_indices_per_tree = json::value_to<std::vector<std::vector<std::vector<int>>>>(
+                v.at("ins2node_indices_per_tree"));
 
         return deltaBoost;
     }
@@ -56,7 +59,8 @@ private:
     friend void tag_invoke(json::value_from_tag, json::value& v, DeltaBoost const& deltaBoost) {
         v = json::object {
                 {"trees", json::value_from(deltaBoost.trees)},
-                {"gh_pairs_per_sample", json::value_from(deltaBoost.gh_pairs_per_sample)}
+                {"gh_pairs_per_sample", json::value_from(deltaBoost.gh_pairs_per_sample)},
+                {"ins2node_indices_per_tree", json::value_from(deltaBoost.gh_pairs_per_sample)}
         };
     }
 

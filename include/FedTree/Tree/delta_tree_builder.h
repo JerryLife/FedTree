@@ -16,7 +16,9 @@ public:
 
     void init_nocutpoints(DataSet &dataset, const DeltaBoostParam &param);
 
-    vector<DeltaTree> build_delta_approximate(const SyncArray<GHPair> &gradients, bool update_y_predict = true);
+    vector<DeltaTree> build_delta_approximate(const SyncArray<GHPair> &gradients,
+                                              std::vector<std::vector<int>>& ins2node_indices_in_tree,
+                                              bool update_y_predict = true);
 
     void find_split(int level) override;
 

@@ -155,15 +155,16 @@ struct DeltaTree : public Tree {
         float_type rch_h = 0;
         float_type self_g = 0;
         float_type self_h = 0;
+        float_type missing_g = 0;
+        float_type missing_h = 0;
         float_type lambda = 0;
 
         DeltaGain() = default;
 
         DeltaGain(float_type gainValue, float_type lchG, float_type lchH, float_type rchG, float_type rchH,
-                  float_type selfG, float_type selfH, float_type lambda) : gain_value(gainValue), lch_g(lchG),
-                                                                           lch_h(lchH), rch_g(rchG), rch_h(rchH),
-                                                                           self_g(selfG), self_h(selfH),
-                                                                           lambda(lambda) {}
+                  float_type selfG, float_type selfH, float_type missing_g, float_type missing_h, float_type lambda)
+                  : gain_value(gainValue), lch_g(lchG), lch_h(lchH), rch_g(rchG), rch_h(rchH),
+                  self_g(selfG), self_h(selfH), missing_g(missing_g), missing_h(missing_h), lambda(lambda) {}
 
         float_type cal_gain_value() const {
             return std::max(0.f, (lch_g * lch_g) / (lch_h + lambda) + (rch_g * rch_g) / (rch_h + lambda) -
@@ -196,6 +197,8 @@ struct DeltaTree : public Tree {
             ar & rch_h;
             ar & self_g;
             ar & self_h;
+            ar & missing_g;
+            ar & missing_h;
             ar & lambda;
         }
 
@@ -209,6 +212,8 @@ struct DeltaTree : public Tree {
                 static_cast<float_type>(o.at("rch_h").as_double()),
                 static_cast<float_type>(o.at("self_g").as_double()),
                 static_cast<float_type>(o.at("self_h").as_double()),
+                static_cast<float_type>(o.at("missing_g").as_double()),
+                static_cast<float_type>(o.at("missing_h").as_double()),
                 static_cast<float_type>(o.at("lambda").as_double())
             };
         }
@@ -222,6 +227,8 @@ struct DeltaTree : public Tree {
                     {"rch_h", deltaGain.rch_h},
                     {"self_g", deltaGain.self_g},
                     {"self_h", deltaGain.self_h},
+                    {"missing_g", deltaGain.missing_g},
+                    {"missing_h", deltaGain.missing_h},
                     {"lambda", deltaGain.lambda}
             };
         }

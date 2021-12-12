@@ -14,8 +14,10 @@ class DeltaTreeRemover {
 public:
     DeltaTreeRemover() = default;
 
-    DeltaTreeRemover(DeltaTree* tree_ptr, const DataSet* dataSet, DeltaBoostParam param, vector<GHPair> gh_pairs):
-    tree_ptr(tree_ptr), dataSet(dataSet), param(std::move(param)), gh_pairs(std::move(gh_pairs)) { }
+    DeltaTreeRemover(DeltaTree* tree_ptr, const DataSet* dataSet, DeltaBoostParam param, vector<GHPair> gh_pairs,
+                     vector<vector<int>> ins2node_indices):
+    tree_ptr(tree_ptr), dataSet(dataSet), param(std::move(param)), gh_pairs(std::move(gh_pairs)),
+    ins2node_indices(std::move(ins2node_indices)) { }
 
     void remove_sample_by_id(int id);
     void adjust_gradients_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs);
@@ -26,6 +28,7 @@ public:
     DeltaTree *tree_ptr = nullptr;
     DeltaBoostParam param;
     vector<GHPair> gh_pairs;
+    vector<vector<int>> ins2node_indices;
 
     const DataSet* dataSet = nullptr;
 };

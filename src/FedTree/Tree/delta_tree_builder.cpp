@@ -43,7 +43,9 @@ void DeltaTreeBuilder::broadcast_potential_node_indices(int node_id) {
     }
 }
 
-vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPair> &gradients, bool update_y_predict) {
+vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPair> &gradients,
+                                                            std::vector<std::vector<int>>& ins2node_indices_in_tree,
+                                                            bool update_y_predict) {
     vector<DeltaTree> trees(param.tree_per_rounds);
     TIMED_FUNC(timerObj);
 
@@ -92,6 +94,8 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
             predict_in_training(k);
         tree_k.nodes = tree.nodes;
     }
+
+    ins2node_indices_in_tree = ins2node_indices;    // return this value for removal
     return trees;
 }
 
@@ -590,7 +594,7 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
     float_type mcw = param.min_child_weight;
     float_type l = param.lambda;
 
-//#pragma omp parallel for  // comment for debug
+#pragma omp parallel for  // comment for debug
     for (int i = 0; i < n_split; i++) {
         int nid0 = i / n_bins;
         int nid = nid0 + nid_offset;
@@ -610,7 +614,7 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
 
             auto lch_gh = father_gh - rch_gh;
             DeltaTree::DeltaGain base_gain(0, lch_gh.g, lch_gh.h, rch_gh.g, rch_gh.h,
-                                           father_gh.g, father_gh.h, param.lambda);
+                                           father_gh.g, father_gh.h, p_missing_gh.g, p_missing_gh.h, param.lambda);
             if (default_to_left_gain > default_to_right_gain) {
                 base_gain.gain_value = default_to_left_gain;
             }

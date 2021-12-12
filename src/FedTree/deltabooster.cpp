@@ -3,6 +3,7 @@
 //
 
 #include "FedTree/deltabooster.h"
+#include "FedTree/Tree/deltaboost.h"
 
 void DeltaBooster::init(DataSet &dataSet, const DeltaBoostParam &delta_param, bool get_cut_points) {
     param = delta_param;
@@ -32,21 +33,23 @@ void DeltaBooster::init(DataSet &dataSet, const DeltaBoostParam &delta_param, bo
 //
 //}
 
-void DeltaBooster::boost(vector<vector<DeltaTree>> &boosted_model, vector<vector<GHPair>>& gh_pairs_per_sample) {
+void DeltaBooster::boost(vector<vector<DeltaTree>>& boosted_model, vector<vector<GHPair>>& gh_pairs_per_sample,
+                         vector<vector<vector<int>>>& ins2node_indices_per_tree) {
     TIMED_FUNC(timerObj);
 //    std::unique_lock<std::mutex> lock(mtx);
     //update gradients
     obj->get_gradient(y, fbuilder->get_y_predict(), gradients);
     gh_pairs_per_sample.push_back(gradients.to_vec());
 
+    std::vector<std::vector<int>> ins2node_indices;
 //    if (param.bagging) rowSampler.do_bagging(gradients);
     PERFORMANCE_CHECKPOINT(timerObj);
     //build new model/approximate function
-    boosted_model.push_back(fbuilder->build_delta_approximate(gradients));
-
+    boosted_model.push_back(fbuilder->build_delta_approximate(gradients, ins2node_indices));
     PERFORMANCE_CHECKPOINT(timerObj);
-    //show metric on training set
+    ins2node_indices_per_tree.push_back(ins2node_indices);
 
+    //show metric on training set
     std::ofstream myfile;
     myfile.open ("data.txt", std::ios_base::app);
     myfile << fbuilder->get_y_predict() << "\n";
