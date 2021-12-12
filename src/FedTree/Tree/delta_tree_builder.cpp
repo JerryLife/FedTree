@@ -383,7 +383,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                     auto hist_data_computed = hist.host_data() + nid0_to_compute * n_bins;
                     auto hist_data_to_compute = hist.host_data() + nid0_to_substract * n_bins;
                     auto father_hist_data = last_hist.host_data() + parent_indices[nid0_to_substract] *
-                                                                    n_bins;   // bug, this is not corresponding!
+                                                                    n_bins;
 #pragma omp parallel for
                     for (int i = 0; i < n_bins; i++) {
                         hist_data_to_compute[i] = father_hist_data[i] - hist_data_computed[i];

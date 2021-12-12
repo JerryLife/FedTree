@@ -105,16 +105,11 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
             if (is_missing) {
                 node.gain.missing_g += delta_gh_pairs[i].g;
                 node.gain.missing_h += delta_gh_pairs[i].h;
-                if (node.default_right) {
-                    
-                } else {
-
-                }
             }
         }
     }
 
-    // update left or right Gh_Pair of parent
+    // update left or right Gh_Pair of parent & recalculate default direction
 #pragma omp parallel for
     for (int i = 0; i < updating_node_indices.size(); ++i) {
         for (int node_id: updating_node_indices[i]) {
@@ -130,18 +125,46 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
                 parent_node.gain.rch_g += delta_gh_pairs[i].g;
                 parent_node.gain.rch_h += delta_gh_pairs[i].h;
             }
+
+
         }
     }
 
-#pragma omp parallel for
-    // calculate gain (parallel)
     for (int i = 0; i < updating_node_indices.size(); ++i) {
         for (int node_id: updating_node_indices[i]) {
-            // update sum_gh_pair
             auto &node = tree_ptr->nodes[node_id];
-            node.calc_weight(param.lambda);
+
+            node.calc_weight(param.lambda);     // this lambda should be consistent with the training
+
             if (!node.is_leaf) {
-                node.gain.cal_gain_value();     // calculate new gain
+                node.gain.cal_gain_value();     // calculate original gain value
+                // recalculate default direction
+                if (node.default_right) {
+                    assert(node.gain.gain_value < 0);
+                    DeltaTree::DeltaGain default_left_gain(node.gain);
+                    default_left_gain.lch_g += node.gain.missing_g;
+                    default_left_gain.lch_h += node.gain.missing_h;
+                    default_left_gain.rch_g -= node.gain.missing_g;
+                    default_left_gain.rch_h -= node.gain.missing_h;
+                    default_left_gain.cal_gain_value();
+                    if (fabs(default_left_gain.gain_value) > fabs(node.gain.gain_value)) {
+                        // switch default direction
+                        node.gain = default_left_gain;
+                    }
+                } else {
+                    assert(node.gain.gain_value > 0);
+                    DeltaTree::DeltaGain default_right_gain(node.gain);
+                    default_right_gain.rch_g += node.gain.missing_g;
+                    default_right_gain.rch_h += node.gain.missing_h;
+                    default_right_gain.lch_g -= node.gain.missing_g;
+                    default_right_gain.lch_h -= node.gain.missing_h;
+                    default_right_gain.cal_gain_value();
+                    if (fabs(default_right_gain.gain_value) > fabs(node.gain.gain_value)) {
+                        // switch default direction
+                        default_right_gain.gain_value = -default_right_gain.gain_value;
+                        node.gain = default_right_gain;
+                    }
+                }
             }
         }
     }
