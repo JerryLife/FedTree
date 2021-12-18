@@ -13,6 +13,7 @@
 #include "sstream"
 #include "FedTree/syncarray.h"
 #include "GBDTparam.h"
+//#include "VacuumFilter/vacuum.h"  // cannot include
 
 namespace json = boost::json;
 
@@ -144,6 +145,14 @@ protected:
 
     virtual void reorder_nid();
 };
+
+
+//template<typename fp_t, int fp_len>
+//class IndexFilter: public VacuumFilter<fp_t, fp_len> {
+//
+//};
+
+
 
 struct DeltaTree : public Tree {
     // can be edited

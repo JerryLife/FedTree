@@ -6,6 +6,7 @@
 #include "FedTree/booster.h"
 #include "FedTree/deltabooster.h"
 #include "FedTree/Tree/delta_tree_remover.h"
+#include "FedTree/Tree/deltaboost_remover.h"
 
 void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     if (param.tree_method == "auto")
@@ -61,11 +62,18 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
     std::unique_ptr<ObjectiveFunction> obj(ObjectiveFunction::create(param.objective));
     obj->configure(param, dataset);     // slicing param
 
+    LOG(INFO) << "Preparing for deletion";
+    DeltaBoostRemover deltaboost_remover(&dataset, this, obj.get(), param);
+    deltaboost_remover.get_info_by_prediction();
+    LOG(INFO) << "Deleting...";
+
     for (int i = 0; i < trees.size(); ++i) {
-        DeltaTree &tree = trees[i][0];
-        vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
-        auto &ins2node_indices = ins2node_indices_per_tree[i];
-        DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs, ins2node_indices);
+//        DeltaTree &tree = trees[i][0];
+//        vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
+//        auto &ins2node_indices = ins2node_indices_per_tree[i];
+//        DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs, ins2node_indices);
+        DeltaTreeRemover& tree_remover = deltaboost_remover.tree_removers[i];
+        const std::vector<GHPair>& gh_pairs = tree_remover.gh_pairs;
         tree_remover.remove_samples_by_indices(sample_indices);
 
         if (i > 0) {

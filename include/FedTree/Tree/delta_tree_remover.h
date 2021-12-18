@@ -19,6 +19,13 @@ public:
     tree_ptr(tree_ptr), dataSet(dataSet), param(std::move(param)), gh_pairs(std::move(gh_pairs)),
     ins2node_indices(std::move(ins2node_indices)) { }
 
+    DeltaTreeRemover(DeltaTree *tree_ptr, const DataSet *dataSet, const DeltaBoostParam &param) :
+    tree_ptr(tree_ptr), dataSet(dataSet), param(param) {
+        gh_pairs = *(std::unique_ptr<std::vector<GHPair>>(new std::vector<GHPair>(dataSet->n_instances())));
+        ins2node_indices = *(std::unique_ptr<std::vector<std::vector<int>>>(
+                new std::vector<std::vector<int>>(dataSet->n_instances(), std::vector<int>(0))));
+    }
+
     void remove_sample_by_id(int id);
     void adjust_gradients_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs);
     void remove_samples_by_indices(const vector<int>& indices);
