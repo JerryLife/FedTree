@@ -233,10 +233,20 @@ int main(int argc, char** argv){
     }
     else if(fl_param.mode == "centralized"){
 
+        DataSet remain_dataset, delete_dataset;
+        bool test_on_remain = !fl_param.gbdt_param.remain_data_path.empty();
+        bool test_on_delete = !fl_param.gbdt_param.delete_data_path.empty();
+        if (test_on_remain) {
+            remain_dataset.load_from_file(fl_param.gbdt_param.delete_data_path, fl_param);
+        }
+        if (test_on_delete) {
+            delete_dataset.load_from_file(fl_param.gbdt_param.delete_data_path, fl_param);
+        }
+
         if (fl_param.deltaboost_param.enable_delta) {
             auto deltaboost = std::unique_ptr<DeltaBoost>(new DeltaBoost());
             float_type score;
-            string model_path = string_format("cache/%s.model",
+            string model_path = string_format("cache/%s_deltaboost.model",
                                               fl_param.deltaboost_param.dataset_name.c_str());
 //            deltaboost->train(fl_param.deltaboost_param, dataset);
 //            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
@@ -246,18 +256,21 @@ int main(int argc, char** argv){
 //                                              fl_param.deltaboost_param.dataset_name.c_str());
 //            parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
 
-            if(use_global_test_set) {
-                score = deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
-                                                  fl_param.deltaboost_param.n_used_trees);
-                scores.push_back(score);
+
+            LOG(INFO) << "On test dataset";
+            deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
+                                      fl_param.deltaboost_param.n_used_trees);
+            if (test_on_delete) {
+                LOG(INFO) << "On deleted dataset";
+                deltaboost->predict_score(fl_param.deltaboost_param, delete_dataset,
+                                          fl_param.deltaboost_param.n_used_trees);
             }
-            else {
-                for(int i = 0; i < n_parties; i++) {
-                    score = deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i],
-                                                      fl_param.deltaboost_param.n_used_trees);
-                    scores.push_back(score);
-                }
+            if (test_on_remain) {
+                LOG(INFO) << "On remained dataset";
+                deltaboost->predict_score(fl_param.deltaboost_param, remain_dataset,
+                                          fl_param.deltaboost_param.n_used_trees);
             }
+
 
             std::chrono::high_resolution_clock timer;
             auto start_rm = timer.now();
@@ -271,32 +284,44 @@ int main(int argc, char** argv){
             LOG(INFO) << "removing time = " << removing_time.count();
 
             LOG(INFO) << "Predict after removals";
-            if(use_global_test_set) {
-                deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
+            LOG(INFO) << "On test dataset";
+            deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
+                                      fl_param.deltaboost_param.n_used_trees);
+            if (test_on_delete) {
+                LOG(INFO) << "On deleted dataset";
+                deltaboost->predict_score(fl_param.deltaboost_param, delete_dataset,
                                           fl_param.deltaboost_param.n_used_trees);
             }
-            else {
-                for(int i = 0; i < n_parties; i++) {
-                    deltaboost->predict_score(fl_param.deltaboost_param, test_subsets[i],
-                                              fl_param.deltaboost_param.n_used_trees);
-                }
+            if (test_on_remain) {
+                LOG(INFO) << "On remained dataset";
+                deltaboost->predict_score(fl_param.deltaboost_param, remain_dataset,
+                                          fl_param.deltaboost_param.n_used_trees);
             }
+
+
+            string model_path_json_delete = string_format("cache/%s_deleted.json",
+                                                   fl_param.deltaboost_param.dataset_name.c_str());
+            parser.save_model_to_json(model_path_json_delete, fl_param.deltaboost_param, *deltaboost, dataset);
+
 
         } else {
             auto gbdt = std::unique_ptr<GBDT>(new GBDT());
             gbdt->train(fl_param.gbdt_param, dataset);
 
-            float_type score;
-            if(use_global_test_set) {
-                score = gbdt->predict_score(fl_param.gbdt_param, test_dataset);
-                scores.push_back(score);
+            LOG(INFO) << "On test dataset";
+            gbdt->predict_score(fl_param.gbdt_param, test_dataset);
+            if (test_on_delete) {
+                LOG(INFO) << "On deleted dataset";
+                gbdt->predict_score(fl_param.gbdt_param, delete_dataset);
             }
-            else {
-                for(int i = 0; i < n_parties; i++) {
-                    score = gbdt->predict_score(fl_param.gbdt_param, test_subsets[i]);
-                    scores.push_back(score);
-                }
+            if (test_on_remain) {
+                LOG(INFO) << "On remained dataset";
+                gbdt->predict_score(fl_param.gbdt_param, remain_dataset);
             }
+
+            string model_path_json = string_format("cache/%s_gbdt.json",
+                                                   fl_param.deltaboost_param.dataset_name.c_str());
+            parser.save_model_to_json(model_path_json, fl_param.gbdt_param, *gbdt, dataset);
         }
 
     } else if (fl_param.mode == "vertical") {

@@ -98,6 +98,54 @@ public:
             n_instances = copy.n_instances;
         }
 
+        friend TreeNode tag_invoke(json::value_to_tag<TreeNode>, json::value const& v) {
+            auto &o = v.as_object();
+
+            TreeNode node;
+
+            node.final_id = o.at("final_id").as_int64();
+            node.lch_index = o.at("lch_index").as_int64();
+            node.rch_index = o.at("rch_index").as_int64();
+            node.parent_index = o.at("parent_index").as_int64();
+            node.gain = o.at("gain").as_double();
+            node.base_weight = o.at("base_weight").as_double();
+            node.split_feature_id = o.at("split_feature_id").as_int64();
+            node.pid = o.at("pid").as_int64();
+            node.split_value = o.at("split_value").as_double();
+            node.split_bid = o.at("split_bid").as_int64();
+            node.default_right = o.at("default_right").as_bool();
+            node.is_leaf = o.at("is_leaf").as_bool();
+            node.is_valid = o.at("is_valid").as_bool();
+            node.is_pruned = o.at("is_pruned").as_bool();
+            node.sum_gh_pair.g = o.at("sum_gh_pair.g").as_double();
+            node.sum_gh_pair.h = o.at("sum_gh_pair.h").as_double();
+            node.n_instances = o.at("n_instances").as_int64();
+
+            return node;
+        }
+
+        friend void tag_invoke(json::value_from_tag, json::value& v, TreeNode const& node) {
+            v = json::object {
+                    {"final_id", node.final_id},
+                    {"lch_index", node.lch_index},
+                    {"rch_index", node.rch_index},
+                    {"parent_index", node.parent_index},
+                    {"gain", node.gain},
+                    {"base_weight", node.base_weight},
+                    {"split_feature_id", node.split_feature_id},
+                    {"pid", node.pid},
+                    {"split_value", node.split_value},
+                    {"split_bid", node.split_bid},
+                    {"default_right", node.default_right},
+                    {"is_leaf", node.is_leaf},
+                    {"is_valid", node.is_valid},
+                    {"is_pruned", node.is_pruned},
+                    {"sum_gh_pair.g", node.sum_gh_pair.g},
+                    {"sum_gh_pair.h", node.sum_gh_pair.h},
+                    {"n_instances", node.n_instances},
+            };
+        }
+
     };
 
     Tree() = default;
@@ -137,6 +185,27 @@ public:
     virtual void prune_self(float_type gamma);
 
     void compute_leaf_value();
+
+    friend Tree tag_invoke(json::value_to_tag<Tree>, json::value const& v) {
+        auto &o = v.as_object();
+
+        Tree tree;
+
+        tree.nodes.load_from_vec(json::value_to<std::vector<TreeNode>>(v.at("nodes")));
+        tree.n_nodes_level = json::value_to<std::vector<int>>(v.at("n_nodes_level"));
+        tree.final_depth = v.at("final_depth").as_int64();
+
+        return tree;
+    }
+
+    friend void tag_invoke(json::value_from_tag, json::value& v, Tree const& tree) {
+        v = json::object {
+                {"nodes", json::value_from(tree.nodes.to_vec())},
+                {"n_nodes_level", json::value_from(tree.n_nodes_level)},
+                {"final_depth", tree.final_depth}
+        };
+    }
+
 
 protected:
     void preorder_traversal(int nid, int max_depth, int depth, string &s) const;
@@ -295,6 +364,8 @@ struct DeltaTree : public Tree {
         }
 
         inline bool is_robust() const { return potential_nodes_indices.size() <= 1; }
+
+        inline bool is_prior() const { return potential_nodes_indices[0] == final_id; }
 
 //        size_t to_chars(char* bytes) {
 //            char buf[sizeof(size_t) + potential_nodes_indices.size() * sizeof(int) + sizeof(DeltaNode)];

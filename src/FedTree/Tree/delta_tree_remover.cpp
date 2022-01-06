@@ -96,42 +96,42 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
         for (int node_id: updating_node_indices[i]) {
             // update sum_gh_pair
             auto &node = tree_ptr->nodes[node_id];
+            #pragma omp atomic
             node.sum_gh_pair.g += delta_gh_pairs[i].g;
+            #pragma omp atomic
             node.sum_gh_pair.h += delta_gh_pairs[i].h;
+            #pragma omp atomic
             node.gain.self_g += delta_gh_pairs[i].g;
+            #pragma omp atomic
             node.gain.self_h += delta_gh_pairs[i].h;
 
             // update missing_gh
             bool is_missing;
             float_type split_fval = get_val(indices[i], node.split_feature_id, &is_missing);
             if (is_missing) {
+                #pragma omp atomic
                 node.gain.missing_g += delta_gh_pairs[i].g;
+                #pragma omp atomic
                 node.gain.missing_h += delta_gh_pairs[i].h;
             }
         }
     }
 
-    // update left or right Gh_Pair of parent & recalculate default direction
+
 #pragma omp parallel for
     for (int i = 0; i < updating_node_indices.size(); ++i) {
         for (int node_id: updating_node_indices[i]) {
             auto &node = tree_ptr->nodes[node_id];
-
-            if (node.parent_index == -1) continue;      // root node
-            auto &parent_node = tree_ptr->nodes[node.parent_index];
-            bool is_left_child = (parent_node.lch_index == node_id);
-            if (is_left_child) {
-                parent_node.gain.lch_g += delta_gh_pairs[i].g;
-                parent_node.gain.lch_h += delta_gh_pairs[i].h;
-            } else {
-                parent_node.gain.rch_g += delta_gh_pairs[i].g;
-                parent_node.gain.rch_h += delta_gh_pairs[i].h;
+            if (!node.is_leaf) {
+                node.gain.lch_g = tree_ptr->nodes[node.lch_index].gain.self_g;
+                node.gain.lch_h = tree_ptr->nodes[node.lch_index].gain.self_h;
+                node.gain.rch_g = tree_ptr->nodes[node.rch_index].gain.self_g;
+                node.gain.rch_h = tree_ptr->nodes[node.rch_index].gain.self_h;
             }
-
-
         }
     }
 
+    // recalculate direction
 #pragma omp parallel for
     for (int i = 0; i < updating_node_indices.size(); ++i) {
         for (int node_id: updating_node_indices[i]) {
@@ -140,32 +140,45 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
             node.calc_weight(param.lambda);     // this lambda should be consistent with the training
 
             if (!node.is_leaf) {
-                node.gain.cal_gain_value();     // calculate original gain value
+//                node.gain.gain_value = node.default_right ? -node.gain.cal_gain_value() : node.gain.cal_gain_value();     // calculate original gain value
+
                 // recalculate default direction
                 if (node.default_right) {
-                    assert(node.gain.gain_value < 0);
+                    node.gain.gain_value = -node.gain.cal_gain_value();
+                    assert(node.gain.gain_value <= 0);
                     DeltaTree::DeltaGain default_left_gain(node.gain);
+#pragma omp atomic
                     default_left_gain.lch_g += node.gain.missing_g;
+#pragma omp atomic
                     default_left_gain.lch_h += node.gain.missing_h;
+#pragma omp atomic
                     default_left_gain.rch_g -= node.gain.missing_g;
+#pragma omp atomic
                     default_left_gain.rch_h -= node.gain.missing_h;
-                    default_left_gain.cal_gain_value();
+                    default_left_gain.gain_value = default_left_gain.cal_gain_value();
                     if (fabs(default_left_gain.gain_value) > fabs(node.gain.gain_value)) {
                         // switch default direction
                         node.gain = default_left_gain;
+                        node.default_right = false;
                     }
                 } else {
-                    assert(node.gain.gain_value > 0);
+                    node.gain.gain_value = node.gain.cal_gain_value();
+                    assert(node.gain.gain_value >= 0);
                     DeltaTree::DeltaGain default_right_gain(node.gain);
+#pragma omp atomic
                     default_right_gain.rch_g += node.gain.missing_g;
+#pragma omp atomic
                     default_right_gain.rch_h += node.gain.missing_h;
+#pragma omp atomic
                     default_right_gain.lch_g -= node.gain.missing_g;
+#pragma omp atomic
                     default_right_gain.lch_h -= node.gain.missing_h;
-                    default_right_gain.cal_gain_value();
+                    default_right_gain.gain_value = -default_right_gain.cal_gain_value();
                     if (fabs(default_right_gain.gain_value) > fabs(node.gain.gain_value)) {
                         // switch default direction
                         default_right_gain.gain_value = -default_right_gain.gain_value;
                         node.gain = default_right_gain;
+                        node.default_right = true;
                     }
                 }
             }

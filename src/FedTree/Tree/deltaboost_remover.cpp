@@ -8,12 +8,12 @@
 
 void DeltaBoostRemover::get_info_by_prediction() {
 
-    auto& trees = deltaboost_ptr->trees;
+    auto& trees = *trees_ptr;
     size_t n_instances = dataSet->n_instances();
 //    int n_features = dataSet.n_features();
 
     //the whole model to an array
-    size_t num_iter = param.n_trees == -1 ? trees.size() : param.n_trees;
+    size_t num_iter = param.n_trees == -1 ? trees.size() : param.n_used_trees;
     int num_class = static_cast<int>(trees.front().size());
     std::vector<std::vector<float_type>> y_predict(n_instances, std::vector<float_type>(num_class, 0));
 

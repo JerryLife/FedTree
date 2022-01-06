@@ -59,6 +59,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     gbdt_param->tree_method = "hist";
     gbdt_param->tree_per_rounds = 1; // # tree of each round, depends on # class
     gbdt_param->metric = "default";
+    gbdt_param->delete_data_path = "";
+    gbdt_param->remain_data_path = "";
 
     DeltaBoostParam *deltaboost_param = &fl_param.deltaboost_param;
     deltaboost_param->enable_delta = "false";
@@ -117,6 +119,10 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 gbdt_param->path = val;
             else if (str_name.compare("test_data") == 0)
                 gbdt_param->test_path = val;
+            else if (str_name.compare("remain_data") == 0)
+                gbdt_param->remain_data_path = val;
+            else if (str_name.compare("delete_data") == 0)
+                gbdt_param->delete_data_path = val;
             else if ((str_name.compare("max_bin") == 0) || (str_name.compare("max_num_bin") == 0))
                 gbdt_param->max_num_bin = atoi(val);
             else if ((str_name.compare("colsample") == 0) || (str_name.compare("column_sampling_rate") == 0))
@@ -330,6 +336,26 @@ void Parser::save_model_to_json(const string &model_path, DeltaBoostParam &model
     v["labels"] = json::value_from(dataSet.label);
 
     v["deltaboost"] = json::value_from(model);
+
+    ofstream out_model_file(model_path);
+    CHECK_EQ(out_model_file.is_open(), true);
+
+    out_model_file << boost::json::serialize(v) << endl;
+    out_model_file.close();
+
+    LOG(INFO) << "saved to " << model_path;
+}
+
+void Parser::save_model_to_json(const string &model_path, GBDTParam &model_param, GBDT &model, DataSet &dataSet) {
+    json::object v;
+    v["objective"] = model_param.objective;
+    v["learning_rate"] = model_param.learning_rate;
+    v["num_class"] = model_param.num_class;
+    v["n_trees"] = model_param.n_trees;
+    v["label_size"] = dataSet.label.size();
+    v["labels"] = json::value_from(dataSet.label);
+
+    v["gbdt"] = json::value_from(model);
 
     ofstream out_model_file(model_path);
     CHECK_EQ(out_model_file.is_open(), true);

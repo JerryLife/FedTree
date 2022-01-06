@@ -36,6 +36,9 @@ struct GBDTParam {
     std::string tree_method;
     std::string metric;
 
+    std::string remain_data_path;
+    std::string delete_data_path;
+
 };
 
 struct DeltaBoostParam : public GBDTParam {

@@ -9,7 +9,9 @@ def remove_sample(X, y, removing_indices: list):
     mask[removing_indices] = False
     X_out = X[mask]
     y_out = y[mask]
-    return X_out, y_out
+    X_remain = X[~mask]
+    y_remain = y[~mask]
+    return X_out, y_out, X_remain, y_remain
 
 
 if __name__ == '__main__':
@@ -24,6 +26,7 @@ if __name__ == '__main__':
 
     X, y = load_data(data_path=args.data_path, data_fmt=args.input_fmt, scale_y=args.scale_y)
     n_remove = int(args.remove_ratio * X.shape[0])
-    X_out, y_out = remove_sample(X, y, removing_indices=list(range(n_remove)))
+    X_out, y_out, X_remain, y_remain = remove_sample(X, y, removing_indices=list(range(n_remove)))
     print(f"Removed {n_remove} instances.")
-    save_data(X_out, y_out, save_path=f"{args.data_path}.remove_first_{args.remove_ratio:.0e}", save_fmt=args.output_fmt)
+    save_data(X_out, y_out, save_path=f"{args.data_path}.remain_{args.remove_ratio:.0e}", save_fmt=args.output_fmt)
+    save_data(X_remain, y_remain, save_path=f"{args.data_path}.delete_{args.remove_ratio:.0e}", save_fmt=args.output_fmt)

@@ -189,12 +189,12 @@ public:
 
     SyncArray &operator=(const SyncArray<T> &) = delete;
 
-    std::vector<T> to_vec() {
+    std::vector<T> to_vec() const {
         std::vector<T> vec_copy(host_data(), host_data() + size());
         return vec_copy;
     }
 
-    void load_from_vec(std::vector<T> vec) {
+    void load_from_vec(const std::vector<T>& vec) {
         this->resize(vec.size());
         this->copy_from(vec.data(), vec.size());
     }

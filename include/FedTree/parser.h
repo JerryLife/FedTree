@@ -21,6 +21,7 @@ public:
     void load_model(const string& model_path, DeltaBoostParam &model_param, DeltaBoost &model, DataSet & dataset);
     void save_model(const string& model_path, DeltaBoostParam &model_param, DeltaBoost &model, DataSet &dataSet);
     void save_model_to_json(const string& model_path, DeltaBoostParam &model_param, DeltaBoost &model, DataSet &dataSet);
+    void save_model_to_json(const string& model_path, GBDTParam &model_param, GBDT &model, DataSet &dataSet);
 };
 
 #endif //FEDTREE_PARSER_H

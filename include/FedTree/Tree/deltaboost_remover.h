@@ -17,12 +17,12 @@
 class DeltaBoostRemover {
 public:
 
-    DeltaBoostRemover(const DataSet *dataSet, DeltaBoost *deltaboostPtr, ObjectiveFunction *obj,
+    DeltaBoostRemover(const DataSet *dataSet, std::vector<std::vector<DeltaTree>>* trees_ptr, ObjectiveFunction *obj,
                       const DeltaBoostParam &param) :
-    dataSet(dataSet), deltaboost_ptr(deltaboostPtr), obj(obj), param(param) {
+    dataSet(dataSet), trees_ptr(trees_ptr), obj(obj), param(param) {
         for (int i = 0; i < param.n_used_trees; ++i) {
             tree_removers.emplace_back(*(std::unique_ptr<DeltaTreeRemover>(
-                    new DeltaTreeRemover(&(deltaboostPtr->trees[i][0]), dataSet, param))));
+                    new DeltaTreeRemover(&((*trees_ptr)[i][0]), dataSet, param))));
         }
     }
 
@@ -32,7 +32,7 @@ public:
 
 private:
     const DataSet* dataSet = nullptr;
-    DeltaBoost* deltaboost_ptr = nullptr;
+    std::vector<std::vector<DeltaTree>>* trees_ptr = nullptr;
     ObjectiveFunction *obj = nullptr;
     DeltaBoostParam param;
 };

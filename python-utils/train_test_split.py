@@ -33,18 +33,18 @@ def split_data(data, labels, val_rate=0.1, test_rate=0.2, seed=0):
     indices = np.arange(data.shape[0])
     if np.isclose(val_rate, 0.0):
         train_data, test_data, train_labels, test_labels, train_idx, test_idx = \
-            train_test_split(data, labels, indices, test_size=test_rate, random_state=seed)
+            train_test_split(data, labels, indices, test_size=test_rate, shuffle=True, random_state=seed)
         return train_data, None, test_data, train_labels, None, test_labels, train_idx, None, test_idx
     elif np.isclose(test_rate, 0.0):
         train_data, val_data, train_labels, val_labels, train_idx, val_idx = \
-            train_test_split(data, labels, indices, test_size=val_rate, random_state=seed)
+            train_test_split(data, labels, indices, test_size=val_rate, shuffle=True, random_state=seed)
         return train_data, val_data, None, train_labels, val_labels, None, train_idx, val_idx, None
     else:
         train_val_data, test_data, train_val_labels, test_labels, train_val_idx, test_idx = \
-            train_test_split(data, labels, indices, test_size=test_rate, random_state=seed)
+            train_test_split(data, labels, indices, test_size=test_rate, shuffle=True, random_state=seed)
         split_val_rate = val_rate / (1. - test_rate)
         train_data, val_data, train_labels, val_labels, train_idx, val_idx = \
-            train_test_split(train_val_data, train_val_labels, train_val_idx, test_size=split_val_rate,
+            train_test_split(train_val_data, train_val_labels, train_val_idx, shuffle=True, test_size=split_val_rate,
                              random_state=seed)
         return train_data, val_data, test_data, train_labels, val_labels, test_labels, train_idx, val_idx, test_idx
 

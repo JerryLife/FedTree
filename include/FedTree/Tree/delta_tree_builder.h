@@ -41,6 +41,8 @@ public:
 
     void update_ins2node_id() override;
 
+    void update_ins2node_indices();
+
     void update_tree() override;
 
     void predict_in_training(int k) override;

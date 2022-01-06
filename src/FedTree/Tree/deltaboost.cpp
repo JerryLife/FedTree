@@ -63,11 +63,14 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
     obj->configure(param, dataset);     // slicing param
 
     LOG(INFO) << "Preparing for deletion";
-    DeltaBoostRemover deltaboost_remover(&dataset, this, obj.get(), param);
+
+    std::vector<std::vector<DeltaTree>> used_trees(trees.begin(), trees.begin() + param.n_used_trees);
+
+    DeltaBoostRemover deltaboost_remover(&dataset, &trees, obj.get(), param);
     deltaboost_remover.get_info_by_prediction();
     LOG(INFO) << "Deleting...";
 
-    for (int i = 0; i < trees.size(); ++i) {
+    for (int i = 0; i < used_trees.size(); ++i) {
 //        DeltaTree &tree = trees[i][0];
 //        vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
 //        auto &ins2node_indices = ins2node_indices_per_tree[i];
