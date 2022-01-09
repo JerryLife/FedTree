@@ -35,7 +35,8 @@ void DeltaTreeBuilder::broadcast_potential_node_indices(int node_id) {
 
         for (int i = 1; i < node.potential_nodes_indices.size(); ++i) {
             int potential_node_id = node.potential_nodes_indices[i];
-            tree.nodes[potential_node_id].potential_nodes_indices = node.potential_nodes_indices;
+//            tree.nodes[potential_node_id].potential_nodes_indices = node.potential_nodes_indices;
+            assert(tree.nodes[potential_node_id].potential_nodes_indices == node.potential_nodes_indices);
         }
 
         prior_nodes_to_broadcast.push(node.lch_index);
@@ -64,6 +65,10 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
             ins2node_indices.emplace_back(vec_i);
         }
 
+        // root node 0 must be prior node
+        is_prior.clear();
+        is_prior.push_back(true);
+
         for (int level = 0; level < param.depth; ++level) {
             //LOG(INFO)<<"in level:"<<level;
             find_split(level);
@@ -88,7 +93,7 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
             LOG(DEBUG) << "Number of nodes: " << tree.nodes.size();
         }
 
-        broadcast_potential_node_indices(0);
+        broadcast_potential_node_indices(0);    // can remove
         //here
 //        tree.prune_self(param.gamma);
 //        LOG(INFO) << "y_predict: " << y_predict;
@@ -464,7 +469,7 @@ void DeltaTreeBuilder::update_ins2node_indices() {
                     if (to_left) {
                         //goes to left child
                         ins2node_indices[iid][j] = node.lch_index;
-                        if (node.is_prior()) {
+                        if (is_prior[nid]) {
                             nid_data[iid] = node.lch_index;
                         }
 
@@ -473,7 +478,7 @@ void DeltaTreeBuilder::update_ins2node_indices() {
                     } else {
                         //right child
                         ins2node_indices[iid][j] = node.rch_index;
-                        if (node.is_prior()) {
+                        if (is_prior[nid]) {
                             nid_data[iid] = node.rch_index;
                         }
                     #pragma omp atomic
@@ -484,6 +489,8 @@ void DeltaTreeBuilder::update_ins2node_indices() {
         }
     }
     has_split = has_splittable.host_data()[0];
+    LOG(DEBUG) << "new tree_id = " << ins2node_id;
+
 }
 
 
@@ -504,7 +511,7 @@ void DeltaTreeBuilder::update_ins2node_id() {
         int n_column = sorted_dataset.n_features();
         auto dense_bin_id_data = dense_bin_id.host_data();
         int max_num_bin = param.max_num_bin;
-//#pragma omp parallel for
+#pragma omp parallel for
         for (int iid = 0; iid < n_instances; iid++) {
             int nid = nid_data[iid];
             const DeltaTree::DeltaNode &node = nodes_data[nid];
@@ -736,6 +743,7 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
                 node.rch_index = nid_offset + n_nodes_in_level + child_offset + 1;
                 node.final_id = tree.nodes.size();
                 tree.nodes.emplace_back(node);
+                is_prior.push_back(false);  // not prior node
                 idx_in_level = node.final_id - nid_offset;
 
                 // update last_hist (initially, last_hist should be of size n_nodes_in_a_level, now it should be expanded to
@@ -786,6 +794,12 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
             parent_indices.push_back(idx_in_level);
         }
 
+        // broadcast potential_node_indices
+        for (int j = 1;  j < num_potential_nodes; ++j) {
+            int potential_node_id = tree.nodes[nid_offset + i].potential_nodes_indices[j];
+            tree.nodes[potential_node_id].potential_nodes_indices = tree.nodes[nid_offset + i].potential_nodes_indices;
+        }
+
         // update ins2node_indices
         for (int j = 0; j < n_instances; ++j) {
             auto it = std::find(ins2node_indices[j].begin(), ins2node_indices[j].end(), nid_offset + i);
@@ -804,17 +818,20 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
 
     // insert placeholders for children
     vector<DeltaTree::DeltaNode> child_nodes(2 * n_nodes_in_level);
+    vector<bool> prior_flags(2 * n_nodes_in_level);
     for (int i = 0; i < child_nodes.size(); ++i) {
-        child_nodes[i].parent_index = parent_indices[i] + nid_offset;
+        size_t parent_index = child_nodes[i].parent_index = parent_indices[i] + nid_offset;
         child_nodes[i].gain = *(new DeltaTree::DeltaGain());
-        child_nodes[i].final_id = nid_offset + n_nodes_in_level + i;        // false calculation
+        child_nodes[i].final_id = nid_offset + n_nodes_in_level + i;
         child_nodes[i].is_leaf = is_last_layer;
         child_nodes[i].potential_nodes_indices = {nid_offset + n_nodes_in_level + i};
         child_nodes[i].lch_index = -3;
         child_nodes[i].rch_index = -3;
+
+        prior_flags[i] = is_prior[parent_index];
     }
     tree.nodes.insert(tree.nodes.end(), child_nodes.begin(), child_nodes.end());
-
+    is_prior.insert(is_prior.end(), prior_flags.begin(), prior_flags.end());
 //    LOG(DEBUG) << "split points (gain/fea_id/nid): " << sp;
 }
 
@@ -832,7 +849,7 @@ void DeltaTreeBuilder::get_split_points(vector<gain_pair> &best_idx_gain, int n_
     auto &nodes_data = tree.nodes;
 
     auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < n_nodes_in_level; i++) {
         const gain_pair& bst = best_idx_gain[i];
         DeltaTree::DeltaGain best_split_gain = bst.second;

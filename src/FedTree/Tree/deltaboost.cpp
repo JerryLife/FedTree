@@ -42,7 +42,11 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     for (int i = 0; i < param.n_trees; ++i) {
         //one iteration may produce multiple trees, depending on objectives
         booster.boost(trees, gh_pairs_per_sample, ins2node_indices_per_tree);
-        LOG(INFO) << "Number of nodes:" << trees[trees.size() - 1][0].nodes.size();
+        int valid_size = 0;
+        for (const auto &node: trees[trees.size() - 1][0].nodes) {
+            if (node.is_valid) ++valid_size;
+        }
+        LOG(INFO) << "Tree " << i << ", Number of nodes:" << valid_size;
     }
 
 //    float_type score = predict_score(param, dataset);

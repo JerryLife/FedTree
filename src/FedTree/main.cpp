@@ -248,13 +248,13 @@ int main(int argc, char** argv){
             float_type score;
             string model_path = string_format("cache/%s_deltaboost.model",
                                               fl_param.deltaboost_param.dataset_name.c_str());
-//            deltaboost->train(fl_param.deltaboost_param, dataset);
-//            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
+            deltaboost->train(fl_param.deltaboost_param, dataset);
+            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
             parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
 
-//            string model_path_json = string_format("cache/%s.json",
-//                                              fl_param.deltaboost_param.dataset_name.c_str());
-//            parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
+            string model_path_json = string_format("cache/%s.json",
+                                              fl_param.deltaboost_param.dataset_name.c_str());
+            parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
 
 
             LOG(INFO) << "On test dataset";

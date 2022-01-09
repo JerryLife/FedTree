@@ -365,7 +365,7 @@ struct DeltaTree : public Tree {
 
         inline bool is_robust() const { return potential_nodes_indices.size() <= 1; }
 
-        inline bool is_prior() const { return potential_nodes_indices[0] == final_id; }
+//        inline bool is_prior() const { return potential_nodes_indices[0] == final_id; }
 
 //        size_t to_chars(char* bytes) {
 //            char buf[sizeof(size_t) + potential_nodes_indices.size() * sizeof(int) + sizeof(DeltaNode)];

@@ -67,6 +67,8 @@ public:
 
     vector<int> parent_indices;     // ID: the relative index of child in the layer
                                     // Value: the relative index of its parent in the layer
+
+    vector<bool> is_prior;       // ID: node index; Value: whether the node is prior node or not.
 };
 
 #endif //FEDTREE_DELTA_TREE_BUILDER_H
