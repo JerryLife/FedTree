@@ -38,6 +38,7 @@ struct GBDTParam {
 
     std::string remain_data_path;
     std::string delete_data_path;
+    std::string save_model_name;
 
 };
 

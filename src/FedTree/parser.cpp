@@ -61,6 +61,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     gbdt_param->metric = "default";
     gbdt_param->delete_data_path = "";
     gbdt_param->remain_data_path = "";
+    gbdt_param->save_model_name = "";
 
     DeltaBoostParam *deltaboost_param = &fl_param.deltaboost_param;
     deltaboost_param->enable_delta = "false";
@@ -123,6 +124,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 gbdt_param->remain_data_path = val;
             else if (str_name.compare("delete_data") == 0)
                 gbdt_param->delete_data_path = val;
+            else if (str_name.compare("save_model_name") == 0)
+                gbdt_param->save_model_name = val;
             else if ((str_name.compare("max_bin") == 0) || (str_name.compare("max_num_bin") == 0))
                 gbdt_param->max_num_bin = atoi(val);
             else if ((str_name.compare("colsample") == 0) || (str_name.compare("column_sampling_rate") == 0))

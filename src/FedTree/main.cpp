@@ -237,7 +237,7 @@ int main(int argc, char** argv){
         bool test_on_remain = !fl_param.gbdt_param.remain_data_path.empty();
         bool test_on_delete = !fl_param.gbdt_param.delete_data_path.empty();
         if (test_on_remain) {
-            remain_dataset.load_from_file(fl_param.gbdt_param.delete_data_path, fl_param);
+            remain_dataset.load_from_file(fl_param.gbdt_param.remain_data_path, fl_param);
         }
         if (test_on_delete) {
             delete_dataset.load_from_file(fl_param.gbdt_param.delete_data_path, fl_param);
@@ -247,13 +247,13 @@ int main(int argc, char** argv){
             auto deltaboost = std::unique_ptr<DeltaBoost>(new DeltaBoost());
             float_type score;
             string model_path = string_format("cache/%s_deltaboost.model",
-                                              fl_param.deltaboost_param.dataset_name.c_str());
-            deltaboost->train(fl_param.deltaboost_param, dataset);
-            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
+                                              fl_param.deltaboost_param.save_model_name.c_str());
+//            deltaboost->train(fl_param.deltaboost_param, dataset);
+//            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
             parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
 
             string model_path_json = string_format("cache/%s.json",
-                                              fl_param.deltaboost_param.dataset_name.c_str());
+                                              fl_param.deltaboost_param.save_model_name.c_str());
             parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
 
 
@@ -300,7 +300,7 @@ int main(int argc, char** argv){
 
 
             string model_path_json_delete = string_format("cache/%s_deleted.json",
-                                                   fl_param.deltaboost_param.dataset_name.c_str());
+                                                   fl_param.deltaboost_param.save_model_name.c_str());
             parser.save_model_to_json(model_path_json_delete, fl_param.deltaboost_param, *deltaboost, dataset);
 
 
@@ -320,7 +320,7 @@ int main(int argc, char** argv){
             }
 
             string model_path_json = string_format("cache/%s_gbdt.json",
-                                                   fl_param.deltaboost_param.dataset_name.c_str());
+                                                   fl_param.gbdt_param.save_model_name.c_str());
             parser.save_model_to_json(model_path_json, fl_param.gbdt_param, *gbdt, dataset);
         }
 
