@@ -235,5 +235,14 @@ typedef thrust::tuple<int, float_type> int_float;
 
 std::ostream &operator<<(std::ostream &os, const int_float &rhs);
 
+template <typename T>
+std::vector<T> flatten(const std::vector<std::vector<T>> & vec) {
+    std::vector<T> result;
+    for (const auto & v : vec)
+        result.insert(result.end(), v.begin(), v.end());
+    return result;
+}
+
+
 
 #endif //FEDTREE_COMMON_H

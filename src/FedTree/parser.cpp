@@ -68,6 +68,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     deltaboost_param->remove_ratio = 0.0;
     deltaboost_param->dataset_name = "";
     deltaboost_param->n_used_trees = 0;
+    deltaboost_param->max_bin_size = 100;
 
     if (argc < 2) {
         printf("Usage: <config>\n");
@@ -163,6 +164,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 deltaboost_param->dataset_name = val;
             else if (str_name.compare("n_used_trees") == 0)
                 deltaboost_param->n_used_trees = atoi(val);
+            else if (str_name.compare("max_bin_size") == 0)
+                deltaboost_param->max_bin_size = atoi(val);
             else
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {

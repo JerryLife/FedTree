@@ -56,7 +56,7 @@ public:
         int split_feature_id;
         int pid;
         float_type split_value;
-        unsigned char split_bid;
+        int split_bid;
         bool default_right = false;
         bool is_leaf = true;
         bool is_valid;// non-valid nodes are those that are "children" of leaf nodes

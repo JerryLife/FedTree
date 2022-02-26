@@ -19,7 +19,7 @@ public:
 
     virtual void init_nocutpoints(DataSet &dataset, const GBDTParam &param);
 
-    void get_bin_ids();
+    virtual void get_bin_ids();
 
     void find_split(int level) override;
 
@@ -147,7 +147,7 @@ public:
 protected:
     vector<HistCut> parties_cut;
     // MSyncArray<unsigned char> char_dense_bin_id;
-    SyncArray<unsigned char> dense_bin_id;
+    SyncArray<int> dense_bin_id;  // instance_id x feature_id -> bin_id
     SyncArray<GHPair> last_hist;
     SyncArray<GHPair> last_missing_gh;
     MSyncArray<GHPair> parties_hist;

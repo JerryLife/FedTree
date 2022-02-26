@@ -34,5 +34,25 @@ public:
     void get_cut_points_by_feature_range(vector<vector<float>> f_range, int max_num_bins);
 };
 
+class RobustHistCut {
+public:
+    // The values of cut points
+    vector<float_type> cut_points_val;
+    // The number of accumulated cut points for current feature
+    vector<int> cut_col_ptr;
+    // The feature id for current cut point
+    vector<int> cut_fid;
+    // Number of instances in bins
+    vector<vector<int>> n_instances_in_hist;
+
+    RobustHistCut() = default;
+
+    RobustHistCut(const RobustHistCut& cut): cut_points_val(cut.cut_points_val), cut_col_ptr(cut.cut_col_ptr),
+    cut_fid(cut.cut_fid), n_instances_in_hist(cut.n_instances_in_hist) { }
+
+    void get_cut_points_by_feature_range_balanced(DataSet &dataset, int max_bin_size, int n_instances);
+    void get_cut_points_by_instance(DataSet &dataset, int max_num_bins, int n_instances);
+};
+
 
 #endif //FEDTREE_HIST_CUT_H

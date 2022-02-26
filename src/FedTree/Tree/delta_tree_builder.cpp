@@ -10,7 +10,13 @@
 #include <numeric>
 
 void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
-    HistTreeBuilder::init(dataset, param);
+    TreeBuilder::init(dataset, param); // NOLINT(bugprone-parent-virtual-call)
+    if (sorted_dataset.n_features() > 0) {
+//        cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
+        cut.get_cut_points_by_feature_range_balanced(sorted_dataset, param.max_bin_size, n_instances);
+        last_hist.resize((2 << param.depth) * cut.cut_points_val.size());
+        get_bin_ids();
+    }
     this->param = param;
     this->sp = SyncArray<DeltaSplitPoint>();
 
@@ -118,7 +124,7 @@ void DeltaTreeBuilder::find_split(int level) {
     int n_max_nodes = n_nodes_in_level * 2;
     int n_max_splits = n_max_nodes * n_bins;
 
-    auto cut_fid_data = cut.cut_fid.host_data();
+    auto cut_fid_data = cut.cut_fid.data();
 
 //    auto i2fid = [=] __host__(int i) { return cut_fid_data[i % n_bins]; };
 //    auto hist_fid = make_transform_iterator(counting_iterator<int>(0), i2fid);
@@ -290,7 +296,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
     const SyncArray<GHPair> &gh_pair = gradients;
 //    DeltaTree &tree = this->tree;
     const SyncArray<DeltaSplitPoint> &sp = this->sp;
-    const HistCut &cut = this->cut;
+    const auto &cut = this->cut;
     const auto &dense_bin_id = this->dense_bin_id;
     int nid_offset = tree.nodes.size() - n_nodes_in_level;
 //    auto &last_hist = this->last_hist;
@@ -311,15 +317,15 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
         TIMED_SCOPE(timerObj, "build hist");
         if (n_nodes_in_level == 1) {
             auto hist_data = hist.host_data();
-            auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
+            auto cut_col_ptr_data = cut.cut_col_ptr.data();
             auto gh_data = gh_pair.host_data();
             auto dense_bin_id_data = dense_bin_id.host_data();
 
             for (int i = 0; i < n_instances * n_column; i++) {
                 int iid = i / n_column;
                 int fid = i % n_column;
-                unsigned char bid = dense_bin_id_data[iid * n_column + fid];
-                if (bid < param.max_num_bin) {
+                auto bid = dense_bin_id_data[iid * n_column + fid];
+                if (bid != -1) {
                     int feature_offset = cut_col_ptr_data[fid];
                     hist_data[feature_offset + bid] += gh_data[iid];
                 }
@@ -347,10 +353,10 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 
 //            auto node_ptr_data = node_ptr.host_data();
 //            auto node_idx_data = node_idx.host_data();
-            auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
+            auto cut_col_ptr_data = cut.cut_col_ptr.data();
             auto gh_data = gh_pair.host_data();
             auto dense_bin_id_data = dense_bin_id.host_data();
-            auto max_num_bin = param.max_num_bin;
+//            auto max_num_bin = param.max_num_bin;
 
 
             for (int i = 0; i < n_nodes_in_level / 2; ++i) {
@@ -377,8 +383,8 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                     for (int j = 0; j < nid_to_iid[nid0].size() * n_column; j++) {
                         int iid = nid_to_iid[nid0][j / n_column];
                         int fid = j % n_column;
-                        unsigned char bid = dense_bin_id_data[iid * n_column + fid];
-                        if (bid != max_num_bin) {
+                        int bid = dense_bin_id_data[iid * n_column + fid];
+                        if (bid != -1) {
                             int feature_offset = cut_col_ptr_data[fid];
                             hist_data[feature_offset + bid] += gh_data[iid];
                         }
@@ -420,7 +426,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
     // handle missing data
     auto &nodes_data = tree.nodes;
     auto missing_gh_data = missing_gh.host_data();
-    auto cut_col_ptr = cut.cut_col_ptr.host_data();
+    auto cut_col_ptr = cut.cut_col_ptr.data();
     auto hist_data = hist.host_data();
 
     for (int pid = 0; pid < n_partition; pid++) {
@@ -452,7 +458,7 @@ void DeltaTreeBuilder::update_ins2node_indices() {
 
         int n_column = sorted_dataset.n_features();
         auto dense_bin_id_data = dense_bin_id.host_data();
-        int max_num_bin = param.max_num_bin;
+//        int max_num_bin = param.max_num_bin;
 #pragma omp parallel for
         for (int iid = 0; iid < n_instances; iid++) {
             for (int j = 0; j < ins2node_indices[iid].size(); ++j) {
@@ -461,10 +467,10 @@ void DeltaTreeBuilder::update_ins2node_indices() {
                 int split_fid = node.split_feature_id;
                 if (node.splittable() && ((split_fid < n_column) && (split_fid >= 0))) {
                     h_s_data[0] = true;
-                    unsigned char split_bid = node.split_bid;
-                    unsigned char bid = dense_bin_id_data[iid * n_column + split_fid];
+                    auto split_bid = node.split_bid;
+                    auto bid = dense_bin_id_data[iid * n_column + split_fid];
                     bool to_left = true;
-                    if ((bid == max_num_bin && node.default_right) || (bid <= split_bid))
+                    if ((bid == -1 && node.default_right) || (bid <= split_bid))
                         to_left = false;
                     if (to_left) {
                         //goes to left child
@@ -510,7 +516,7 @@ void DeltaTreeBuilder::update_ins2node_id() {
 
         int n_column = sorted_dataset.n_features();
         auto dense_bin_id_data = dense_bin_id.host_data();
-        int max_num_bin = param.max_num_bin;
+//        int max_num_bin = param.max_num_bin;
 #pragma omp parallel for
         for (int iid = 0; iid < n_instances; iid++) {
             int nid = nid_data[iid];
@@ -518,10 +524,10 @@ void DeltaTreeBuilder::update_ins2node_id() {
             int split_fid = node.split_feature_id;
             if (node.splittable() && ((split_fid < n_column) && (split_fid >= 0))) {
                 h_s_data[0] = true;
-                unsigned char split_bid = node.split_bid;
-                unsigned char bid = dense_bin_id_data[iid * n_column + split_fid];
+                auto split_bid = node.split_bid;
+                auto bid = dense_bin_id_data[iid * n_column + split_fid];
                 bool to_left = true;
-                if ((bid == max_num_bin && node.default_right) || (bid <= split_bid))
+                if ((bid == -1 && node.default_right) || (bid <= split_bid))
                     to_left = false;
                 if (to_left) {
                     //goes to left child
@@ -705,8 +711,8 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
             std::accumulate(num_nodes_per_level.begin(), num_nodes_per_level.end(), 0);
     const auto hist_data = hist.host_data();
     const auto missing_gh_data = missing_gh.host_data();
-    const auto cut_val_data = cut.cut_points_val.host_data();
-    const auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
+    const auto cut_val_data = cut.cut_points_val.data();
+    const auto cut_col_ptr_data = cut.cut_col_ptr.data();
 
     sp.resize(n_nodes_in_level);
     auto sp_data = sp.host_data();
@@ -783,7 +789,7 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
             sp_data[idx_in_level].gain = best_split_gain;
             size_t n_column = sorted_dataset.n_features();
             sp_data[idx_in_level].fval = cut_val_data[split_index % n_bins];
-            sp_data[idx_in_level].split_bid = (unsigned char) (split_index % n_bins - cut_col_ptr_data[fid]);
+            sp_data[idx_in_level].split_bid = (int) (split_index % n_bins - cut_col_ptr_data[fid]);
             sp_data[idx_in_level].fea_missing_gh = missing_gh_data[i * n_column + hist_fid[split_index]];
             sp_data[idx_in_level].default_right = best_split_gain.gain_value < 0;
             sp_data[idx_in_level].rch_sum_gh = hist_data[split_index];
@@ -842,13 +848,13 @@ void DeltaTreeBuilder::get_split_points(vector<gain_pair> &best_idx_gain, int n_
     int nid_offset = static_cast<int>(n_nodes_in_level - 1);
     auto hist_data = hist.host_data();
     const auto missing_gh_data = missing_gh.host_data();
-    auto cut_val_data = cut.cut_points_val.host_data();
+    auto cut_val_data = cut.cut_points_val.data();
 
     sp.resize(n_nodes_in_level);
     auto sp_data = sp.host_data();
     auto &nodes_data = tree.nodes;
 
-    auto cut_col_ptr_data = cut.cut_col_ptr.host_data();
+    auto cut_col_ptr_data = cut.cut_col_ptr.data();
 #pragma omp parallel for
     for (int i = 0; i < n_nodes_in_level; i++) {
         const gain_pair& bst = best_idx_gain[i];
@@ -867,7 +873,7 @@ void DeltaTreeBuilder::get_split_points(vector<gain_pair> &best_idx_gain, int n_
         int n_bins = cut.cut_points_val.size();
         int n_column = sorted_dataset.n_features();
         sp_data[i].fval = cut_val_data[split_index % n_bins];
-        sp_data[i].split_bid = (unsigned char) (split_index % n_bins - cut_col_ptr_data[fid]);
+        sp_data[i].split_bid = (int) (split_index % n_bins - cut_col_ptr_data[fid]);
         sp_data[i].fea_missing_gh = missing_gh_data[i * n_column + hist_fid[split_index]];
         sp_data[i].default_right = best_split_gain.gain_value < 0;
         sp_data[i].rch_sum_gh = hist_data[split_index];
@@ -875,5 +881,69 @@ void DeltaTreeBuilder::get_split_points(vector<gain_pair> &best_idx_gain, int n_
     }
     LOG(DEBUG) << "split points (gain/fea_id/nid): " << sp;
 }
+
+
+void DeltaTreeBuilder::get_bin_ids() {
+//    SparseColumns &columns = shards[device_id].columns;
+    auto &cut = this->cut;
+    auto &dense_bin_id = this->dense_bin_id;
+    using namespace thrust;
+    int n_column = sorted_dataset.n_features();
+    int nnz = sorted_dataset.csc_val.size();
+    auto cut_col_ptr = cut.cut_col_ptr.data();
+    auto cut_points_ptr = cut.cut_points_val.data();
+    auto csc_val_data = &(sorted_dataset.csc_val[0]);
+    auto csc_col_ptr_data = &(sorted_dataset.csc_col_ptr[0]);
+
+    SyncArray<int> bin_id;
+    bin_id.resize(nnz);
+    auto bin_id_data = bin_id.host_data();
+    int n_block = fminf((nnz / n_column - 1) / 256 + 1, 4 * 56);
+    {
+        auto lowerBound = [=]__host__(const float_type *search_begin, const float_type *search_end, float_type val) {
+            const float_type *left = search_begin;
+            const float_type *right = search_end - 1;
+
+            while (left != right) {
+                const float_type *mid = left + (right - left) / 2;
+                if (*mid <= val)
+                    right = mid;
+                else left = mid + 1;
+            }
+            return left;
+        };
+        TIMED_SCOPE(timerObj, "binning");
+
+#pragma omp parallel for
+        for (int cid = 0; cid < n_column; cid++) {
+            for (int i = csc_col_ptr_data[cid]; i < csc_col_ptr_data[cid + 1]; i++) {
+                auto search_begin = cut_points_ptr + cut_col_ptr[cid];
+                auto search_end = cut_points_ptr + cut_col_ptr[cid + 1];
+                auto val = csc_val_data[i];
+                bin_id_data[i] = lowerBound(search_begin, search_end, val) - search_begin;
+            }
+        }
+    }
+
+//    auto max_num_bin = param.max_num_bin;
+    dense_bin_id.resize(n_instances * n_column);
+    auto dense_bin_id_data = dense_bin_id.host_data();
+    auto csc_row_idx_data = sorted_dataset.csc_row_idx.data();
+    // default bid for missing values
+#pragma omp parallel for
+    for (int i = 0; i < n_instances * n_column; i++) {
+        dense_bin_id_data[i] = -1;
+    }
+#pragma omp parallel for
+    for (int fid = 0; fid < n_column; fid++) {
+        for (int i = csc_col_ptr_data[fid]; i < csc_col_ptr_data[fid + 1]; i++) {
+            int row = csc_row_idx_data[i];
+            auto bid = bin_id_data[i];
+            dense_bin_id_data[row * n_column + fid] = bid;
+        }
+    }
+    LOG(INFO);
+}
+
 
 

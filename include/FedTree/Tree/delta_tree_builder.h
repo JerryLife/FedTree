@@ -58,9 +58,12 @@ public:
 
     void broadcast_potential_node_indices(int node_id);
 
+    void get_bin_ids();
+
     DeltaTree tree;
     DeltaBoostParam param;
     SyncArray<DeltaSplitPoint> sp;
+    RobustHistCut cut;
 
     vector<int> num_nodes_per_level;    // number of nodes in each level, including potential nodes
     vector<vector<int>> ins2node_indices;   // each instance may be in multiple nodes
