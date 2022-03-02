@@ -221,6 +221,8 @@ void HistCut::get_cut_points_by_feature_range(vector<vector<float>> f_range, int
 
 
 void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, int max_bin_size, int n_instances) {
+    if(!dataset.has_csc)
+        dataset.csr_to_csc();
     size_t n_features = dataset.n_features();
 
     // obtain min-max value of each feature
@@ -280,10 +282,10 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
 
         // filter non-empty bins; remove the last split point (max)
 //        cut_points_val_vec[fid].push_back(split_values[0]);
-        for (int i = 0; i < n_instances_in_bins_with_flag.size(); ++i) {
+        for (int i = n_instances_in_bins_with_flag.size() - 1; i >= 0; --i) {
             if (n_instances_in_bins_with_flag[i].first > 0) {
                 n_instances_in_hist[fid].push_back(n_instances_in_bins_with_flag[i].first);
-                cut_points_val_vec[fid].push_back(split_values[i]);
+                cut_points_val_vec[fid].push_back(split_values[i + 1]);
             }
         }
         cut_fid_vec[fid] = std::vector<int>(n_instances_in_hist[fid].size(), fid);

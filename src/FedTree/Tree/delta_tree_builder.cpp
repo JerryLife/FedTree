@@ -11,10 +11,12 @@
 
 void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     TreeBuilder::init(dataset, param); // NOLINT(bugprone-parent-virtual-call)
-    if (sorted_dataset.n_features() > 0) {
+    if (dataset.n_features() > 0) {
+        RobustHistCut ref_cut;
+//        ref_cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
 //        cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
         cut.get_cut_points_by_feature_range_balanced(sorted_dataset, param.max_bin_size, n_instances);
-        last_hist.resize((2 << param.depth) * cut.cut_points_val.size());
+//        last_hist.resize((2 << param.depth) * cut.cut_points_val.size());
         get_bin_ids();
     }
     this->param = param;
@@ -23,9 +25,7 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
 }
 
 void DeltaTreeBuilder::init_nocutpoints(DataSet &dataset, const DeltaBoostParam &param) {
-    HistTreeBuilder::init(dataset, param);
-    this->param = param;
-    this->sp = SyncArray<DeltaSplitPoint>();
+    TreeBuilder::init_nosortdataset(dataset, param);
 }
 
 void DeltaTreeBuilder::broadcast_potential_node_indices(int node_id) {
@@ -228,8 +228,12 @@ int DeltaTreeBuilder::get_threshold_gain_in_a_level(const vector<DeltaTree::Delt
     int total_size = 0;
     for (int i = 0; i < n_bins * n_nodes_in_level; i += n_bins) {
         int nid = i / n_bins;
+
         float_type min_diff_node = min_diff * (float)(n_samples_in_nodes[nid]) / (float)n_instances;
         float_type max_range_node = max_range * (float)(n_samples_in_nodes[nid]) / (float)n_instances;
+//        assert(n_samples_in_nodes[nid] > 0);
+        if (n_samples_in_nodes[nid] == 0)       // to be fixed. filter all empty nodes
+            min_diff_node = 1.;
 
         vector<gain_pair> potential_idx_gain_per_node;
         std::sort(idx_gain.begin() + i, idx_gain.begin() + i + n_bins, arg_abs_max);
@@ -293,9 +297,9 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
     std::chrono::high_resolution_clock timer;
 
 //    const SyncArray<int> &nid = ins2node_id;
-    const SyncArray<GHPair> &gh_pair = gradients;
+    const auto &gh_pair = gradients;
 //    DeltaTree &tree = this->tree;
-    const SyncArray<DeltaSplitPoint> &sp = this->sp;
+    const auto &sp = this->sp;
     const auto &cut = this->cut;
     const auto &dense_bin_id = this->dense_bin_id;
     int nid_offset = tree.nodes.size() - n_nodes_in_level;
@@ -532,7 +536,7 @@ void DeltaTreeBuilder::update_ins2node_id() {
                 if (to_left) {
                     //goes to left child
                     nid_data[iid] = node.lch_index;
-//                    #pragma omp atomic
+                    #pragma omp atomic
                     nodes_data[node.lch_index].n_instances += 1;
 
                     for (int &potential_nid: ins2node_indices[iid]) {
@@ -546,7 +550,7 @@ void DeltaTreeBuilder::update_ins2node_id() {
                 } else {
                     //right child
                     nid_data[iid] = node.rch_index;
-//                    #pragma omp atomic
+                    #pragma omp atomic
                     nodes_data[node.rch_index].n_instances += 1;
 
                     for (int &potential_nid: ins2node_indices[iid]) {
@@ -886,7 +890,7 @@ void DeltaTreeBuilder::get_split_points(vector<gain_pair> &best_idx_gain, int n_
 void DeltaTreeBuilder::get_bin_ids() {
 //    SparseColumns &columns = shards[device_id].columns;
     auto &cut = this->cut;
-    auto &dense_bin_id = this->dense_bin_id;
+//    auto &dense_bin_id = this->dense_bin_id;
     using namespace thrust;
     int n_column = sorted_dataset.n_features();
     int nnz = sorted_dataset.csc_val.size();
@@ -942,7 +946,6 @@ void DeltaTreeBuilder::get_bin_ids() {
             dense_bin_id_data[row * n_column + fid] = bid;
         }
     }
-    LOG(INFO);
 }
 
 

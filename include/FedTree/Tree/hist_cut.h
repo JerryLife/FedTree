@@ -48,7 +48,7 @@ public:
     RobustHistCut() = default;
 
     RobustHistCut(const RobustHistCut& cut): cut_points_val(cut.cut_points_val), cut_col_ptr(cut.cut_col_ptr),
-    cut_fid(cut.cut_fid), n_instances_in_hist(cut.n_instances_in_hist) { }
+    n_instances_in_hist(cut.n_instances_in_hist) { }
 
     void get_cut_points_by_feature_range_balanced(DataSet &dataset, int max_bin_size, int n_instances);
     void get_cut_points_by_instance(DataSet &dataset, int max_num_bins, int n_instances);
