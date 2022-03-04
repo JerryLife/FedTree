@@ -14,8 +14,8 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     if (dataset.n_features() > 0) {
         RobustHistCut ref_cut;
 //        ref_cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
-//        cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
-        cut.get_cut_points_by_feature_range_balanced(sorted_dataset, param.max_bin_size, n_instances);
+        cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
+//        cut.get_cut_points_by_feature_range_balanced(sorted_dataset, param.max_bin_size, n_instances);
 //        last_hist.resize((2 << param.depth) * cut.cut_points_val.size());
         get_bin_ids();
     }
@@ -473,9 +473,15 @@ void DeltaTreeBuilder::update_ins2node_indices() {
                     h_s_data[0] = true;
                     auto split_bid = node.split_bid;
                     auto bid = dense_bin_id_data[iid * n_column + split_fid];
-                    bool to_left = true;
-                    if ((bid == -1 && node.default_right) || (bid <= split_bid))
-                        to_left = false;
+                    bool to_left;
+                    if (bid == -1) {
+                        to_left = !node.default_right;
+                    } else {
+                        to_left = bid > split_bid;
+                    }
+//                    bool to_left = true;
+//                    if ((bid == -1 && node.default_right) || (bid <= split_bid))
+//                        to_left = false;
                     if (to_left) {
                         //goes to left child
                         ins2node_indices[iid][j] = node.lch_index;
@@ -530,9 +536,14 @@ void DeltaTreeBuilder::update_ins2node_id() {
                 h_s_data[0] = true;
                 auto split_bid = node.split_bid;
                 auto bid = dense_bin_id_data[iid * n_column + split_fid];
-                bool to_left = true;
-                if ((bid == -1 && node.default_right) || (bid <= split_bid))
-                    to_left = false;
+                bool to_left;
+                if (bid == -1) {
+                    to_left = !node.default_right;
+                } else {
+                    to_left = bid > split_bid;
+                }
+//                if ((bid == -1 && node.default_right) || (bid <= split_bid))
+//                    to_left = false;
                 if (to_left) {
                     //goes to left child
                     nid_data[iid] = node.lch_index;
@@ -793,7 +804,7 @@ void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>
             sp_data[idx_in_level].gain = best_split_gain;
             size_t n_column = sorted_dataset.n_features();
             sp_data[idx_in_level].fval = cut_val_data[split_index % n_bins];
-            sp_data[idx_in_level].split_bid = (int) (split_index % n_bins - cut_col_ptr_data[fid]);
+            sp_data[idx_in_level].split_bid = (split_index % n_bins - cut_col_ptr_data[fid]);
             sp_data[idx_in_level].fea_missing_gh = missing_gh_data[i * n_column + hist_fid[split_index]];
             sp_data[idx_in_level].default_right = best_split_gain.gain_value < 0;
             sp_data[idx_in_level].rch_sum_gh = hist_data[split_index];
