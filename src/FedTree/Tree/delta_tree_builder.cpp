@@ -14,8 +14,8 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     if (dataset.n_features() > 0) {
         RobustHistCut ref_cut;
 //        ref_cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
-        cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
-//        cut.get_cut_points_by_feature_range_balanced(sorted_dataset, param.max_bin_size, n_instances);
+//        cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
+        cut.get_cut_points_by_feature_range_balanced(sorted_dataset, param.max_bin_size, n_instances);
 //        last_hist.resize((2 << param.depth) * cut.cut_points_val.size());
         get_bin_ids();
     }

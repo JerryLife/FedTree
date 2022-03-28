@@ -6,8 +6,9 @@ import numpy as np
 import argparse
 
 
-def load_data(data_path, data_fmt, scale_y=False) -> tuple:
+def load_data(data_path, data_fmt, scale_y=False, output_dense=False) -> tuple:
     """
+    :param output_dense: whether to output dense matrix. If set to false, csr_matrix will be output
     :param scale_y:
     :param data_fmt: data format (e.g. libsvm)
     :param data_path: path of the data
@@ -25,7 +26,10 @@ def load_data(data_path, data_fmt, scale_y=False) -> tuple:
     if scale_y:
         y = MinMaxScaler((0, 1)).fit_transform(y.reshape(-1, 1)).reshape(-1)
 
-    return X, y
+    if output_dense:
+        return X.toarray(), y
+    else:
+        return X, y
 
 
 def split_data(data, labels, val_rate=0.1, test_rate=0.2, seed=0):

@@ -12,7 +12,7 @@ class Evaluative(abc.ABC):
 
 class Node:
     def __init__(self, is_leaf=False, split_feature_id=None, split_value=None, base_weight=None, default_right=False,
-                 lch_id=-1, rch_id=-1, parent_id=-1):
+                 lch_id=-1, rch_id=-1, parent_id=-1, n_instances=0):
         self.parent_id = parent_id
         self.lch_id = lch_id
         self.rch_id = rch_id
@@ -21,6 +21,7 @@ class Node:
         self.base_weight = base_weight
         self.default_right = default_right
         self.is_leaf = is_leaf
+        self.n_instances = n_instances
 
     def decide_right(self, x) -> bool:
         """
@@ -28,10 +29,10 @@ class Node:
         :return: false for left, true for right
         """
         feature_value = x[self.split_feature_id]
-        if abs(feature_value) < 1e-7:
+        if abs(feature_value) < 1e-10:
             # missing value
             return self.default_right
-        return feature_value > self.split_value
+        return not (feature_value < self.split_value)
 
     @classmethod
     def load_from_json(cls, js: dict):
@@ -42,7 +43,23 @@ class Node:
                    split_value=float(js['split_value']),
                    base_weight=float(js['base_weight']),
                    default_right=bool(js['default_right']),
-                   is_leaf=bool(js['is_leaf']))
+                   is_leaf=bool(js['is_leaf']),
+                   n_instances=js['n_instances'])
+
+    def __repr__(self):
+        return f"{self.parent_id=} {self.lch_id=} {self.rch_id=} {self.split_feature_id=} {self.split_value=} " \
+               f"{self.base_weight=} {self.default_right=} {self.is_leaf=} {self.n_instances=}"
+
+    def __eq__(self, other):
+        if self.is_leaf != other.is_leaf or self.n_instances != other.n_instances:
+            return False
+
+        if self.is_leaf:
+            return self.base_weight == other.base_weight
+        else:
+            return self.split_feature_id == other.split_feature_id \
+               and self.default_right == other.default_right \
+               and self.split_value == other.split_value
 
 
 class Tree:
@@ -82,9 +99,28 @@ class Tree:
                 js['nodes'][node.lch_id]['parent_index'] = len(tree.nodes)
                 js['nodes'][node.rch_id]['parent_index'] = len(tree.nodes)
                 visiting_node_indices += [node.lch_id, node.rch_id]
-
-            tree.add_child_(node, is_right_child)
+            if node.parent_id == -1:
+                tree.add_root_(node)
+            else:
+                tree.add_child_(node, is_right_child)
         return tree
+
+    def __eq__(self, other):
+        visiting_node_indices = [0]
+        other_visiting_node_indices = [0]
+        while len(visiting_node_indices) > 0:
+            node_id = visiting_node_indices.pop(0)
+            other_node_id = other_visiting_node_indices.pop(0)
+            node = self.nodes[node_id]
+            other_node = other.nodes[other_node_id]
+            if node != other_node:
+                return False
+
+            assert node.is_leaf == other_node.is_leaf
+            if not node.is_leaf:
+                visiting_node_indices += [node.lch_id, node.rch_id]
+                other_visiting_node_indices += [other_node.lch_id, other_node.rch_id]
+        return True
 
 
 class GBDT(Evaluative):
@@ -92,15 +128,19 @@ class GBDT(Evaluative):
         self.lr = lr
         self.trees = trees
 
-    def predict_score(self, X: np.ndarray):
+    def predict_score(self, X: np.ndarray, n_used_trees=-1):
         """
+        :param n_used_trees: number of used trees
         :param X: 2D array
         :return: y: 1D array
         """
+        if n_used_trees == -1:
+            n_used_trees = len(self.trees)
+
         scores = np.zeros(X.shape[0])
         for i, x in enumerate(X):
             score = 0
-            for tree in self.trees:
+            for tree in self.trees[:n_used_trees]:
                 score += tree.predict(x) * self.lr
             scores[i] = score
         return scores
@@ -115,8 +155,13 @@ class GBDT(Evaluative):
     def load_from_json(cls, js, type='deltaboost'):
         assert type in ['deltaboost', 'gbdt'], "Unsupported type"
 
-        gbdt = cls(lr=js['learning_rate'], trees=[])
+        gbdt = cls(lr=float(js['learning_rate']), trees=[])
         for tree_js in js[type]['trees']:
             gbdt.trees.append(Tree.load_from_json(tree_js[0]))
         return gbdt
 
+    def __eq__(self, other):
+        for i, (tree, other_tree) in enumerate(zip(self.trees, other.trees)):
+            if tree != other_tree:
+                return False
+        return True

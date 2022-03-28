@@ -1,3 +1,4 @@
+import os
 import queue
 import pathlib
 import argparse
@@ -6,12 +7,16 @@ import pygraphviz as pgv
 import json
 
 
-def visualize(model_path, model_type: str):
+def visualize(model_path, model_type: str, output_dir=None):
+
+    base_path = pathlib.Path(model_path).with_suffix('')
+    if output_dir is not None:
+        base_path = os.path.join(output_dir, base_path.stem)
+
     with open(model_path, 'r') as f:
         js = json.load(f)
     print("Loaded.")
 
-    base_path = pathlib.Path(model_path)
     if model_type == 'gbdt':
         Gs = json_to_dot_gbdt(js)
     elif model_type == 'deltaboost':
@@ -19,7 +24,7 @@ def visualize(model_path, model_type: str):
     else:
         assert False
     for i, G in enumerate(Gs):
-        G.draw(f"{base_path.with_suffix('')}_tree{i}.svg", prog='dot')
+        G.draw(f"{base_path}_tree{i}.svg", prog='dot')
 
 
 def json_to_dot_gbdt(model):
@@ -47,7 +52,7 @@ def json_to_dot_gbdt(model):
                     next_visiting_nodes.append(lch_id)
                     next_visiting_nodes.append(rch_id)
                     G.add_node(f"{node_id}", shape='box',
-                               label=f"<ID={node_id}, N={node['n_instances']}, Bid={node['split_bid']}<BR/>Gain={node['gain']:.4f}>")
+                               label=f"<ID={node_id}, N={node['n_instances']}, Bid={node['split_bid']}, Fid={node['split_feature_id']}<BR/>Gain={node['gain']:.4f}>")
 
                 parent_index = nodes[node_id]['parent_index']
                 if parent_index >= 0:     # not root level
@@ -87,7 +92,7 @@ def json_to_dot_deltaboost(model):
                                label=f"<ID={prior_node_id}, N={node['n_instances']}<BR/>Weight={node['base_weight']:.4f}>")
                 else:
                     G.add_node(f"{prior_node_id}", shape='box',
-                               label=f"<ID={prior_node_id}, N={node['n_instances']}, Bid={node['split_bid']}<BR/>Gain={node['gain']['gain_value']:.4f}>")
+                               label=f"<ID={prior_node_id}, N={node['n_instances']}, Bid={node['split_bid']}, Fid={node['split_feature_id']}<BR/>Gain={node['gain']['gain_value']:.4f}>")
 
                 parent_index = nodes[prior_node_id]['parent_index']
                 if parent_index >= 0:     # not root level
@@ -106,7 +111,7 @@ def json_to_dot_deltaboost(model):
                                        label=f"<ID={potential_id}, N={potential_node['n_instances']}<BR/>Weight={potential_node['base_weight']:.4f}>")
                         else:
                             G.add_node(f"{potential_id}", shape='box',
-                                       label=f"<ID={potential_id}, N={potential_node['n_instances']}, Bid={potential_node['split_bid']}<BR/>Gain={potential_node['gain']['gain_value']:.4f}>")
+                                       label=f"<ID={potential_id}, N={potential_node['n_instances']}, Bid={potential_node['split_bid']}, Fid={potential_node['split_feature_id']}<BR/>Gain={potential_node['gain']['gain_value']:.4f}>")
                         parent_index = nodes[potential_id]['parent_index']
                         G.add_edge(f"{parent_index}", f"{potential_id}", style='invis')
 
@@ -136,10 +141,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str)
     parser.add_argument('--model-type', '-m', type=str, default='deltaboost')
+    parser.add_argument('--output-dir', '-o', type=str, default='../fig/')
     args = parser.parse_args()
     # visualize("trees/cod-rna.json")
     # visualize("trees/gisette.json")
     # visualize("trees/covtype.json")
     # visualize("trees/cadata.json")
-    visualize(args.path, model_type=args.model_type)
+    visualize(args.path, model_type=args.model_type, output_dir=args.output_dir)
 
