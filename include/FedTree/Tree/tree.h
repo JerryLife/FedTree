@@ -237,16 +237,63 @@ struct DeltaTree : public Tree {
         float_type missing_h = 0;
         float_type lambda = 0;
 
+        float_type ev_remain_gain = 0;
+        float_type lch_g2 = 0;
+        float_type rch_g2 = 0;
+        float_type self_g2 = 0;
+        float_type missing_g2 = 0;
+        int n_instances = 0;
+        int n_remove = 0;
+
         DeltaGain() = default;
 
-        DeltaGain(float_type gainValue, float_type lchG, float_type lchH, float_type rchG, float_type rchH,
-                  float_type selfG, float_type selfH, float_type missing_g, float_type missing_h, float_type lambda)
-                  : gain_value(gainValue), lch_g(lchG), lch_h(lchH), rch_g(rchG), rch_h(rchH),
-                  self_g(selfG), self_h(selfH), missing_g(missing_g), missing_h(missing_h), lambda(lambda) {}
+        DeltaGain(const DeltaGain &deltaGain) = default;
 
-        float_type cal_gain_value() const {
-            return std::max(0.f, (lch_g * lch_g) / (lch_h + lambda) + (rch_g * rch_g) / (rch_h + lambda) -
-                   (self_g * self_g) / (self_h + lambda));
+        DeltaGain &operator=(const DeltaGain &other) = default;
+
+        DeltaGain(float_type lchG, float_type lchH, float_type rchG, float_type rchH,
+                  float_type selfG, float_type selfH, float_type missingG, float_type missingH, float_type lambda,
+                  float_type lchG2, float_type rchG2, float_type self_g2, float_type missing_g2, int nInstances, int n_remove) :
+                  lch_g(lchG), lch_h(lchH), rch_g(rchG), rch_h(rchH), self_g(selfG), self_h(selfH),
+                missing_g(missingG), missing_h(missingH), lambda(lambda), lch_g2(lchG2), rch_g2(rchG2), self_g2(self_g2),
+                missing_g2(missing_g2), n_instances(nInstances), n_remove(n_remove) {}
+
+        DeltaGain(float_type gain_value, float_type lchG, float_type lchH, float_type rchG, float_type rchH,
+                  float_type selfG, float_type selfH, float_type missingG, float_type missingH, float_type lambda,
+                  float_type ev_remain_gain, float_type lchG2, float_type rchG2, float_type self_g2, float_type missing_g2,
+                  int nInstances, int n_remove) :
+                gain_value(gain_value), lch_g(lchG), lch_h(lchH), rch_g(rchG), rch_h(rchH), self_g(selfG), self_h(selfH),
+                missing_g(missingG), missing_h(missingH), lambda(lambda), ev_remain_gain(ev_remain_gain),
+                lch_g2(lchG2), rch_g2(rchG2), self_g2(self_g2),
+                missing_g2(missing_g2), n_instances(nInstances), n_remove(n_remove) {}
+
+//        DeltaGain(float_type gainValue, float_type lchG, float_type lchH, float_type rchG, float_type rchH,
+//                  float_type selfG, float_type selfH, float_type missing_g, float_type missing_h, float_type lambda)
+//                  : gain_value(gainValue), lch_g(lchG), lch_h(lchH), rch_g(rchG), rch_h(rchH),
+//                  self_g(selfG), self_h(selfH), missing_g(missing_g), missing_h(missing_h), lambda(lambda) {}
+
+        [[nodiscard]] float_type cal_gain_value(float_type min_child_weight = 1) const {
+            if (lch_h >= min_child_weight && rch_h >= min_child_weight) {
+                return std::max(0.f, (lch_g * lch_g) / (lch_h + lambda) + (rch_g * rch_g) / (rch_h + lambda) -
+                                     (self_g * self_g) / (self_h + lambda));
+            } else {
+                return 0;
+            }
+        }
+
+        [[nodiscard]] float_type cal_ev_remain_gain(float_type min_child_weight = 1) const {
+            if (lch_h >= min_child_weight && rch_h >= min_child_weight) {
+                double remove_ratio = 1. * n_remove / n_instances;
+                double coef = (1 - 2 * remove_ratio + remove_ratio * remove_ratio - remove_ratio / n_instances);
+                auto left_G = (remove_ratio * lch_g2 + coef * lch_g * lch_g) / ((1 - remove_ratio) * lch_h + lambda);
+                auto right_G = (remove_ratio * rch_g2 + coef * rch_g * rch_g) / ((1 - remove_ratio) * rch_h + lambda);
+                auto self_G =
+                        (remove_ratio * self_g2 + coef * self_g * self_g) / ((1 - remove_ratio) * self_h + lambda);
+                auto remain_gain = static_cast<float_type>(left_G + right_G - self_G);
+                return std::max(0.f, remain_gain);
+            } else {
+                return 0;
+            }
         }
 
         void delta_left_(float_type gradient, float_type hessian) {
@@ -278,6 +325,12 @@ struct DeltaTree : public Tree {
             ar & missing_g;
             ar & missing_h;
             ar & lambda;
+            ar & lch_g2;
+            ar & rch_g2;
+            ar & self_g2;
+            ar & missing_g2;
+            ar & n_instances;
+            ar & n_remove;
         }
 
         friend DeltaGain tag_invoke(json::value_to_tag<DeltaGain>, json::value const& v) {
@@ -292,7 +345,14 @@ struct DeltaTree : public Tree {
                 static_cast<float_type>(o.at("self_h").as_double()),
                 static_cast<float_type>(o.at("missing_g").as_double()),
                 static_cast<float_type>(o.at("missing_h").as_double()),
-                static_cast<float_type>(o.at("lambda").as_double())
+                static_cast<float_type>(o.at("lambda").as_double()),
+                static_cast<float_type>(o.at("ev_remain_gain").as_double()),
+                static_cast<float_type>(o.at("lch_g2").as_double()),
+                static_cast<float_type>(o.at("rch_g2").as_double()),
+                static_cast<float_type>(o.at("self_g2").as_double()),
+                static_cast<float_type>(o.at("missing_g2").as_double()),
+                static_cast<int>(o.at("n_instances").as_int64()),
+                static_cast<int>(o.at("n_remove").as_int64())
             };
         }
 
@@ -307,7 +367,72 @@ struct DeltaTree : public Tree {
                     {"self_h", deltaGain.self_h},
                     {"missing_g", deltaGain.missing_g},
                     {"missing_h", deltaGain.missing_h},
-                    {"lambda", deltaGain.lambda}
+                    {"lambda", deltaGain.lambda},
+                    {"ev_remain_gain", deltaGain.ev_remain_gain},
+                    {"lch_g2", deltaGain.lch_g2},
+                    {"rch_g2", deltaGain.rch_g2},
+                    {"self_g2", deltaGain.self_g2},
+                    {"missing_g2", deltaGain.missing_g2},
+                    {"n_instances", deltaGain.n_instances},
+                    {"n_remove", deltaGain.n_remove}
+            };
+        }
+    };
+
+    struct SplitNeighborhood {
+        int fid = -1;
+        int best_idx = -1;
+        vector<int> split_bids;
+        vector<DeltaTree::DeltaGain> gain;
+
+        SplitNeighborhood() = default;
+
+        SplitNeighborhood(const vector<int> &split_bids, int fid, const vector<DeltaTree::DeltaGain> &gain)
+                : split_bids(split_bids), fid(fid), gain(gain) {}
+
+        SplitNeighborhood &operator=(const SplitNeighborhood &other) = default;
+
+        void update_best_idx_() {
+            if (gain.empty()) return;
+            auto max_gain_itr = std::max_element(gain.begin(), gain.end(), [](const auto &a, const auto &b) {
+                return std::abs(a.gain_value) < std::abs(b.gain_value);
+            });
+            best_idx = static_cast<int>(max_gain_itr - gain.begin());
+        }
+
+        inline DeltaTree::DeltaGain best_gain() const {
+            return best_idx == -1 ? DeltaGain() : gain[best_idx];
+        }
+
+        inline int best_bid() const {
+            return split_bids[best_idx];
+        }
+
+        template<class Archive> void serialize(Archive &ar, const unsigned int /*version*/) {
+            ar & fid;
+            ar & best_idx;
+            ar & split_bids;
+            ar & gain;
+        }
+
+        friend SplitNeighborhood tag_invoke(json::value_to_tag<SplitNeighborhood>, json::value const& v) {
+            auto &o = v.as_object();
+
+            SplitNeighborhood split_nbr;
+
+            split_nbr.fid = static_cast<int>(v.at("fid").as_int64());
+            split_nbr.best_idx = static_cast<int>(v.at("best_idx").as_int64());
+            split_nbr.split_bids = json::value_to<std::vector<int>>(v.at("split_bids"));
+            split_nbr.gain = json::value_to<std::vector<DeltaGain>>(v.at("gain"));
+            return split_nbr;
+        }
+
+        friend void tag_invoke(json::value_from_tag, json::value& v, SplitNeighborhood const& split_nbr) {
+            v = json::object {
+                    {"fid", split_nbr.fid},
+                    {"best_idx", split_nbr.best_idx},
+                    {"split_bids", json::value_from(split_nbr.split_bids)},
+                    {"gain", json::value_from(split_nbr.gain)}
             };
         }
     };
@@ -316,6 +441,8 @@ struct DeltaTree : public Tree {
 
         vector<int> potential_nodes_indices;    // the indices is sorted by the value of priority
         DeltaGain gain;     // hide the float_type gain
+        float_type sum_g2 = 0.0;   // sum of g^2 and h^2 in this node
+        SplitNeighborhood split_nbr;    // split neighborhood around split point
 
         DeltaNode() = default;
 
@@ -336,8 +463,10 @@ struct DeltaTree : public Tree {
             is_pruned = copy.is_pruned;
             sum_gh_pair.g = copy.sum_gh_pair.g;
             sum_gh_pair.h = copy.sum_gh_pair.h;
+            sum_g2 = copy.sum_g2;
             n_instances = copy.n_instances;
             potential_nodes_indices = copy.potential_nodes_indices;
+            split_nbr = copy.split_nbr;
         }
 
         DeltaNode &operator=(const DeltaNode& copy) {
@@ -357,9 +486,10 @@ struct DeltaTree : public Tree {
             is_pruned = copy.is_pruned;
             sum_gh_pair.g = copy.sum_gh_pair.g;
             sum_gh_pair.h = copy.sum_gh_pair.h;
+            sum_g2 = copy.sum_g2;
             n_instances = copy.n_instances;
             potential_nodes_indices = copy.potential_nodes_indices;
-
+            split_nbr = copy.split_nbr;
             return *this;
         }
 
@@ -395,8 +525,10 @@ struct DeltaTree : public Tree {
             ar & is_pruned;
             ar & sum_gh_pair.g;
             ar & sum_gh_pair.h;
+            ar & sum_g2;
             ar & n_instances;
             ar & potential_nodes_indices;
+            ar & split_nbr;
         }
 
         friend DeltaNode tag_invoke(json::value_to_tag<DeltaNode>, json::value const& v) {
@@ -422,7 +554,8 @@ struct DeltaTree : public Tree {
             deltaNode.sum_gh_pair.h = o.at("sum_gh_pair.h").as_double();
             deltaNode.n_instances = o.at("n_instances").as_int64();
             deltaNode.potential_nodes_indices = boost::json::value_to<std::vector<int>>(o.at("potential_nodes_indices"));
-
+            deltaNode.sum_g2 = o.at("sum_g2").as_double();
+            deltaNode.split_nbr = json::value_to<SplitNeighborhood>(v.at("split_nbr"));
             return deltaNode;
         }
 
@@ -445,7 +578,9 @@ struct DeltaTree : public Tree {
                     {"sum_gh_pair.g", deltaNode.sum_gh_pair.g},
                     {"sum_gh_pair.h", deltaNode.sum_gh_pair.h},
                     {"n_instances", deltaNode.n_instances},
-                    {"potential_nodes_indices", json::value_from(deltaNode.potential_nodes_indices)}
+                    {"potential_nodes_indices", json::value_from(deltaNode.potential_nodes_indices)},
+                    {"sum_g2", deltaNode.sum_g2},
+                    {"split_nbr", json::value_from(deltaNode.split_nbr)}
             };
         }
     };
@@ -506,6 +641,8 @@ private:
     }
 
 };
+
+
 
 
 #endif //FEDTREE_TREE_H

@@ -252,7 +252,7 @@ int main(int argc, char** argv){
             parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
             parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
 
-            string model_path_json = string_format("cache/%s.json",
+            string model_path_json = string_format("cache/%s_deltaboost.json",
                                               fl_param.deltaboost_param.save_model_name.c_str());
             parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
 

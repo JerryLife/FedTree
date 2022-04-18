@@ -149,6 +149,7 @@ protected:
     // MSyncArray<unsigned char> char_dense_bin_id;
     SyncArray<int> dense_bin_id;  // instance_id x feature_id -> bin_id
     SyncArray<GHPair> last_hist;
+    vector<float_type> last_hist_g2;
     SyncArray<GHPair> last_missing_gh;
     MSyncArray<GHPair> parties_hist;
     MSyncArray<GHPair> parties_missing_gh;

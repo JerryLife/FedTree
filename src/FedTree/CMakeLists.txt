@@ -8,6 +8,7 @@ list(REMOVE_ITEM SRC "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
 set(BOOST_ROOT /home/zhaomin/.local)
 find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
+#find_package(TBB REQUIRED PATHS ${TBB_RELEASE})
 
 
 find_library(NTL_LIB ntl)

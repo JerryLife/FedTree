@@ -6,6 +6,7 @@
 #include "thrust/reduce.h"
 #include "thrust/execution_policy.h"
 #include <numeric>
+#include <boost/compute/algorithm/reduce.hpp>
 
 void Tree::init_CPU(const GHPair sum_gh, const GBDTParam &param) {
     init_structure(param.depth);
@@ -210,11 +211,18 @@ void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostPar
     init_structure(param.depth);
     //init root node
     GHPair sum_gh = thrust::reduce(thrust::host, gradients.host_data(), gradients.host_end());
-    LOG(DEBUG) << "init_CPU: " << sum_gh;
+//    float_type sum_g2 = std::reduce(std::execution::par, gradients.host_data(), gradients.host_end(), 0.0f,
+//                                    [](const GHPair &a, const GHPair &b){
+//        return  a.g * a.g + b.g * b.g;
+//    });
+
+    float_type sum_g2 = std::accumulate(gradients.host_data(), gradients.host_end(), 0.0f,
+                                         [](float_type a, const GHPair &b){ return  a + b.g * b.g;});
 
     float_type lambda = param.lambda;
     DeltaNode &root_node = nodes[0];
     root_node.sum_gh_pair = sum_gh;
+    root_node.sum_g2 = sum_g2;
     root_node.is_valid = true;
     root_node.calc_weight(lambda); // TODO: check here
     root_node.n_instances = static_cast<int>(gradients.size());
