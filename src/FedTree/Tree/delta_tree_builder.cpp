@@ -120,7 +120,7 @@ void DeltaTreeBuilder::find_split(int level) {
 //    int nid_offset = static_cast<int>(pow(2, level) - 1);
     int n_column = sorted_dataset.n_features();
     int n_partition = n_column * n_nodes_in_level;
-    int n_bins = cut.cut_points_val.size();
+    int n_bins = static_cast<int>(cut.cut_points_val.size());
     int n_max_nodes = n_nodes_in_level * 2;
     int n_max_splits = n_max_nodes * n_bins;
 
@@ -162,7 +162,7 @@ void DeltaTreeBuilder::find_split(int level) {
 //    update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 3, 3);
 
     vector<DeltaTree::SplitNeighborhood> best_split_nbr(n_nodes_in_level);
-    int nbr_size = 10;
+    int nbr_size = 20;
     get_best_split_nbr(gain, best_split_nbr, n_nodes_in_level, n_bins, nbr_size);
 
 //    vector<int> n_samples_in_nodes(n_nodes_in_level);
@@ -276,64 +276,84 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
             return fabsf(a.second.gain_value) > fabsf(b.second.gain_value);
     };
 
+    // calculate score
+    float_type alpha = 0.5;
+    vector<float_type> score_per_sp(gain.size());
+#pragma omp parallel for
+    for (int i = 0; i < gain.size(); ++i) {
+        score_per_sp[i] = std::abs(gain[i].gain_value) - alpha * (gain[i].gain_value - gain[i].ev_remain_gain);
+    }
+
     for (int i = 0; i < n_bins * n_nodes_in_level; i += n_bins) {
         int nid = i / n_bins;
 
-        vector<int> sorted_gain_idx(n_bins);
-        std::iota(sorted_gain_idx.begin(), sorted_gain_idx.end(), 0);
-        vector<int> sorted_remain_gain_idx(sorted_gain_idx);
-        auto gain_cmp = [&gain,i](int a, int b) { return std::abs(gain[i + a].gain_value) > std::abs(gain[i + b].gain_value); };
-        auto remain_gain_cmp = [&gain,i](int a, int b) { return gain[i + a].ev_remain_gain > gain[i + b].ev_remain_gain; };
-        std::sort(sorted_gain_idx.begin(), sorted_gain_idx.end(), gain_cmp);
-        std::sort(sorted_remain_gain_idx.begin(), sorted_remain_gain_idx.end(), remain_gain_cmp);
+//        vector<int> sorted_gain_idx(n_bins);
+//        std::iota(sorted_gain_idx.begin(), sorted_gain_idx.end(), 0);
+//        vector<int> sorted_remain_gain_idx(sorted_gain_idx);
+//        auto gain_cmp = [&gain,i](int a, int b) { return std::abs(gain[i + a].gain_value) > std::abs(gain[i + b].gain_value); };
+//        auto remain_gain_cmp = [&gain,i](int a, int b) { return gain[i + a].ev_remain_gain > gain[i + b].ev_remain_gain; };
+//        std::sort(sorted_gain_idx.begin(), sorted_gain_idx.end(), gain_cmp);
+//        std::sort(sorted_remain_gain_idx.begin(), sorted_remain_gain_idx.end(), remain_gain_cmp);
+//
+//        // covert sorted index to rank of each split points (n_bins in total)
+//        vector<int> gain_rank(n_bins);
+//#pragma omp parallel for
+//        for(int j = 0; j < n_bins; ++j) {
+//            gain_rank[sorted_gain_idx[j]] = j + 1;
+//        }
+//        vector<int> remain_gain_rank(n_bins);
+//#pragma omp parallel for
+//        for(int j = 0; j < n_bins; ++j) {
+//            remain_gain_rank[sorted_remain_gain_idx[j]] = j + 1;
+//        }
+//
+//        // combine two ranks
+//        vector<float_type> overall_rank(n_bins);
+//        for (int j = 0; j < n_bins; ++j) {
+//            // by geometric mean
+//            overall_rank[j] = static_cast<float_type>(sqrt(gain_rank[j] * remain_gain_rank[j]));
+////            // by mean
+////            overall_rank[j] = static_cast<float_type>((gain_rank[j] + remain_gain_rank[j]) / 2.);
+//        }
 
-        // covert sorted index to rank of each split points (n_bins in total)
-        vector<int> gain_rank(n_bins);
-#pragma omp parallel for
-        for(int j = 0; j < n_bins; ++j) {
-            gain_rank[sorted_gain_idx[j]] = j + 1;
-        }
-        vector<int> remain_gain_rank(n_bins);
-#pragma omp parallel for
-        for(int j = 0; j < n_bins; ++j) {
-            remain_gain_rank[sorted_remain_gain_idx[j]] = j + 1;
-        }
-
-        // combine two ranks
-        vector<float_type> overall_rank(n_bins);
-        for (int j = 0; j < n_bins; ++j) {
-            // by geometric mean
-            overall_rank[j] = static_cast<float_type>(sqrt(gain_rank[j] * remain_gain_rank[j]));
-//            // by mean
-//            overall_rank[j] = static_cast<float_type>((gain_rank[j] + remain_gain_rank[j]) / 2.);
-        }
 
         // choose the best split neighborhood (with min scores)
-        vector<std::pair<size_t, float_type>> scores(sorted_dataset.n_features());
+        vector<std::tuple<size_t, size_t, float_type>> scores(sorted_dataset.n_features());
         for (int j = 0; j < sorted_dataset.n_features(); ++j) {
             int bid_start = cut.cut_col_ptr[j];
             int bid_end = cut.cut_col_ptr[j + 1];
-            vector<float_type> scores_in_feature(bid_end - bid_start - nbr_size + 1);
-            for (int k = bid_start; k < bid_end - nbr_size + 1; ++k) {
-                float_type score = std::accumulate(overall_rank.begin() + k, overall_rank.begin() + k + nbr_size, 0.f);
-                scores_in_feature[k - bid_start] = score;
+            int n_nbrs = bid_end - bid_start - nbr_size + 1;
+            vector<float_type> scores_in_feature;
+            if (n_nbrs > 0){
+                scores_in_feature.resize(n_nbrs);
+                for (int k = bid_start; k < bid_end - nbr_size + 1; ++k) {
+                    float_type score = std::accumulate(score_per_sp.begin() + i + k, score_per_sp.begin() + i + k + nbr_size, 0.f);
+                    scores_in_feature[k - bid_start] = score;
+                }
+            } else {
+                float_type score = std::accumulate(score_per_sp.begin() + i + bid_start, score_per_sp.begin() + i + bid_end, 0.f);
+                scores_in_feature = {score};
             }
-            auto best_score_in_feature_itr = std::min_element(scores_in_feature.begin(),scores_in_feature.end());
-            size_t best_idx_in_feature = best_score_in_feature_itr - scores_in_feature.begin() + bid_start;    // idx in range(n_bins)
+
+            auto best_score_in_feature_itr = std::max_element(scores_in_feature.begin(),scores_in_feature.end());
+            size_t best_idx_in_feature_start = best_score_in_feature_itr - scores_in_feature.begin() + bid_start;    // idx in range(n_bins)
+            size_t best_idx_in_feature_end = std::min(static_cast<int>(best_idx_in_feature_start + nbr_size), bid_end);
             float_type best_score_in_feature = *best_score_in_feature_itr;
-            scores[j] = std::make_pair(best_idx_in_feature, best_score_in_feature);
+            scores[j] = std::make_tuple(best_idx_in_feature_start, best_idx_in_feature_end, best_score_in_feature);
         }
-        auto best_idx_score_itr = std::min_element(scores.begin(), scores.end(), [](const auto &a, const auto &b){
-            return a.second < b.second;
-        });     // get min rank
+        // assert scores >= 0
+        auto best_idx_score_itr = std::max_element(scores.begin(), scores.end(), [](const auto &a, const auto &b){
+            return std::get<2>(a) < std::get<2>(b);
+        });
         int fid = static_cast<int>(best_idx_score_itr - scores.begin());
-        int best_bid = static_cast<int>(best_idx_score_itr->first);
-        float_type best_score = best_idx_score_itr->second;
+        int best_bid_start = static_cast<int>(std::get<0>(*best_idx_score_itr));
+        int best_bid_end = static_cast<int>(std::get<1>(*best_idx_score_itr));
+        float_type best_score = std::get<2>(*best_idx_score_itr);
 
         // extract best split neighborhood according to best_bid
-        vector<int> best_bid_vec(nbr_size);
-        std::iota(best_bid_vec.begin(), best_bid_vec.end(), best_bid);
-        vector<DeltaTree::DeltaGain> best_gain_vec(gain.begin() + i + best_bid, gain.begin() + i + best_bid + nbr_size);
+        vector<int> best_bid_vec(best_bid_end - best_bid_start);
+        std::iota(best_bid_vec.begin(), best_bid_vec.end(), best_bid_start);
+        vector<DeltaTree::DeltaGain> best_gain_vec(gain.begin() + i + best_bid_start, gain.begin() + i + best_bid_end);
         DeltaTree::SplitNeighborhood split_nbr(best_bid_vec, fid, best_gain_vec);
         split_nbr.update_best_idx_();
         best_split_nbr[nid] = split_nbr;
@@ -477,7 +497,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                         if (bid != -1) {
                             int feature_offset = cut_col_ptr_data[fid];
                             hist_data[feature_offset + bid] += gh_data[iid];
-                            hist_g2[feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
+                            hist_g2[nid0_to_compute * n_bins + feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
                         }
                     }
                 }
@@ -487,11 +507,14 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                 {
                     auto hist_data_computed = hist.host_data() + nid0_to_compute * n_bins;
                     auto hist_data_to_compute = hist.host_data() + nid0_to_substract * n_bins;
-                    auto parent_hist_data = last_hist.host_data() + parent_indices[nid0_to_substract] *
-                                                                    n_bins;
+                    auto parent_hist_data = last_hist.host_data() + parent_indices[nid0_to_substract] * n_bins;
+                    auto hist_g2_computed = hist_g2.data() + nid0_to_compute * n_bins;
+                    auto hist_g2_to_compute = hist_g2.data() + nid0_to_substract * n_bins;
+                    auto parent_hist_g2 = last_hist_g2.data() + parent_indices[nid0_to_substract] * n_bins;
 #pragma omp parallel for
-                    for (int i = 0; i < n_bins; i++) {
-                        hist_data_to_compute[i] = parent_hist_data[i] - hist_data_computed[i];
+                    for (int j = 0; j < n_bins; j++) {
+                        hist_data_to_compute[j] = parent_hist_data[j] - hist_data_computed[j];
+                        hist_g2_to_compute[j] = parent_hist_g2[j] - hist_g2_computed[j];
                     }
                 }
                 auto t_copy_end = timer.now();
@@ -529,7 +552,6 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
     for (int pid = 0; pid < n_partition; pid++) {
         int nid0 = pid / n_column;
         int nid = nid0 + nid_offset;
-        //            todo: check, ThunderGBM uses return;
         if (!nodes_data[nid].splittable()) continue;
         int fid = pid % n_column;
         if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
@@ -687,7 +709,7 @@ void DeltaTreeBuilder::update_tree() {
     float_type rt_eps = param.rt_eps;
     float_type lambda = param.lambda;
 
-//#pragma omp parallel for
+#pragma omp parallel for
     for(int i = 0; i < n_nodes_in_level; i++){
         DeltaTree::DeltaGain best_split_gain = sp_data[i].gain;
 
@@ -706,6 +728,7 @@ void DeltaTreeBuilder::update_tree() {
             node.split_feature_id = sp_data[i].split_fea_id;
             node.split_nbr = sp_data[i].split_nbr;
             GHPair p_missing_gh = sp_data[i].fea_missing_gh;
+            float_type p_missing_g2 = sp_data[i].fea_missing_g2;
             //todo process begin
             node.split_value = sp_data[i].fval;
             node.split_bid = sp_data[i].split_bid;
@@ -713,6 +736,7 @@ void DeltaTreeBuilder::update_tree() {
             rch.sum_g2 = sp_data[i].rch_sum_g2;
             if (sp_data[i].default_right) {
                 rch.sum_gh_pair = rch.sum_gh_pair + p_missing_gh;
+                rch.sum_g2 = rch.sum_g2 + p_missing_g2;
                 // LOG(INFO) << "RCH" << rch.sum_gh_pair;
                 node.default_right = true;
             }
@@ -983,11 +1007,12 @@ void DeltaTreeBuilder::get_split_points(vector<DeltaTree::SplitNeighborhood> &be
     parent_indices.clear();
 
     auto cut_col_ptr_data = cut.cut_col_ptr.data();
+    int n_bins = static_cast<int>(cut.cut_points_val.size());
 //#pragma omp parallel for
     for (int i = 0; i < n_nodes_in_level; i++) {
         auto &split_nbr = best_split_nbr[i];
         DeltaTree::DeltaGain best_split_gain = split_nbr.best_gain();
-        int split_index = split_nbr.best_bid();
+        int split_index = split_nbr.best_bid() + n_bins * i;
         if (!nodes_data[i + nid_offset].is_valid) {
             sp_data[i].split_fea_id = -1;
             sp_data[i].nid = -1;
@@ -998,11 +1023,11 @@ void DeltaTreeBuilder::get_split_points(vector<DeltaTree::SplitNeighborhood> &be
         nodes_data[i + nid_offset].lch_index = nid_offset + n_nodes_in_level + i * 2;
         nodes_data[i + nid_offset].rch_index = nid_offset + n_nodes_in_level + i * 2 + 1;
 
-        int fid = hist_fid[split_index];
+//        int fid = hist_fid[split_index];
+        int fid = split_nbr.fid;
         sp_data[i].split_fea_id = fid;
         sp_data[i].nid = i + nid_offset;
         sp_data[i].gain = best_split_gain;
-        int n_bins = cut.cut_points_val.size();
         int n_column = sorted_dataset.n_features();
         sp_data[i].fval = cut_val_data[split_index % n_bins];
         sp_data[i].split_bid = (int) (split_index % n_bins - cut_col_ptr_data[fid]);

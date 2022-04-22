@@ -55,7 +55,7 @@ public:
         float_type base_weight;
         int split_feature_id;
         int pid;
-        float_type split_value;
+        float_type split_value = 0.0;
         int split_bid;
         bool default_right = false;
         bool is_leaf = true;
