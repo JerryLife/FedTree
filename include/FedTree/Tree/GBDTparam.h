@@ -50,6 +50,9 @@ struct DeltaBoostParam : public GBDTParam {
     float_type max_range_gain = 0;
     int n_used_trees = 0;
     int max_bin_size = 100;
+    float_type alpha = 0.0;
+    int nbr_size = 1;
+    float_type delta_gain_eps = 0.0;
 
     DeltaBoostParam() = default;
 
@@ -60,7 +63,10 @@ struct DeltaBoostParam : public GBDTParam {
     max_range_gain(deltaboost_param->max_range_gain),
     dataset_name(deltaboost_param->dataset_name),
     n_used_trees(deltaboost_param->n_used_trees),
-    max_bin_size(deltaboost_param->max_bin_size) {
+    max_bin_size(deltaboost_param->max_bin_size),
+    alpha(deltaboost_param->alpha),
+    nbr_size(deltaboost_param->nbr_size),
+    delta_gain_eps(deltaboost_param->delta_gain_eps) {
         if (deltaboost_param->n_used_trees > 0) {
             this->n_used_trees = deltaboost_param->n_used_trees;
         } else {

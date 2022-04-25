@@ -257,9 +257,9 @@ int main(int argc, char** argv){
             parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
 
 
-//            LOG(INFO) << "On test dataset";
-//            deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
-//                                      fl_param.deltaboost_param.n_used_trees);
+            LOG(INFO) << "On test dataset";
+            deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
+                                      fl_param.deltaboost_param.n_used_trees);
 //            if (test_on_delete) {
 //                LOG(INFO) << "On deleted dataset";
 //                deltaboost->predict_score(fl_param.deltaboost_param, delete_dataset,

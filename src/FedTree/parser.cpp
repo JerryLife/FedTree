@@ -9,6 +9,8 @@
 #include <FedTree/parser.h>
 #include <FedTree/dataset.h>
 #include <FedTree/Tree/tree.h>
+
+#include <memory>
 #include "FedTree/Tree/deltaboost.h"
 
 #include "boost/serialization/string.hpp"
@@ -69,6 +71,9 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     deltaboost_param->dataset_name = "";
     deltaboost_param->n_used_trees = 0;
     deltaboost_param->max_bin_size = 100;
+    deltaboost_param->alpha = 0.0;
+    deltaboost_param->nbr_size = 1;
+    deltaboost_param->delta_gain_eps = 0.0;
 
     if (argc < 2) {
         printf("Usage: <config>\n");
@@ -166,6 +171,12 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 deltaboost_param->n_used_trees = atoi(val);
             else if (str_name.compare("max_bin_size") == 0)
                 deltaboost_param->max_bin_size = atoi(val);
+            else if (str_name.compare("alpha") == 0)
+                deltaboost_param->alpha = atof(val);
+            else if (str_name.compare("nbr_size") == 0)
+                deltaboost_param->nbr_size = atoi(val);
+            else if (str_name.compare("delta_gain_eps") == 0)
+                deltaboost_param->delta_gain_eps = atof(val);
             else
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {
@@ -197,8 +208,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
 
     if (deltaboost_param->enable_delta) {
         // copy gbdt params into deltaboost params
-        fl_param.deltaboost_param = *(std::unique_ptr<DeltaBoostParam>(
-                new DeltaBoostParam(gbdt_param, deltaboost_param)));
+        fl_param.deltaboost_param = *(std::make_unique<DeltaBoostParam>(
+                gbdt_param, deltaboost_param));
     }
 }
 

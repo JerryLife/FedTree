@@ -99,7 +99,7 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
             LOG(DEBUG) << "Number of nodes: " << tree.nodes.size();
         }
 
-        broadcast_potential_node_indices(0);    // can remove
+//        broadcast_potential_node_indices(0);    // can remove
         //here
 //        tree.prune_self(param.gamma);
 //        LOG(INFO) << "y_predict: " << y_predict;
@@ -162,7 +162,7 @@ void DeltaTreeBuilder::find_split(int level) {
 //    update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 3, 3);
 
     vector<DeltaTree::SplitNeighborhood> best_split_nbr(n_nodes_in_level);
-    int nbr_size = 20;
+    int nbr_size = 30;
     get_best_split_nbr(gain, best_split_nbr, n_nodes_in_level, n_bins, nbr_size);
 
 //    vector<int> n_samples_in_nodes(n_nodes_in_level);
@@ -277,69 +277,48 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
     };
 
     // calculate score
-    float_type alpha = 0.5;
-    vector<float_type> score_per_sp(gain.size());
+    float_type alpha = 0.0;
+    vector<float_type> gain_per_sp(gain.size());
+    vector<float_type> remain_gain_per_sp(gain.size());
 #pragma omp parallel for
     for (int i = 0; i < gain.size(); ++i) {
-        score_per_sp[i] = std::abs(gain[i].gain_value) - alpha * (gain[i].gain_value - gain[i].ev_remain_gain);
+        gain_per_sp[i] = std::abs(gain[i].gain_value);
+        remain_gain_per_sp[i] = gain[i].ev_remain_gain;
     }
 
     for (int i = 0; i < n_bins * n_nodes_in_level; i += n_bins) {
         int nid = i / n_bins;
 
-//        vector<int> sorted_gain_idx(n_bins);
-//        std::iota(sorted_gain_idx.begin(), sorted_gain_idx.end(), 0);
-//        vector<int> sorted_remain_gain_idx(sorted_gain_idx);
-//        auto gain_cmp = [&gain,i](int a, int b) { return std::abs(gain[i + a].gain_value) > std::abs(gain[i + b].gain_value); };
-//        auto remain_gain_cmp = [&gain,i](int a, int b) { return gain[i + a].ev_remain_gain > gain[i + b].ev_remain_gain; };
-//        std::sort(sorted_gain_idx.begin(), sorted_gain_idx.end(), gain_cmp);
-//        std::sort(sorted_remain_gain_idx.begin(), sorted_remain_gain_idx.end(), remain_gain_cmp);
-//
-//        // covert sorted index to rank of each split points (n_bins in total)
-//        vector<int> gain_rank(n_bins);
-//#pragma omp parallel for
-//        for(int j = 0; j < n_bins; ++j) {
-//            gain_rank[sorted_gain_idx[j]] = j + 1;
-//        }
-//        vector<int> remain_gain_rank(n_bins);
-//#pragma omp parallel for
-//        for(int j = 0; j < n_bins; ++j) {
-//            remain_gain_rank[sorted_remain_gain_idx[j]] = j + 1;
-//        }
-//
-//        // combine two ranks
-//        vector<float_type> overall_rank(n_bins);
-//        for (int j = 0; j < n_bins; ++j) {
-//            // by geometric mean
-//            overall_rank[j] = static_cast<float_type>(sqrt(gain_rank[j] * remain_gain_rank[j]));
-////            // by mean
-////            overall_rank[j] = static_cast<float_type>((gain_rank[j] + remain_gain_rank[j]) / 2.);
-//        }
-
-
         // choose the best split neighborhood (with min scores)
-        vector<std::tuple<size_t, size_t, float_type>> scores(sorted_dataset.n_features());
+        vector<std::tuple<size_t, size_t, float_type, float_type>> scores(sorted_dataset.n_features());
         for (int j = 0; j < sorted_dataset.n_features(); ++j) {
             int bid_start = cut.cut_col_ptr[j];
             int bid_end = cut.cut_col_ptr[j + 1];
             int n_nbrs = bid_end - bid_start - nbr_size + 1;
             vector<float_type> scores_in_feature;
+            vector<float_type> remain_scores_in_feature;
             if (n_nbrs > 0){
                 scores_in_feature.resize(n_nbrs);
+                remain_scores_in_feature.resize(n_nbrs);
                 for (int k = bid_start; k < bid_end - nbr_size + 1; ++k) {
-                    float_type score = std::accumulate(score_per_sp.begin() + i + k, score_per_sp.begin() + i + k + nbr_size, 0.f);
+                    float_type score = std::accumulate(gain_per_sp.begin() + i + k, gain_per_sp.begin() + i + k + nbr_size, 0.f);
+                    float_type remain_score = std::accumulate(remain_gain_per_sp.begin() + i + k, remain_gain_per_sp.begin() + i + k + nbr_size, 0.f);
                     scores_in_feature[k - bid_start] = score;
+                    remain_scores_in_feature[k - bid_start] = remain_score;
                 }
             } else {
-                float_type score = std::accumulate(score_per_sp.begin() + i + bid_start, score_per_sp.begin() + i + bid_end, 0.f);
+                float_type score = std::accumulate(gain_per_sp.begin() + i + bid_start, gain_per_sp.begin() + i + bid_end, 0.f);
+                float_type remain_score = std::accumulate(remain_gain_per_sp.begin() + i + bid_start, remain_gain_per_sp.begin() + i + bid_end, 0.f);
                 scores_in_feature = {score};
+                remain_scores_in_feature = {remain_score};
             }
 
             auto best_score_in_feature_itr = std::max_element(scores_in_feature.begin(),scores_in_feature.end());
             size_t best_idx_in_feature_start = best_score_in_feature_itr - scores_in_feature.begin() + bid_start;    // idx in range(n_bins)
             size_t best_idx_in_feature_end = std::min(static_cast<int>(best_idx_in_feature_start + nbr_size), bid_end);
             float_type best_score_in_feature = *best_score_in_feature_itr;
-            scores[j] = std::make_tuple(best_idx_in_feature_start, best_idx_in_feature_end, best_score_in_feature);
+            float_type remain_best_score_in_feature = remain_scores_in_feature[best_score_in_feature_itr - scores_in_feature.begin()];
+            scores[j] = std::make_tuple(best_idx_in_feature_start, best_idx_in_feature_end, best_score_in_feature, remain_best_score_in_feature);
         }
         // assert scores >= 0
         auto best_idx_score_itr = std::max_element(scores.begin(), scores.end(), [](const auto &a, const auto &b){
@@ -349,14 +328,33 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         int best_bid_start = static_cast<int>(std::get<0>(*best_idx_score_itr));
         int best_bid_end = static_cast<int>(std::get<1>(*best_idx_score_itr));
         float_type best_score = std::get<2>(*best_idx_score_itr);
+        float_type remain_best_score = std::get<3>(*best_idx_score_itr);
 
-        // extract best split neighborhood according to best_bid
-        vector<int> best_bid_vec(best_bid_end - best_bid_start);
-        std::iota(best_bid_vec.begin(), best_bid_vec.end(), best_bid_start);
-        vector<DeltaTree::DeltaGain> best_gain_vec(gain.begin() + i + best_bid_start, gain.begin() + i + best_bid_end);
-        DeltaTree::SplitNeighborhood split_nbr(best_bid_vec, fid, best_gain_vec);
-        split_nbr.update_best_idx_();
-        best_split_nbr[nid] = split_nbr;
+        // get the second feature, check if the best feature is robust
+        float_type eps = 4.0;
+        bool is_robust = true;
+        for (int j = 0; j < scores.size(); ++j) {
+            if (j != fid && best_score - std::get<2>(scores[j]) < eps &&
+                         remain_best_score - std::get<3>(scores[j]) < eps) {
+                is_robust = false;
+            }
+        }
+        if (remain_best_score < eps || best_score < eps) {
+            is_robust = false;
+        }
+
+        if (is_robust) {
+            // extract best split neighborhood according to best_bid
+            vector<int> best_bid_vec(best_bid_end - best_bid_start);
+            std::iota(best_bid_vec.begin(), best_bid_vec.end(), best_bid_start);
+            vector<DeltaTree::DeltaGain> best_gain_vec(gain.begin() + i + best_bid_start, gain.begin() + i + best_bid_end);
+            DeltaTree::SplitNeighborhood split_nbr(best_bid_vec, fid, best_gain_vec);
+            split_nbr.update_best_idx_();
+            best_split_nbr[nid] = split_nbr;
+        } else {
+            // generate a split_nbr with gain 0, forcing tree to stop splitting
+            best_split_nbr[nid] = DeltaTree::SplitNeighborhood();
+        }
     }
 }
 

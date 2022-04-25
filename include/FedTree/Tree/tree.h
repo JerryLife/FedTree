@@ -401,10 +401,14 @@ struct DeltaTree : public Tree {
         }
 
         inline DeltaTree::DeltaGain best_gain() const {
-            return best_idx == -1 ? DeltaGain() : gain[best_idx];
+            if (best_idx == -1 || gain.empty())
+                return {};
+            return gain[best_idx];
         }
 
         inline int best_bid() const {
+            if (best_idx == -1)
+                return 0;
             return split_bids[best_idx];
         }
 
