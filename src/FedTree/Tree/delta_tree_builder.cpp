@@ -1003,19 +1003,19 @@ void DeltaTreeBuilder::get_split_points(vector<DeltaTree::SplitNeighborhood> &be
     auto &nodes_data = tree.nodes;
 
     parent_indices.clear();
+    parent_indices = *std::make_unique<vector<int>>(2 * n_nodes_in_level);
 
     auto cut_col_ptr_data = cut.cut_col_ptr.data();
     int n_bins = static_cast<int>(cut.cut_points_val.size());
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < n_nodes_in_level; i++) {
         auto &split_nbr = best_split_nbr[i];
         DeltaTree::DeltaGain best_split_gain = split_nbr.best_gain();
         int split_index = split_nbr.best_bid() + n_bins * i;
+        parent_indices[2*i] = parent_indices[2*i+1] = i;
         if (!nodes_data[i + nid_offset].is_valid) {
             sp_data[i].split_fea_id = -1;
             sp_data[i].nid = -1;
-            parent_indices.push_back(i);
-            parent_indices.push_back(i);
             continue;
         }
         nodes_data[i + nid_offset].lch_index = nid_offset + n_nodes_in_level + i * 2;
@@ -1041,9 +1041,6 @@ void DeltaTreeBuilder::get_split_points(vector<DeltaTree::SplitNeighborhood> &be
             bid -= cut_col_ptr_data[fid];
         }
         sp_data[i].split_nbr = split_nbr;
-
-        parent_indices.push_back(i);
-        parent_indices.push_back(i);
     }
     LOG(DEBUG) << "split points (gain/fea_id/nid): " << sp;
 
