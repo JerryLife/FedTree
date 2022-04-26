@@ -162,8 +162,7 @@ void DeltaTreeBuilder::find_split(int level) {
 //    update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 3, 3);
 
     vector<DeltaTree::SplitNeighborhood> best_split_nbr(n_nodes_in_level);
-    int nbr_size = 30;
-    get_best_split_nbr(gain, best_split_nbr, n_nodes_in_level, n_bins, nbr_size);
+    get_best_split_nbr(gain, best_split_nbr, n_nodes_in_level, n_bins, param.nbr_size);
 
 //    vector<int> n_samples_in_nodes(n_nodes_in_level);
 //    for (int i = nid_start_idx; i < nid_start_idx + n_nodes_in_level; ++i) {
@@ -277,7 +276,6 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
     };
 
     // calculate score
-    float_type alpha = 0.0;
     vector<float_type> gain_per_sp(gain.size());
     vector<float_type> remain_gain_per_sp(gain.size());
 #pragma omp parallel for
@@ -289,7 +287,7 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
     for (int i = 0; i < n_bins * n_nodes_in_level; i += n_bins) {
         int nid = i / n_bins;
 
-        // choose the best split neighborhood (with min scores)
+        // choose the best split neighborhood (with max scores)
         vector<std::tuple<size_t, size_t, float_type, float_type>> scores(sorted_dataset.n_features());
         for (int j = 0; j < sorted_dataset.n_features(); ++j) {
             int bid_start = cut.cut_col_ptr[j];
@@ -331,15 +329,14 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         float_type remain_best_score = std::get<3>(*best_idx_score_itr);
 
         // get the second feature, check if the best feature is robust
-        float_type eps = 4.0;
         bool is_robust = true;
         for (int j = 0; j < scores.size(); ++j) {
-            if (j != fid && best_score - std::get<2>(scores[j]) < eps &&
-                         remain_best_score - std::get<3>(scores[j]) < eps) {
+            if (j != fid && best_score - std::get<2>(scores[j]) < param.delta_gain_eps &&
+                         remain_best_score - std::get<3>(scores[j]) < param.delta_gain_eps) {
                 is_robust = false;
             }
         }
-        if (remain_best_score < eps || best_score < eps) {
+        if (remain_best_score < param.delta_gain_eps || best_score < param.delta_gain_eps) {
             is_robust = false;
         }
 
@@ -713,7 +710,6 @@ void DeltaTreeBuilder::update_tree() {
 
         if (fabs(best_split_gain.gain_value) > rt_eps) {
             //do split
-            //todo: check, thundergbm uses return
             if (sp_data[i].nid == -1) continue;
             int nid = sp_data[i].nid;
             DeltaTree::DeltaNode &node = tree.nodes[nid];
@@ -745,7 +741,6 @@ void DeltaTreeBuilder::update_tree() {
             rch.calc_weight(lambda);
         } else {
             //set leaf
-            //todo: check, thundergbm uses return
             if (sp_data[i].nid == -1) continue;
             int nid = sp_data[i].nid;
             DeltaTree::DeltaNode &node = tree.nodes[nid];
