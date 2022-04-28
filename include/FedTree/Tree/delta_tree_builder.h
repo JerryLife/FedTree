@@ -68,6 +68,8 @@ public:
 
     void get_bin_ids();
 
+    void update_random_feature_rank_(size_t seed);
+
     DeltaTree tree;
     DeltaBoostParam param;
     SyncArray<DeltaSplitPoint> sp;
@@ -78,6 +80,7 @@ public:
 
     vector<int> parent_indices;     // ID: the relative index of child in the layer
                                     // Value: the relative index of its parent in the layer
+    vector<int> random_feature_rank;       // random rank of feature in trees
 
     vector<bool> is_prior;       // ID: node index; Value: whether the node is prior node or not.
 };

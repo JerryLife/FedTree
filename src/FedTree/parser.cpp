@@ -71,7 +71,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     deltaboost_param->dataset_name = "";
     deltaboost_param->n_used_trees = 0;
     deltaboost_param->max_bin_size = 100;
-    deltaboost_param->alpha = 0.0;
+    deltaboost_param->gain_alpha = 0.0;
     deltaboost_param->nbr_size = 1;
     deltaboost_param->delta_gain_eps = 0.0;
 
@@ -171,8 +171,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 deltaboost_param->n_used_trees = atoi(val);
             else if (str_name.compare("max_bin_size") == 0)
                 deltaboost_param->max_bin_size = atoi(val);
-            else if (str_name.compare("alpha") == 0)
-                deltaboost_param->alpha = atof(val);
+            else if (str_name.compare("gain_alpha") == 0)
+                deltaboost_param->gain_alpha = atof(val);
             else if (str_name.compare("nbr_size") == 0)
                 deltaboost_param->nbr_size = atoi(val);
             else if (str_name.compare("delta_gain_eps") == 0)
