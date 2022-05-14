@@ -260,48 +260,48 @@ int main(int argc, char** argv){
             LOG(INFO) << "On test dataset";
             deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
                                       fl_param.deltaboost_param.n_used_trees);
-//            if (test_on_delete) {
-//                LOG(INFO) << "On deleted dataset";
-//                deltaboost->predict_score(fl_param.deltaboost_param, delete_dataset,
-//                                          fl_param.deltaboost_param.n_used_trees);
-//            }
-//            if (test_on_remain) {
-//                LOG(INFO) << "On remained dataset";
-//                deltaboost->predict_score(fl_param.deltaboost_param, remain_dataset,
-//                                          fl_param.deltaboost_param.n_used_trees);
-//            }
-
-//
-//            std::chrono::high_resolution_clock timer;
-//            auto start_rm = timer.now();
-//            int num_removals = static_cast<int>(fl_param.deltaboost_param.remove_ratio * dataset.n_instances());
-//            LOG(INFO) << num_removals << " samples to be removed from model";
-//            vector<int> removing_indices(static_cast<int>(fl_param.deltaboost_param.remove_ratio * dataset.n_instances()));
-//            std::iota(removing_indices.begin(), removing_indices.end(), 0);
-//            deltaboost->remove_samples(fl_param.deltaboost_param, dataset, removing_indices);
-//            auto stop_rm = timer.now();
-//            std::chrono::duration<float> removing_time = stop_rm - start_rm;
-//            LOG(INFO) << "removing time = " << removing_time.count();
-//
-//            LOG(INFO) << "Predict after removals";
-//            LOG(INFO) << "On test dataset";
-//            deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
-//                                      fl_param.deltaboost_param.n_used_trees);
-//            if (test_on_delete) {
-//                LOG(INFO) << "On deleted dataset";
-//                deltaboost->predict_score(fl_param.deltaboost_param, delete_dataset,
-//                                          fl_param.deltaboost_param.n_used_trees);
-//            }
-//            if (test_on_remain) {
-//                LOG(INFO) << "On remained dataset";
-//                deltaboost->predict_score(fl_param.deltaboost_param, remain_dataset,
-//                                          fl_param.deltaboost_param.n_used_trees);
-//            }
+            if (test_on_delete) {
+                LOG(INFO) << "On deleted dataset";
+                deltaboost->predict_score(fl_param.deltaboost_param, delete_dataset,
+                                          fl_param.deltaboost_param.n_used_trees);
+            }
+            if (test_on_remain) {
+                LOG(INFO) << "On remained dataset";
+                deltaboost->predict_score(fl_param.deltaboost_param, remain_dataset,
+                                          fl_param.deltaboost_param.n_used_trees);
+            }
 
 
-//            string model_path_json_delete = string_format("cache/%s_deleted.json",
-//                                                   fl_param.deltaboost_param.save_model_name.c_str());
-//            parser.save_model_to_json(model_path_json_delete, fl_param.deltaboost_param, *deltaboost, dataset);
+            std::chrono::high_resolution_clock timer;
+            auto start_rm = timer.now();
+            int num_removals = static_cast<int>(fl_param.deltaboost_param.remove_ratio * dataset.n_instances());
+            LOG(INFO) << num_removals << " samples to be removed from model";
+            vector<int> removing_indices(static_cast<int>(fl_param.deltaboost_param.remove_ratio * dataset.n_instances()));
+            std::iota(removing_indices.begin(), removing_indices.end(), 0);
+            deltaboost->remove_samples(fl_param.deltaboost_param, dataset, removing_indices);
+            auto stop_rm = timer.now();
+            std::chrono::duration<float> removing_time = stop_rm - start_rm;
+            LOG(INFO) << "removing time = " << removing_time.count();
+
+            LOG(INFO) << "Predict after removals";
+            LOG(INFO) << "On test dataset";
+            deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
+                                      fl_param.deltaboost_param.n_used_trees);
+            if (test_on_delete) {
+                LOG(INFO) << "On deleted dataset";
+                deltaboost->predict_score(fl_param.deltaboost_param, delete_dataset,
+                                          fl_param.deltaboost_param.n_used_trees);
+            }
+            if (test_on_remain) {
+                LOG(INFO) << "On remained dataset";
+                deltaboost->predict_score(fl_param.deltaboost_param, remain_dataset,
+                                          fl_param.deltaboost_param.n_used_trees);
+            }
+
+
+            string model_path_json_delete = string_format("cache/%s_deleted.json",
+                                                   fl_param.deltaboost_param.save_model_name.c_str());
+            parser.save_model_to_json(model_path_json_delete, fl_param.deltaboost_param, *deltaboost, dataset);
 
 
         } else {

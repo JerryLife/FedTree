@@ -57,7 +57,8 @@ public:
                                     const int *hist_fid, SyncArray<GHPair> &missing_gh,
                                     SyncArray<GHPair> &hist, vector<float_type> &hist_g2, int level);
 
-    void get_best_split_nbr(const vector<DeltaTree::DeltaGain> &gain, vector<DeltaTree::SplitNeighborhood> &best_split_nbr,
+    void get_best_split_nbr(const vector<DeltaTree::DeltaGain> &gain,
+                            vector<DeltaTree::SplitNeighborhood> &best_split_nbr,
                             int n_nodes_in_level, int n_bins, int nbr_size);
 
     int filter_potential_idx_gain(const vector<vector<gain_pair>>& candidate_idx_gain,

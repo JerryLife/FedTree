@@ -52,6 +52,24 @@ public:
 
     void get_cut_points_by_feature_range_balanced(DataSet &dataset, int max_bin_size, int n_instances);
     void get_cut_points_by_instance(DataSet &dataset, int max_num_bins, int n_instances);
+
+    [[nodiscard]] inline float_type get_cut_point_val(int fid, int bid) const {
+        int feature_offset = cut_col_ptr[fid];
+        return cut_points_val[feature_offset + bid];
+    }
+
+    [[nodiscard]] inline auto get_cut_point_val_itr(int fid, int bid) const {
+        int feature_offset = cut_col_ptr[fid];
+        return cut_points_val.begin() + feature_offset + bid;
+    }
+
+    [[nodiscard]] inline float_type get_cut_point_val(int bid) const {      // global bid
+        return cut_points_val[bid];
+    }
+
+    [[nodiscard]] inline auto get_cut_point_val_itr(int bid) const {       // global bid
+        return cut_points_val.begin() + bid;
+    }
 };
 
 

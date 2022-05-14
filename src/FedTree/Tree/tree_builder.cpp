@@ -176,7 +176,7 @@ void TreeBuilder::build_tree_by_predefined_structure(const SyncArray<GHPair> &gr
         Tree::TreeNode &root_node = node_data[0];
         root_node.sum_gh_pair = sum_gh;
         root_node.is_valid = true;
-        root_node.calc_weight(lambda);
+        root_node.calc_weight_(lambda);
         root_node.n_instances = gradients.size();
 
         for (int level = 0; level < tree.final_depth; ++level) {
@@ -286,8 +286,8 @@ void TreeBuilder::update_tree() {
             }
             lch.sum_gh_pair = node.sum_gh_pair - rch.sum_gh_pair;
           //  LOG(INFO) << "LCH" << lch.sum_gh_pair;
-            lch.calc_weight(lambda);
-            rch.calc_weight(lambda);
+            lch.calc_weight_(lambda);
+            rch.calc_weight_(lambda);
         } else {
             //set leaf
             //todo: check, thundergbm uses return
@@ -337,8 +337,8 @@ void TreeBuilder::update_tree_in_a_node(int node_id) {
             node.default_right = true;
         }
         lch.sum_gh_pair = node.sum_gh_pair - rch.sum_gh_pair;
-        lch.calc_weight(lambda); // TODO: check here
-        rch.calc_weight(lambda); // TODO: check here
+        lch.calc_weight_(lambda); // TODO: check here
+        rch.calc_weight_(lambda); // TODO: check here
     } else {
         //set leaf
         //todo: check, thundergbm uses return
@@ -382,8 +382,8 @@ void TreeBuilder::update_tree_by_sp_values() {
                 node.default_right = true;
             }
             lch.sum_gh_pair = node.sum_gh_pair - rch.sum_gh_pair;
-            lch.calc_weight(lambda);
-            rch.calc_weight(lambda);
+            lch.calc_weight_(lambda);
+            rch.calc_weight_(lambda);
         }
         else {
             float_type best_split_gain = sp_data[i].gain;
@@ -409,8 +409,8 @@ void TreeBuilder::update_tree_by_sp_values() {
                     node.default_right = true;
                 }
                 lch.sum_gh_pair = node.sum_gh_pair - rch.sum_gh_pair;
-                lch.calc_weight(lambda);
-                rch.calc_weight(lambda);
+                lch.calc_weight_(lambda);
+                rch.calc_weight_(lambda);
             } else {
                 //set leaf
                 //todo: check, thundergbm uses return

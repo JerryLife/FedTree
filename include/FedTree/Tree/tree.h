@@ -68,7 +68,7 @@ public:
         friend std::ostream &operator<<(std::ostream &os,
                                         const TreeNode &node);
 
-        HOST_DEVICE void calc_weight(float_type lambda) {
+        HOST_DEVICE void calc_weight_(float_type lambda) {
             this->base_weight = -sum_gh_pair.g / (sum_gh_pair.h + lambda);
         }
 
@@ -382,13 +382,15 @@ struct DeltaTree : public Tree {
     struct SplitNeighborhood {
         int fid = -1;
         int best_idx = -1;
-        vector<int> split_bids;
-        vector<DeltaTree::DeltaGain> gain;
+        vector<int> split_bids;     // size nbr_size
+        vector<DeltaTree::DeltaGain> gain;  // size: nbr_size
+        vector<float_type> split_vals;  // size nbr_size
 
         SplitNeighborhood() = default;
 
-        SplitNeighborhood(const vector<int> &split_bids, int fid, const vector<DeltaTree::DeltaGain> &gain)
-                : split_bids(split_bids), fid(fid), gain(gain) {}
+        SplitNeighborhood(const vector<int> &split_bids, int fid, const vector<DeltaTree::DeltaGain> &gain,
+                          const vector<float_type> &split_vals)
+                : split_bids(split_bids), fid(fid), gain(gain), split_vals(split_vals) {}
 
         SplitNeighborhood &operator=(const SplitNeighborhood &other) = default;
 
@@ -407,15 +409,22 @@ struct DeltaTree : public Tree {
         }
 
         inline int best_bid() const {
-            if (best_idx == -1)
+            if (best_idx == -1 || split_bids.empty())
                 return 0;
             return split_bids[best_idx];
+        }
+
+        inline float_type best_split_value() const {
+            if (best_idx == -1 || split_vals.empty())
+                return 0.0;
+            return split_vals[best_idx];
         }
 
         template<class Archive> void serialize(Archive &ar, const unsigned int /*version*/) {
             ar & fid;
             ar & best_idx;
             ar & split_bids;
+            ar & split_vals;
             ar & gain;
         }
 
@@ -428,6 +437,7 @@ struct DeltaTree : public Tree {
             split_nbr.best_idx = static_cast<int>(v.at("best_idx").as_int64());
             split_nbr.split_bids = json::value_to<std::vector<int>>(v.at("split_bids"));
             split_nbr.gain = json::value_to<std::vector<DeltaGain>>(v.at("gain"));
+            split_nbr.split_vals = json::value_to<std::vector<float_type>>(v.at("split_vals"));
             return split_nbr;
         }
 
@@ -436,7 +446,8 @@ struct DeltaTree : public Tree {
                     {"fid", split_nbr.fid},
                     {"best_idx", split_nbr.best_idx},
                     {"split_bids", json::value_from(split_nbr.split_bids)},
-                    {"gain", json::value_from(split_nbr.gain)}
+                    {"gain", json::value_from(split_nbr.gain)},
+                    {"split_vals", json::value_from(split_nbr.split_vals)},
             };
         }
     };

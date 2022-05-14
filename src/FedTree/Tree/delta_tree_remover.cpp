@@ -35,17 +35,17 @@ void DeltaTreeRemover::remove_samples_by_indices(const vector<int>& indices) {
     }
 
     // this function is parallel
-    adjust_gradients_by_indices(indices, gh_pair_vec);
+    adjust_split_nbrs_by_indices(indices, gh_pair_vec, true);
 }
 
 
 
 
+[[deprecated]]
 void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs) {
     /**
      * @param id: the indices of sample to be adjusted gradients
      * @param delta_gh_pair: gradient and hessian to be subtracted from the tree
-     * @return : indices of all modified leaves
      */
 
     SyncArray<int> csr_col_idx(dataSet->csr_col_idx.size());
@@ -137,7 +137,7 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
         for (int node_id: updating_node_indices[i]) {
             auto &node = tree_ptr->nodes[node_id];
 
-            node.calc_weight(param.lambda);     // this lambda should be consistent with the training
+            node.calc_weight_(param.lambda);     // this lambda should be consistent with the training
 
             if (!node.is_leaf) {
 //                node.gain.gain_value = node.default_right ? -node.gain.cal_gain_value() : node.gain.cal_gain_value();     // calculate original gain value
@@ -188,6 +188,7 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
     sort_potential_nodes_by_gain(0);
 }
 
+[[deprecated]]
 void DeltaTreeRemover::sort_potential_nodes_by_gain(int root_idx) {
     std::queue<int> processing_nodes;
     processing_nodes.push(root_idx);    // start from root node
@@ -233,5 +234,151 @@ void DeltaTreeRemover::sort_potential_nodes_by_gain(int root_idx) {
         }
     }
 }
+
+void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs,
+                                                    bool remove_n_ins) {
+    /**
+     * @param id: the indices of sample to be adjusted gradients
+     * @param delta_gh_pair: gradient and hessian to be subtracted from the tree
+     * @param remove_n_ins: whether to remove n_instances from visited nodes
+     */
+
+    SyncArray<int> csr_col_idx(dataSet->csr_col_idx.size());
+    SyncArray<float_type> csr_val(dataSet->csr_val.size());
+    SyncArray<int> csr_row_ptr(dataSet->csr_row_ptr.size());
+    csr_col_idx.copy_from(dataSet->csr_col_idx.data(), dataSet->csr_col_idx.size());
+    csr_val.copy_from(dataSet->csr_val.data(), dataSet->csr_val.size());
+    csr_row_ptr.copy_from(dataSet->csr_row_ptr.data(), dataSet->csr_row_ptr.size());
+
+    const auto csr_col_idx_data = csr_col_idx.host_data();
+    const auto csr_val_data = csr_val.host_data();
+    const auto csr_row_ptr_data = csr_row_ptr.host_data();
+
+    auto get_val = [&](int iid, int fid,
+                       bool *is_missing) -> float_type {
+        int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
+        float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
+        int row_len = csr_row_ptr_data[iid + 1] - csr_row_ptr_data[iid];
+
+        //binary search to get feature value
+        const int *left = col_idx;
+        const int *right = col_idx + row_len;
+
+        while (left != right) {
+            const int *mid = left + (right - left) / 2;
+            if (*mid == fid) {
+                *is_missing = false;
+                return row_val[mid - col_idx];
+            }
+            if (*mid > fid)
+                right = mid;
+            else left = mid + 1;
+        }
+        *is_missing = true;
+        return 0;
+    };
+
+    vector<vector<int>> nid_to_index_id(tree_ptr->nodes.size(), vector<int>());
+    for (int i = 0; i < indices.size(); ++i) {
+        for (auto node_id: ins2node_indices[i]) {
+            nid_to_index_id[node_id].push_back(i);
+        }
+    }
+
+
+    // inference from the root, update split_nbrs layer by layer
+    size_t n_nodes_in_layer;
+    vector<int> visit_node_indices = {0};
+    while (!visit_node_indices.empty()) {
+        n_nodes_in_layer = visit_node_indices.size();
+        // can try parallel
+        for (int i = 0; i < n_nodes_in_layer; ++i) {
+            int node_id = visit_node_indices[i];
+            auto &node = tree_ptr->nodes[node_id];
+            for (int j: nid_to_index_id[node_id]) {
+                node.sum_gh_pair.g += delta_gh_pairs[j].g;
+                node.sum_gh_pair.h += delta_gh_pairs[j].h;
+                if (remove_n_ins)
+                    node.n_instances -= 1;
+
+                if (node.is_leaf) continue;
+
+                // update missing_gh
+                bool is_missing;
+                // get_val is useful to detect "is_missing", clion falsely marks it as "not used"
+                float_type feature_val = get_val(indices[j], node.split_feature_id, &is_missing);
+
+                // update all the neighbors
+                for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
+                    if (is_missing) {
+                        node.split_nbr.gain[k].missing_g += delta_gh_pairs[j].g;
+                        node.split_nbr.gain[k].missing_h += delta_gh_pairs[j].h;
+                    }
+
+                    node.split_nbr.gain[k].self_g += delta_gh_pairs[j].g;
+                    node.split_nbr.gain[k].self_h += delta_gh_pairs[j].h;
+                    if (feature_val < node.split_nbr.split_vals[k]) {
+                        node.split_nbr.gain[k].lch_g += delta_gh_pairs[j].g;
+                        node.split_nbr.gain[k].lch_h += delta_gh_pairs[j].h;
+                    } else {
+                        node.split_nbr.gain[k].rch_g += delta_gh_pairs[j].g;
+                        node.split_nbr.gain[k].rch_h += delta_gh_pairs[j].h;
+                    }
+                }
+            }
+
+            if (node.is_leaf) {
+                node.calc_weight_(param.lambda);
+                continue;
+            }
+
+            // select new best gain
+            node.split_nbr.update_best_idx_();
+            node.gain = node.split_nbr.best_gain();
+            node.split_bid = node.split_nbr.best_bid();
+            node.split_value = node.split_nbr.best_split_value();
+
+            // recalculate default direction
+            if (node.default_right) {
+                node.gain.gain_value = -node.gain.cal_gain_value();
+                assert(node.gain.gain_value <= 0);
+                DeltaTree::DeltaGain default_left_gain(node.gain);
+                default_left_gain.lch_g += node.gain.missing_g;
+                default_left_gain.lch_h += node.gain.missing_h;
+                default_left_gain.rch_g -= node.gain.missing_g;
+                default_left_gain.rch_h -= node.gain.missing_h;
+                default_left_gain.gain_value = default_left_gain.cal_gain_value();
+                if (fabs(default_left_gain.gain_value) > fabs(node.gain.gain_value)) {
+                    // switch default direction
+                    node.gain = default_left_gain;
+                    node.default_right = false;
+                }
+            } else {
+                node.gain.gain_value = node.gain.cal_gain_value();
+                assert(node.gain.gain_value >= 0);
+                DeltaTree::DeltaGain default_right_gain(node.gain);
+                default_right_gain.rch_g += node.gain.missing_g;
+                default_right_gain.rch_h += node.gain.missing_h;
+                default_right_gain.lch_g -= node.gain.missing_g;
+                default_right_gain.lch_h -= node.gain.missing_h;
+                default_right_gain.gain_value = -default_right_gain.cal_gain_value();
+                if (fabs(default_right_gain.gain_value) > fabs(node.gain.gain_value)) {
+                    // switch default direction
+                    default_right_gain.gain_value = -default_right_gain.gain_value;
+                    node.gain = default_right_gain;
+                    node.default_right = true;
+                }
+            }
+
+            // add indices of left and right children
+            assert(node.lch_index > 0 && node.rch_index > 0);
+            visit_node_indices.push_back(node.lch_index);
+            visit_node_indices.push_back(node.rch_index);
+        }
+        visit_node_indices.erase(visit_node_indices.begin(), visit_node_indices.begin() + n_nodes_in_layer);
+    }
+}
+
+
 
 

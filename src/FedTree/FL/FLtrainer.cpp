@@ -503,7 +503,7 @@ void FLtrainer::vertical_fl_trainer(vector<Party> &parties, Server &server, FLPa
 #pragma omp parallel for
                     for (int nid = (1 << l) - 1; nid < (2 << (l + 1)) - 1; nid++) {
                         server.decrypt_gh(node_data[nid].sum_gh_pair);
-                        node_data[nid].calc_weight(params.gbdt_param.lambda);
+                        node_data[nid].calc_weight_(params.gbdt_param.lambda);
                     }
                 }
 

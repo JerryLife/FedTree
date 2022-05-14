@@ -15,7 +15,7 @@ void Tree::init_CPU(const GHPair sum_gh, const GBDTParam &param) {
     Tree::TreeNode &root_node = node_data[0];
     root_node.sum_gh_pair = sum_gh;
     root_node.is_valid = true;
-    root_node.calc_weight(lambda);
+    root_node.calc_weight_(lambda);
 }
 
 void Tree::init_CPU(const SyncArray<GHPair> &gradients, const GBDTParam &param) {
@@ -30,7 +30,7 @@ void Tree::init_CPU(const SyncArray<GHPair> &gradients, const GBDTParam &param) 
     Tree::TreeNode &root_node = node_data[0];
     root_node.sum_gh_pair = sum_gh;
     root_node.is_valid = true;
-    root_node.calc_weight(lambda); // TODO: check here
+    root_node.calc_weight_(lambda); // TODO: check here
     root_node.n_instances = gradients.size();
 }
 
@@ -89,7 +89,7 @@ void Tree::init_structure(int depth) {
 //         Tree::TreeNode &root_node = node_data[0];
 //         root_node.sum_gh_pair = sum_gh;
 //         root_node.is_valid = true;
-//         root_node.calc_weight(lambda);
+//         root_node.calc_weight_(lambda);
 //     });
 // }
 
@@ -153,7 +153,7 @@ void Tree::compute_leaf_value() {
     Tree::TreeNode *nodes_data = this->nodes.host_data();
     for(int i = 0; i < this->nodes.size(); i++) {
         if(nodes_data[i].is_leaf) {
-            nodes_data[i].calc_weight();
+            nodes_data[i].calc_weight_();
         }
     }
 }
@@ -224,7 +224,7 @@ void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostPar
     root_node.sum_gh_pair = sum_gh;
     root_node.sum_g2 = sum_g2;
     root_node.is_valid = true;
-    root_node.calc_weight(lambda); // TODO: check here
+    root_node.calc_weight_(lambda); // TODO: check here
     root_node.n_instances = static_cast<int>(gradients.size());
     root_node.potential_nodes_indices.emplace_back(0);
 }

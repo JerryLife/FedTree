@@ -386,7 +386,10 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
             vector<int> best_bid_vec(best_idx_score_itr->idx_in_feature_end - best_idx_score_itr->idx_in_feature_start);
             std::iota(best_bid_vec.begin(), best_bid_vec.end(), best_idx_score_itr->idx_in_feature_start);
             vector<DeltaTree::DeltaGain> best_gain_vec(gain.begin() + i + best_idx_score_itr->idx_in_feature_start, gain.begin() + i + best_idx_score_itr->idx_in_feature_end);
-            DeltaTree::SplitNeighborhood split_nbr(best_bid_vec, best_idx_score_itr->fid, best_gain_vec);
+            vector<float_type> best_split_val_vec(
+                    cut.get_cut_point_val_itr(best_bid_vec[0]),       // global bid
+                    cut.get_cut_point_val_itr(best_bid_vec[best_bid_vec.size() - 1] + 1));      // global bid
+            DeltaTree::SplitNeighborhood split_nbr(best_bid_vec, best_idx_score_itr->fid, best_gain_vec, best_split_val_vec);
             split_nbr.update_best_idx_();
             best_split_nbr[nid] = split_nbr;
         } else {
@@ -518,7 +521,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                 //only compute the histogram on the node with the smaller data
                 if (n_ins_left > n_ins_right)
                     std::swap(nid0_to_compute, nid0_to_substract);
-                //compute histogram
+                 //compute histogram
                 {
                     int nid0 = nid0_to_compute + nid_offset;
 //                    auto idx_begin = node_ptr.host_data()[nid0];
@@ -778,8 +781,8 @@ void DeltaTreeBuilder::update_tree() {
             lch.sum_gh_pair = node.sum_gh_pair - rch.sum_gh_pair;
             lch.sum_g2 = node.sum_g2 - rch.sum_g2;
             //  LOG(INFO) << "LCH" << lch.sum_gh_pair;
-            lch.calc_weight(lambda);
-            rch.calc_weight(lambda);
+            lch.calc_weight_(lambda);
+            rch.calc_weight_(lambda);
         } else {
             //set leaf
             if (sp_data[i].nid == -1) continue;

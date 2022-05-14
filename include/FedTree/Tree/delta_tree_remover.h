@@ -28,6 +28,7 @@ public:
 
     void remove_sample_by_id(int id);
     void adjust_gradients_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs);
+    void adjust_split_nbrs_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs, bool remove_n_ins=false);
     void remove_samples_by_indices(const vector<int>& indices);
 
     void sort_potential_nodes_by_gain(int root_idx);
