@@ -315,12 +315,16 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                         node.split_nbr.gain[k].missing_h += delta_gh_pairs[j].h;
                     }
 
+                    bool is_marginal = node.split_nbr.is_marginal(feature_val);
+
                     node.split_nbr.gain[k].self_g += delta_gh_pairs[j].g;
                     node.split_nbr.gain[k].self_h += delta_gh_pairs[j].h;
-                    if (feature_val < node.split_nbr.split_vals[k]) {
+                    if (feature_val < node.split_nbr.split_vals[k] || is_marginal) {
                         node.split_nbr.gain[k].lch_g += delta_gh_pairs[j].g;
                         node.split_nbr.gain[k].lch_h += delta_gh_pairs[j].h;
-                    } else {
+                    }
+
+                    if (feature_val >= node.split_nbr.split_vals[k] || is_marginal) {
                         node.split_nbr.gain[k].rch_g += delta_gh_pairs[j].g;
                         node.split_nbr.gain[k].rch_h += delta_gh_pairs[j].h;
                     }
