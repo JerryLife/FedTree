@@ -102,8 +102,14 @@ void DeltaBoostRemover::get_info_by_prediction() {
 
                         // prior node
                         if (!is_missing) {
-                            int child_id = get_next_child(nodes[node_id], fval);
-                            visiting_node_indices.push_back(child_id);
+//                            int child_id = get_next_child(nodes[node_id], fval);
+                            bool is_marginal = nodes[node_id].split_nbr.is_marginal(fval);
+                            if (fval < node.split_value || is_marginal) {
+                                visiting_node_indices.push_back(node.lch_index);
+                            }
+                            if (fval >= node.split_value || is_marginal) {
+                                visiting_node_indices.push_back(node.rch_index);
+                            }
                         } else if (node.default_right) {
                             visiting_node_indices.push_back(node.rch_index);
                         } else {
