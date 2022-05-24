@@ -618,11 +618,9 @@ void DeltaTreeBuilder::update_ins2node_indices() {
 
         int n_column = sorted_dataset.n_features();
         auto dense_bin_id_data = dense_bin_id.host_data();
-        int marginal_count = 0;
 //        int max_num_bin = param.max_num_bin;
-//#pragma omp parallel for
+#pragma omp parallel for
         for (int iid = 0; iid < n_instances; iid++) {
-            vector<int> updated_ins2node_indices_id;
             for (int j = 0; j < ins2node_indices[iid].size(); ++j) {
                 int nid = ins2node_indices[iid][j];
                 const auto &node = nodes_data[nid];
@@ -632,44 +630,35 @@ void DeltaTreeBuilder::update_ins2node_indices() {
                     auto split_bid = node.split_bid;
                     auto bid = dense_bin_id_data[iid * n_column + split_fid];
                     bool to_left;
-                    bool is_marginal;
                     if (bid == -1) {
                         to_left = !node.default_right;
-                        is_marginal = false;
                     } else {
                         to_left = bid > split_bid;
-                        is_marginal = node.split_nbr.is_marginal(bid);
                     }
-#pragma omp atomic
-                    marginal_count += is_marginal ? 1 : 0;
-
-                    if (is_marginal) {
-                        updated_ins2node_indices_id.push_back(node.lch_index);
-                        updated_ins2node_indices_id.push_back(node.rch_index);
-                    } else {
-                        if (to_left) {
-                            // goes to left child
-                            ins2node_indices[iid][j] = node.lch_index;
-//                        if (is_prior[nid]) {
-//                            nid_data[iid] = node.lch_index;
-//                        }
-#pragma omp atomic
-                            nodes_data[node.lch_index].n_instances += 1;
-                        } else {
-                            // right child
-                            ins2node_indices[iid][j] = node.rch_index;
-//                        if (is_prior[nid]) {
-//                            nid_data[iid] = node.rch_index;
-//                        }
-#pragma omp atomic
-                            nodes_data[node.rch_index].n_instances += 1;
+//                    bool to_left = true;
+//                    if ((bid == -1 && node.default_right) || (bid <= split_bid))
+//                        to_left = false;
+                    if (to_left) {
+                        //goes to left child
+                        ins2node_indices[iid][j] = node.lch_index;
+                        if (is_prior[nid]) {
+                            nid_data[iid] = node.lch_index;
                         }
-                    }
 
+                    #pragma omp atomic
+                        nodes_data[node.lch_index].n_instances += 1;
+                    } else {
+                        //right child
+                        ins2node_indices[iid][j] = node.rch_index;
+                        if (is_prior[nid]) {
+                            nid_data[iid] = node.rch_index;
+                        }
+                    #pragma omp atomic
+                        nodes_data[node.rch_index].n_instances += 1;
+                    }
                 }
             }
         }
-        LOG(DEBUG) << "marginal count = " << marginal_count;
     }
     has_split = has_splittable.host_data()[0];
     LOG(DEBUG) << "new tree_id = " << ins2node_id;

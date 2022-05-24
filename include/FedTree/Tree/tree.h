@@ -382,7 +382,7 @@ struct DeltaTree : public Tree {
     struct SplitNeighborhood {
         int fid = -1;
         int best_idx = -1;
-        vector<int> split_bids;     // size nbr_size    // bin id in the feature, which is similar to node.split_bid
+        vector<int> split_bids;     // size nbr_size
         vector<DeltaTree::DeltaGain> gain;  // size: nbr_size
         vector<float_type> split_vals;  // size nbr_size
 
@@ -400,20 +400,6 @@ struct DeltaTree : public Tree {
                 return std::abs(a.gain_value) < std::abs(b.gain_value);
             });
             best_idx = static_cast<int>(max_gain_itr - gain.begin());
-        }
-
-        [[nodiscard]] inline bool is_marginal(int bid) const {
-            /**
-             * @param bid: bin id in the feature
-             */
-             return split_bids[0] <= bid && bid < split_bids[split_bids.size() - 1];
-        }
-
-        [[nodiscard]] inline bool is_marginal(float_type value) const {
-            /**
-             * @param value: value in the split feature
-             */
-            return split_vals[0] > value && value >= split_vals[split_vals.size() - 1];
         }
 
         inline DeltaTree::DeltaGain best_gain() const {
