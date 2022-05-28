@@ -468,6 +468,9 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
             auto cut_col_ptr_data = cut.cut_col_ptr.data();
             auto gh_data = gh_pair.host_data();
             auto dense_bin_id_data = dense_bin_id.host_data();
+            for (auto &gh: gh_pair.to_vec()) {
+                assert(gh.h >= 0);
+            }
 
             for (int i = 0; i < n_instances * n_column; i++) {
                 int iid = i / n_column;
@@ -565,7 +568,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
         last_hist.resize(n_nodes_in_level * n_bins);
         last_hist_g2.resize(n_nodes_in_level * n_bins);
         auto last_hist_data = last_hist.host_data();
-        auto hist_data = hist.host_data();
+        const auto hist_data = hist.host_data();
 #pragma omp parallel for
         for (int i = 0; i < n_nodes_in_level * n_bins; i++) {
             last_hist_data[i] = hist_data[i];
@@ -597,6 +600,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
             GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
             float_type node_g2 = hist_g2[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
             missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
+            assert(missing_gh_data[pid].h >= 0);    // second tree, root node, this does not hold
             missing_g2[pid] = nodes_data[nid].sum_g2 - node_g2;
         }
     }

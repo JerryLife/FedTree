@@ -210,14 +210,18 @@ void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostPar
     TIMED_FUNC(timerObj);
     init_structure(param.depth);
     //init root node
-    GHPair sum_gh = thrust::reduce(thrust::host, gradients.host_data(), gradients.host_end());
+//    GHPair sum_gh = thrust::reduce(thrust::host, gradients.host_data(), gradients.host_end());
 //    float_type sum_g2 = std::reduce(std::execution::par, gradients.host_data(), gradients.host_end(), 0.0f,
 //                                    [](const GHPair &a, const GHPair &b){
 //        return  a.g * a.g + b.g * b.g;
 //    });
+    for (auto &gh: gradients.to_vec()) {
+        assert(gh.h >= 0);
+    }
 
     float_type sum_g2 = std::accumulate(gradients.host_data(), gradients.host_end(), 0.0f,
                                          [](float_type a, const GHPair &b){ return  a + b.g * b.g;});
+    GHPair sum_gh = std::accumulate(gradients.host_data(), gradients.host_end(), GHPair());
 
     float_type lambda = param.lambda;
     DeltaNode &root_node = nodes[0];

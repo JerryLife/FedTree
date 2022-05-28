@@ -82,25 +82,32 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
         DeltaTreeRemover& tree_remover = deltaboost_remover.tree_removers[i];
         const std::vector<GHPair>& gh_pairs = tree_remover.gh_pairs;
         tree_remover.remove_samples_by_indices(sample_indices);
+        vector<bool> is_iid_removed(dataset.n_instances(), false);  // hash table to query if an instance is removed O(1)
+//#pragma omp parallel for
+        for (int j = 0; j < sample_indices.size(); ++j) {
+            is_iid_removed[sample_indices[j]] = true;
+        }
 
         if (i > 0) {
             SyncArray<float_type> y_predict;
-            y_predict.resize(dataset.n_instances());
             predict_raw(param, dataset, y_predict, i);
 
             SyncArray<GHPair> updated_gh_pairs_array(y.size());
             obj->get_gradient(y, y_predict, updated_gh_pairs_array);
             vector<GHPair> delta_gh_pairs = updated_gh_pairs_array.to_vec();
+            GHPair sum_gh_pair = std::accumulate(delta_gh_pairs.begin(), delta_gh_pairs.end(), GHPair());
 
             vector<int> adjust_indices;
             vector<GHPair> adjust_values;
             for (int j = 0; j < delta_gh_pairs.size(); ++j) {
+                if (is_iid_removed[j]) continue;
                 if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
                     std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
                     adjust_indices.emplace_back(j);
                     adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
                 }
             }
+            GHPair sum_delta_gh_pair = std::accumulate(adjust_values.begin(), adjust_values.end(), GHPair());
 
             // debug only
             SyncArray<int> adjust_indices_array;
@@ -110,7 +117,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
             LOG(DEBUG) << "Adjusted indices" << adjust_indices_array;
             LOG(DEBUG) << "Adjusted values" << adjust_values_array;
 
-            tree_remover.adjust_gradients_by_indices(adjust_indices, adjust_values);
+            tree_remover.adjust_split_nbrs_by_indices(adjust_indices, adjust_values, false);
         }
     }
 }

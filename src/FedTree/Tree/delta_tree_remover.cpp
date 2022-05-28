@@ -298,8 +298,10 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
             for (int j: nid_to_index_id[node_id]) {
                 node.sum_gh_pair.g += delta_gh_pairs[j].g;
                 node.sum_gh_pair.h += delta_gh_pairs[j].h;
-                if (remove_n_ins)
+                if (remove_n_ins) {
                     node.n_instances -= 1;
+                    node.gain.n_instances -= 1;
+                }
 
                 if (node.is_leaf) continue;
 
