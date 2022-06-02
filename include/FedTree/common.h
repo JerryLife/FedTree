@@ -10,6 +10,7 @@
 
 #define THRUST_IGNORE_DEPRECATED_CPP_DIALECT
 
+
 #include "boost/serialization/vector.hpp"
 
 #include "FedTree/util/log.h"
@@ -39,7 +40,17 @@ std::string string_format(const std::string &format, Args ... args) {
 }
 
 //data types
-typedef float float_type;
+typedef double float_type;
+
+
+
+bool ft_eq(float_type a, float_type b);
+
+bool ft_ge(float_type a, float_type b);
+
+bool ft_le(float_type a, float_type b);
+
+#undef EPSILON
 
 //CUDA macro
 #ifdef USE_CUDA
@@ -242,7 +253,5 @@ std::vector<T> flatten(const std::vector<std::vector<T>> & vec) {
         result.insert(result.end(), v.begin(), v.end());
     return result;
 }
-
-
 
 #endif //FEDTREE_COMMON_H

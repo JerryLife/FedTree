@@ -317,19 +317,19 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
                 scores_in_feature.resize(n_nbrs);
                 remain_scores_in_feature.resize(n_nbrs);
                 for (int k = bid_start; k < bid_end - nbr_size + 1; ++k) {
-                    float_type score = std::accumulate(gain_per_sp.begin() + i + k, gain_per_sp.begin() + i + k + nbr_size, 0.f);
-                    float_type remain_score = std::accumulate(remain_gain_per_sp.begin() + i + k, remain_gain_per_sp.begin() + i + k + nbr_size, 0.f);
+                    float_type score = std::accumulate(gain_per_sp.begin() + i + k, gain_per_sp.begin() + i + k + nbr_size, 0.);
+                    float_type remain_score = std::accumulate(remain_gain_per_sp.begin() + i + k, remain_gain_per_sp.begin() + i + k + nbr_size, 0.);
                     scores_in_feature[k - bid_start] = score / static_cast<float_type>(nbr_size);
                     remain_scores_in_feature[k - bid_start] = remain_score / static_cast<float_type>(nbr_size);
                 }
             } else {
-                float_type score = std::accumulate(gain_per_sp.begin() + i + bid_start, gain_per_sp.begin() + i + bid_end, 0.f);
-                float_type remain_score = std::accumulate(remain_gain_per_sp.begin() + i + bid_start, remain_gain_per_sp.begin() + i + bid_end, 0.f);
+                float_type score = std::accumulate(gain_per_sp.begin() + i + bid_start, gain_per_sp.begin() + i + bid_end, 0.);
+                float_type remain_score = std::accumulate(remain_gain_per_sp.begin() + i + bid_start, remain_gain_per_sp.begin() + i + bid_end, 0.);
                 if (bid_start != bid_end) {
                     scores_in_feature = {score / static_cast<float_type>(bid_end - bid_start)};
                     remain_scores_in_feature = {remain_score / static_cast<float_type>(bid_end - bid_start)};
                 } else {
-                    scores_in_feature = remain_scores_in_feature = {0.f};
+                    scores_in_feature = remain_scores_in_feature = {0.};
                 }
             }
 
@@ -463,25 +463,47 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 
     {   // redefine timerObj
         TIMED_SCOPE(timerObj, "build hist");
+        int n_bids = 0;
         if (n_nodes_in_level == 1) {
             auto hist_data = hist.host_data();
-            auto cut_col_ptr_data = cut.cut_col_ptr.data();
+            auto cut_col_ptr_data = cut.cut_col_ptr;
             auto gh_data = gh_pair.host_data();
             auto dense_bin_id_data = dense_bin_id.host_data();
-            for (auto &gh: gh_pair.to_vec()) {
-                assert(gh.h >= 0);
-            }
+//            for (auto &gh: gh_pair.to_vec()) {
+//                assert(gh.h >= 0);
+//            }
 
+            GHPair sum_gh0 = std::accumulate(hist_data, hist_data + cut.cut_col_ptr[1], GHPair());
+
+//            vector<int> indices;
+//            GHPair sum_gh5;
+//            vector<GHPair> gh_vec(cut.cut_col_ptr[1], GHPair());
             for (int i = 0; i < n_instances * n_column; i++) {
                 int iid = i / n_column;
                 int fid = i % n_column;
                 auto bid = dense_bin_id_data[iid * n_column + fid];
                 if (bid != -1) {
                     int feature_offset = cut_col_ptr_data[fid];
+//                    if (0 <= feature_offset + bid && feature_offset + bid < cut.cut_col_ptr[1]) {
+//                        indices.push_back(iid);
+//                        assert(feature_offset == 0);
+//                        assert(fid == 0);
+//                        gh_vec.at(bid) += gh_data[iid];
+//                        sum_gh5 += gh_data[iid];
+//                    } else {
+//                        assert(fid != 0);
+//                    }
+//
                     hist_data[feature_offset + bid] += gh_data[iid];
                     hist_g2[feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
                 }
             }
+//            GHPair sum_gh4 = std::accumulate(gh_vec.begin(), gh_vec.end(), GHPair());
+
+
+//            float_type sum_g21 = std::accumulate(gh_pair.host_data(), gh_pair.host_data() + gh_pair.size(), 0.0f, [](float_type a, const GHPair &b){ return  a + b.g * b.g;});
+//            float_type sum_g22 = std::accumulate(hist_g2.begin(), hist_g2.begin() + cut.cut_col_ptr[1], 0.0f);
+//            LOG(INFO);
         } else {
             auto t_dp_begin = timer.now();
             // sort the indices of instance s.t. each node can be split by node_ptr
@@ -574,7 +596,6 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
             last_hist_data[i] = hist_data[i];
             last_hist_g2[i] = hist_g2[i];
         }
-
     }
 
     this->build_n_hist++;
@@ -600,7 +621,11 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
             GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
             float_type node_g2 = hist_g2[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
             missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
-            assert(missing_gh_data[pid].h >= 0);    // second tree, root node, this does not hold
+//            if (missing_gh_data[pid].h < 0) {
+//                vector<float_type> close_h;
+//
+//            }
+//            assert(missing_gh_data[pid].h >= 0);    // second tree, root node, this does not hold
             missing_g2[pid] = nodes_data[nid].sum_g2 - node_g2;
         }
     }
@@ -639,9 +664,6 @@ void DeltaTreeBuilder::update_ins2node_indices() {
                     } else {
                         to_left = bid > split_bid;
                     }
-//                    bool to_left = true;
-//                    if ((bid == -1 && node.default_right) || (bid <= split_bid))
-//                        to_left = false;
                     if (to_left) {
                         //goes to left child
                         ins2node_indices[iid][j] = node.lch_index;
@@ -702,8 +724,6 @@ void DeltaTreeBuilder::update_ins2node_id() {
                 } else {
                     to_left = bid > split_bid;
                 }
-//                if ((bid == -1 && node.default_right) || (bid <= split_bid))
-//                    to_left = false;
                 if (to_left) {
                     //goes to left child
                     nid_data[iid] = node.lch_index;
@@ -1171,12 +1191,13 @@ void DeltaTreeBuilder::get_bin_ids() {
             const float_type *right = search_end - 1;
 
             while (left != right) {
-                const float_type *mid = left + (right - left) / 2;
+                const float_type *mid = left + (right - left) / 2;  // to prevent overflow
                 if (*mid <= val)
+//                if (ft_le(*mid, val))       // use approximate equality of float_type
                     right = mid;
                 else left = mid + 1;
             }
-            return left;
+            return left;        // the result satisfies *(left - 1) > val >= *left
         };
         TIMED_SCOPE(timerObj, "binning");
 

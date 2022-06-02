@@ -36,13 +36,14 @@ public:
 
 class RobustHistCut {
 public:
-    // The values of cut points
+    // The values of cut points C1, C2, ..., Cn sorted in descending order.
+    // The bins look like  (+inf, C1] (C1, C2] ... (Cn-1, Cn]
     vector<float_type> cut_points_val;
     // The number of accumulated cut points for current feature
     vector<int> cut_col_ptr;
     // The feature id for current cut point
     vector<int> cut_fid;
-    // Number of instances in bins
+    // Number of instances in bins B1, B2, ..., Bn. Bi is the #intances in (Ci-1, Ci]
     vector<vector<int>> n_instances_in_hist;
 
     RobustHistCut() = default;

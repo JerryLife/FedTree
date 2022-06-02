@@ -6,7 +6,7 @@
 #define FEDTREE_HIST_TREE_BUILDER_H
 
 #include "tree_builder.h"
-#include "hist_cut.h"
+//#include "hist_cut.h"
 #include <thrust/copy.h>
 #include <thrust/execution_policy.h>
 

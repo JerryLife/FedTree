@@ -3,7 +3,7 @@ subdir=tree"$n_trees"
 outdir="out/remove_test/$subdir/"
 mkdir -p $outdir
 
-for dataset in codrna; do
+for dataset in codrna cadata covtype gisette msd; do
   for ratio in 0.01 0.001; do
     if [ $ratio = "0.01" ]; then
       taskset -c 1-60 ./main conf/"$dataset".conf data=./data/"$dataset".train remove_ratio="$ratio" n_trees=$n_trees \

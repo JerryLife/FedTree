@@ -194,6 +194,7 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
     for (int iid = 0; iid < n_instances; iid++) {
         auto get_next_child = [&](const DeltaTree::DeltaNode& node, float_type feaValue) {
             return feaValue < node.split_value ? node.lch_index : node.rch_index;
+//            return ft_ge(feaValue, node.split_value) ? node.rch_index : node.lch_index;
         };
         auto get_val = [&](const int *row_idx, const float_type *row_val, int row_len, int idx,
                            bool *is_missing) -> float_type {

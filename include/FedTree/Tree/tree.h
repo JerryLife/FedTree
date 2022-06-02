@@ -274,7 +274,7 @@ struct DeltaTree : public Tree {
 
         [[nodiscard]] float_type cal_gain_value(float_type min_child_weight = 1) const {
             if (lch_h >= min_child_weight && rch_h >= min_child_weight) {
-                return std::max(0.f, (lch_g * lch_g) / (lch_h + lambda) + (rch_g * rch_g) / (rch_h + lambda) -
+                return std::max(0., (lch_g * lch_g) / (lch_h + lambda) + (rch_g * rch_g) / (rch_h + lambda) -
                                      (self_g * self_g) / (self_h + lambda));
             } else {
                 return 0;
@@ -290,7 +290,7 @@ struct DeltaTree : public Tree {
                 auto self_G =
                         (remove_ratio * self_g2 + coef * self_g * self_g) / ((1 - remove_ratio) * self_h + lambda);
                 auto remain_gain = static_cast<float_type>(left_G + right_G - self_G);
-                return std::max(0.f, remain_gain);
+                return std::max(0., remain_gain);
             } else {
                 return 0;
             }

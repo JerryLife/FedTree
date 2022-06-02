@@ -7,7 +7,7 @@
 #include <thrust/transform.h>
 #include "thrust/unique.h"
 #include "thrust/execution_policy.h"
-#include "FedTree/common.h"
+//#include "FedTree/common.h"
 #include <numeric>
 
 
@@ -94,7 +94,7 @@ void syncarray_resize_cpu(SyncArray<T> &buf_array, int new_size) {
     buf_array.copy_from(tmp_array);
 }
 
-void unique_by_flag(SyncArray<float> &target_arr, SyncArray<int> &flags, int n_columns) {
+void unique_by_flag(SyncArray<float_type> &target_arr, SyncArray<int> &flags, int n_columns) {
     using namespace thrust::placeholders;
 
 //    float max_elem = max_elements(target_arr);
@@ -265,11 +265,13 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
             size_t n_instances_left = std::count_if(dataset.csc_val.begin() + dataset.csc_col_ptr[fid],
                                                     dataset.csc_val.begin() + dataset.csc_col_ptr[fid + 1],
                                                     [&](float_type value){
+//                                                        return ft_le(split_values[split_bin_id], value) && value < mid_value;
                                                         return split_values[split_bin_id] <= value && value < mid_value;
             });
             size_t n_instances_right = std::count_if(dataset.csc_val.begin() + dataset.csc_col_ptr[fid],
                                                     dataset.csc_val.begin() + dataset.csc_col_ptr[fid + 1],
                                                     [&](float_type value){
+//                                                        return ft_le(mid_value, value) && value < split_values[split_bin_id + 1];
                                                         return mid_value <= value && value < split_values[split_bin_id + 1];
                                                     });
             bool left_splittable = std::abs(split_values[split_bin_id] - mid_value) > tol;
@@ -282,7 +284,7 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
 
         // filter non-empty bins; remove the last split point (max)
 //        cut_points_val_vec[fid].push_back(split_values[0]);
-        for (int i = n_instances_in_bins_with_flag.size() - 1; i >= 0; --i) {
+        for (int i = static_cast<int>(n_instances_in_bins_with_flag.size() - 1); i >= 0; --i) {
             if (n_instances_in_bins_with_flag[i].first > 0) {
                 n_instances_in_hist[fid].push_back(n_instances_in_bins_with_flag[i].first);
                 cut_points_val_vec[fid].push_back(split_values[i + 1]);
