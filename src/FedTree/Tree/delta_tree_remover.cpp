@@ -289,42 +289,98 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
     // inference from the root, update split_nbrs layer by layer
     size_t n_nodes_in_layer;
     vector<int> visit_node_indices = {0};
+
+    // iid_indices_in_nodes: iid indices in each node of a level
+    vector<vector<int>> iid_indices_in_nodes(1, vector<int>(indices.size()));
+    // initialize with all the instances to be adjusted (root node)
+    std::iota(iid_indices_in_nodes[0].begin(), iid_indices_in_nodes[0].end(), 0);
     while (!visit_node_indices.empty()) {
         n_nodes_in_layer = visit_node_indices.size();
+        vector<vector<int>> next_iid_indices_in_nodes;
+        assert(n_nodes_in_layer == iid_indices_in_nodes.size());
+
         // can try parallel
         for (int i = 0; i < n_nodes_in_layer; ++i) {
             int node_id = visit_node_indices[i];
             auto &node = tree_ptr->nodes[node_id];
-            for (int j: nid_to_index_id[node_id]) {
-                node.sum_gh_pair.g += delta_gh_pairs[j].g;
-                node.sum_gh_pair.h += delta_gh_pairs[j].h;
+            auto &iid_indices = iid_indices_in_nodes[i];
+
+            for (int j: iid_indices) {
                 if (remove_n_ins) {
                     node.n_instances -= 1;
                     node.gain.n_instances -= 1;
                 }
 
-                if (node.is_leaf) continue;
+                if (node.parent_index == -1) {
+                    // root node
+                    node.sum_gh_pair.g += delta_gh_pairs[j].g;
+                    node.sum_gh_pair.h += delta_gh_pairs[j].h;
 
-                // update missing_gh
-                bool is_missing;
-                // get_val is useful to detect "is_missing", clion falsely marks it as "not used"
-                float_type feature_val = get_val(indices[j], node.split_feature_id, &is_missing);
+                    if (node.is_leaf) continue;
 
-                // update all the neighbors
-                for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
-                    if (is_missing) {
-                        node.split_nbr.gain[k].missing_g += delta_gh_pairs[j].g;
-                        node.split_nbr.gain[k].missing_h += delta_gh_pairs[j].h;
+                    // update missing_gh
+                    bool is_missing;
+                    float_type feature_val = get_val(indices[j], node.split_feature_id, &is_missing);
+
+                    // update all the neighbors
+                    for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
+                        if (is_missing) {
+                            node.split_nbr.gain[k].missing_g += delta_gh_pairs[j].g;
+                            node.split_nbr.gain[k].missing_h += delta_gh_pairs[j].h;
+                        }
+
+                        node.split_nbr.gain[k].self_g += delta_gh_pairs[j].g;
+                        node.split_nbr.gain[k].self_h += delta_gh_pairs[j].h;
+                        if (feature_val < node.split_nbr.split_vals[k]) {
+                            node.split_nbr.gain[k].lch_g += delta_gh_pairs[j].g;
+                            node.split_nbr.gain[k].lch_h += delta_gh_pairs[j].h;
+                        } else {
+                            node.split_nbr.gain[k].rch_g += delta_gh_pairs[j].g;
+                            node.split_nbr.gain[k].rch_h += delta_gh_pairs[j].h;
+                        }
+                    }
+                } else {
+                    // non-root nodes
+                    assert(node.parent_index >= 0);
+
+                    // obtain self.gh_pair from parent
+                    const auto &parent_node = tree_ptr->nodes[node.parent_index];
+                    if (tree_ptr->is_left_child(node_id)) {
+                        // this node is the left child of its parent
+                        node.sum_gh_pair.g = parent_node.gain.lch_g;
+                        node.sum_gh_pair.h = parent_node.gain.lch_h;
+                        for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
+                            node.split_nbr.gain[k].self_g = parent_node.gain.lch_g;
+                            node.split_nbr.gain[k].self_h = parent_node.gain.lch_h;
+                        }
+                    } else {
+                        // this node is the right child of its parent
+                        node.sum_gh_pair.g = parent_node.gain.rch_g;
+                        node.sum_gh_pair.h = parent_node.gain.rch_h;
+                        for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
+                            node.split_nbr.gain[k].self_g = parent_node.gain.rch_g;
+                            node.split_nbr.gain[k].self_h = parent_node.gain.rch_h;
+                        }
                     }
 
-                    node.split_nbr.gain[k].self_g += delta_gh_pairs[j].g;
-                    node.split_nbr.gain[k].self_h += delta_gh_pairs[j].h;
-                    if (feature_val < node.split_nbr.split_vals[k]) {
-                        node.split_nbr.gain[k].lch_g += delta_gh_pairs[j].g;
-                        node.split_nbr.gain[k].lch_h += delta_gh_pairs[j].h;
-                    } else {
-                        node.split_nbr.gain[k].rch_g += delta_gh_pairs[j].g;
-                        node.split_nbr.gain[k].rch_h += delta_gh_pairs[j].h;
+                    if (node.is_leaf) continue;
+
+                    bool is_missing;
+                    float_type feature_val = get_val(indices[j], node.split_feature_id, &is_missing);
+
+                    // update all the neighbors
+                    for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
+                        if (is_missing) {
+                            node.split_nbr.gain[k].missing_g += delta_gh_pairs[j].g;
+                            node.split_nbr.gain[k].missing_h += delta_gh_pairs[j].h;
+                        }
+                        if (feature_val < node.split_nbr.split_vals[k]) {
+                            node.split_nbr.gain[k].lch_g += delta_gh_pairs[j].g;
+                            node.split_nbr.gain[k].lch_h += delta_gh_pairs[j].h;
+                        } else {
+                            node.split_nbr.gain[k].rch_g += delta_gh_pairs[j].g;
+                            node.split_nbr.gain[k].rch_h += delta_gh_pairs[j].h;
+                        }
                     }
                 }
             }
@@ -350,8 +406,8 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                 default_left_gain.rch_g -= node.gain.missing_g;
                 default_left_gain.rch_h -= node.gain.missing_h;
                 default_left_gain.gain_value = default_left_gain.cal_gain_value();
-                if (fabs(default_left_gain.gain_value) > fabs(node.gain.gain_value)) {
-                    // switch default direction
+                if (ft_ge(fabs(default_left_gain.gain_value), fabs(node.gain.gain_value))) {
+                    // switch default direction to left (marginal default left)
                     node.gain = default_left_gain;
                     node.default_right = false;
                 }
@@ -364,13 +420,35 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                 default_right_gain.lch_g -= node.gain.missing_g;
                 default_right_gain.lch_h -= node.gain.missing_h;
                 default_right_gain.gain_value = -default_right_gain.cal_gain_value();
-                if (fabs(default_right_gain.gain_value) > fabs(node.gain.gain_value)) {
-                    // switch default direction
+                if (!ft_ge(fabs(node.gain.gain_value), fabs(default_right_gain.gain_value))) {
+                    // switch default direction to right (marginal default left)
                     default_right_gain.gain_value = -default_right_gain.gain_value;
                     node.gain = default_right_gain;
                     node.default_right = true;
                 }
             }
+
+            // recalculate iid_indices of next layer (split_value may be changed)
+            vector<int> next_iid_indices_left;
+            vector<int> next_iid_indices_right;
+            for (int j: iid_indices) {
+                bool is_missing;
+                float_type feature_val = get_val(indices[j], node.split_feature_id, &is_missing);
+                bool to_left;
+                if (is_missing) {
+                    to_left = !node.default_right;
+                } else {
+                    to_left = feature_val < node.split_value;
+                }
+
+                if (to_left) {
+                    next_iid_indices_left.push_back(j);
+                } else {
+                    next_iid_indices_right.push_back(j);
+                }
+            }
+            next_iid_indices_in_nodes.emplace_back(next_iid_indices_left);
+            next_iid_indices_in_nodes.emplace_back(next_iid_indices_right);
 
             // add indices of left and right children
             assert(node.lch_index > 0 && node.rch_index > 0);
@@ -378,6 +456,8 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
             visit_node_indices.push_back(node.rch_index);
         }
         visit_node_indices.erase(visit_node_indices.begin(), visit_node_indices.begin() + n_nodes_in_layer);
+        iid_indices_in_nodes = next_iid_indices_in_nodes;
+        next_iid_indices_in_nodes.clear();
     }
 }
 

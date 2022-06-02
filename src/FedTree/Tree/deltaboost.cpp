@@ -101,21 +101,22 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
             vector<GHPair> adjust_values;
             for (int j = 0; j < delta_gh_pairs.size(); ++j) {
                 if (is_iid_removed[j]) continue;
-                if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
-                    std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
-                    adjust_indices.emplace_back(j);
-                    adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
-                }
+                adjust_indices.emplace_back(j);
+                adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
+//                if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
+//                    std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
+//
+//                }
             }
-            GHPair sum_delta_gh_pair = std::accumulate(adjust_values.begin(), adjust_values.end(), GHPair());
+//            GHPair sum_delta_gh_pair = std::accumulate(adjust_values.begin(), adjust_values.end(), GHPair());
 
-            // debug only
-            SyncArray<int> adjust_indices_array;
-            SyncArray<GHPair> adjust_values_array;
-            adjust_indices_array.load_from_vec(adjust_indices);
-            adjust_values_array.load_from_vec(adjust_values);
-            LOG(DEBUG) << "Adjusted indices" << adjust_indices_array;
-            LOG(DEBUG) << "Adjusted values" << adjust_values_array;
+//            // debug only
+//            SyncArray<int> adjust_indices_array;
+//            SyncArray<GHPair> adjust_values_array;
+//            adjust_indices_array.load_from_vec(adjust_indices);
+//            adjust_values_array.load_from_vec(adjust_values);
+//            LOG(DEBUG) << "Adjusted indices" << adjust_indices_array;
+//            LOG(DEBUG) << "Adjusted values" << adjust_values_array;
 
             tree_remover.adjust_split_nbrs_by_indices(adjust_indices, adjust_values, false);
         }

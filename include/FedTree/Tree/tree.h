@@ -226,22 +226,22 @@ protected:
 struct DeltaTree : public Tree {
     // can be edited
     struct DeltaGain {
-        float_type gain_value = 0;
-        float_type lch_g = 0;
-        float_type lch_h = 0;
-        float_type rch_g = 0;
-        float_type rch_h = 0;
-        float_type self_g = 0;
-        float_type self_h = 0;
-        float_type missing_g = 0;
-        float_type missing_h = 0;
-        float_type lambda = 0;
+        float_type gain_value = 0.;
+        float_type lch_g = 0.;
+        float_type lch_h = 0.;
+        float_type rch_g = 0.;
+        float_type rch_h = 0.;
+        float_type self_g = 0.;
+        float_type self_h = 0.;
+        float_type missing_g = 0.;
+        float_type missing_h = 0.;
+        float_type lambda = 0.;
 
-        float_type ev_remain_gain = 0;
-        float_type lch_g2 = 0;
-        float_type rch_g2 = 0;
-        float_type self_g2 = 0;
-        float_type missing_g2 = 0;
+        float_type ev_remain_gain = 0.;
+        float_type lch_g2 = 0.;
+        float_type rch_g2 = 0.;
+        float_type self_g2 = 0.;
+        float_type missing_g2 = 0.;
         int n_instances = 0;
         int n_remove = 0;
 
@@ -624,6 +624,13 @@ struct DeltaTree : public Tree {
     int try_prune_leaf(int nid, int np, float_type gamma, vector<int> &leaf_child_count) override;
 
     void reorder_nid() override;
+
+    [[nodiscard]]
+    bool is_left_child(int nid) {
+        if (nodes[nid].parent_index < 0) return false;
+        auto parent_node = nodes[nodes[nid].parent_index];
+        return parent_node.lch_index == nid;
+    }
 
     vector<DeltaNode> nodes;    // contains all the nodes including potential nodes
 

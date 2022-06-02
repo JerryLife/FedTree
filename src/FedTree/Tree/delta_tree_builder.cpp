@@ -477,7 +477,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 
 //            vector<int> indices;
 //            GHPair sum_gh5;
-//            vector<GHPair> gh_vec(cut.cut_col_ptr[1], GHPair());
+            vector<GHPair> gh_vec(cut.cut_col_ptr[1], GHPair());
             for (int i = 0; i < n_instances * n_column; i++) {
                 int iid = i / n_column;
                 int fid = i % n_column;
@@ -499,10 +499,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                 }
             }
 //            GHPair sum_gh4 = std::accumulate(gh_vec.begin(), gh_vec.end(), GHPair());
-
-
-//            float_type sum_g21 = std::accumulate(gh_pair.host_data(), gh_pair.host_data() + gh_pair.size(), 0.0f, [](float_type a, const GHPair &b){ return  a + b.g * b.g;});
-//            float_type sum_g22 = std::accumulate(hist_g2.begin(), hist_g2.begin() + cut.cut_col_ptr[1], 0.0f);
+//
 //            LOG(INFO);
         } else {
             auto t_dp_begin = timer.now();
@@ -598,11 +595,17 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
         }
     }
 
+//    float_type sum_g21 = std::accumulate(gh_pair.host_data(), gh_pair.host_data() + gh_pair.size(), 0.0, [](float_type a, const GHPair &b){ return  a + b.g * b.g;});
+//    float_type sum_g22 = std::accumulate(hist_g2.begin(), hist_g2.begin() + cut.cut_col_ptr[1], 0.0);
+
     this->build_n_hist++;
     inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
                           hist.host_data(), hist.host_data());
     inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
                           hist_g2.begin(), hist_g2.begin());
+
+//    sum_g21 = std::accumulate(gh_pair.host_data(), gh_pair.host_data() + gh_pair.size(), 0.0, [](float_type a, const GHPair &b){ return  a + b.g * b.g;});
+//    sum_g22 = hist_g2[cut.cut_col_ptr[1] - 1];
 //    LOG(DEBUG) << hist;
 
     // handle missing data
@@ -625,7 +628,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 //                vector<float_type> close_h;
 //
 //            }
-//            assert(missing_gh_data[pid].h >= 0);    // second tree, root node, this does not hold
+//            assert(missing_gh_data[pid].h >= 0);
             missing_g2[pid] = nodes_data[nid].sum_g2 - node_g2;
         }
     }
@@ -897,7 +900,7 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
             default_to_right_gain.gain_value = -default_to_right_gain.cal_gain_value(mcw);
             default_to_right_gain.ev_remain_gain = default_to_right_gain.cal_ev_remain_gain(mcw);
 
-            if (std::abs(default_to_left_gain.gain_value) > std::abs(default_to_right_gain.gain_value)) {
+            if (ft_ge(std::fabs(default_to_left_gain.gain_value), std::fabs(default_to_right_gain.gain_value))) {
                 gain[i] = default_to_left_gain;
             }
             else {
