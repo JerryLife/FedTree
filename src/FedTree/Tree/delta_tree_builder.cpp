@@ -23,7 +23,6 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     this->param = param;
     this->sp = SyncArray<DeltaSplitPoint>();
     update_random_feature_rank_(0);
-
 }
 
 void DeltaTreeBuilder::init_nocutpoints(DataSet &dataset, const DeltaBoostParam &param) {
@@ -60,10 +59,13 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
 
     for (int k = 0; k < param.tree_per_rounds; ++k) {
         DeltaTree &tree_k = trees[k];
+        float_type gain_coef = 0.;
 
         this->ins2node_id.resize(n_instances);
         this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_instances));
-        this->tree.init_CPU(this->gradients, param);
+        this->tree.init_CPU(this->gradients, param, gain_coef);
+        delta_gain_eps = param.delta_gain_eps * gain_coef;
+        LOG(INFO) << "delta_gain_eps = " << delta_gain_eps;
         num_nodes_per_level.clear();
         ins2node_indices.clear();
 
@@ -367,7 +369,7 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         // find the first gap larger than delta_gain_eps
         int gap_idx;
         for (gap_idx = 0; gap_idx < idx_scores.size() - 1; ++gap_idx) {
-            if (idx_scores[gap_idx].score - idx_scores[gap_idx+1].score > param.delta_gain_eps)
+            if (idx_scores[gap_idx].score - idx_scores[gap_idx+1].score > delta_gain_eps)
                 break;
         }
 
@@ -377,7 +379,7 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         });
 
         bool is_robust = true;
-        if (best_idx_score_itr->score < param.delta_gain_eps || best_idx_score_itr->remain_score < param.delta_gain_eps) {
+        if (best_idx_score_itr->score < delta_gain_eps) {
             is_robust = false;
         }
 
@@ -900,7 +902,7 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
             default_to_right_gain.gain_value = -default_to_right_gain.cal_gain_value(mcw);
             default_to_right_gain.ev_remain_gain = default_to_right_gain.cal_ev_remain_gain(mcw);
 
-            if (ft_ge(std::fabs(default_to_left_gain.gain_value), std::fabs(default_to_right_gain.gain_value))) {
+            if (ft_ge(std::fabs(default_to_left_gain.gain_value), std::fabs(default_to_right_gain.gain_value), 1e-2)) {
                 gain[i] = default_to_left_gain;
             }
             else {

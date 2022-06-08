@@ -206,7 +206,7 @@ void DeltaTree::prune_self(float_type gamma) {
     reorder_nid();
 }
 
-void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostParam &param) {
+void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostParam &param, float_type &gain_coef) {
     TIMED_FUNC(timerObj);
     init_structure(param.depth);
     //init root node
@@ -231,6 +231,8 @@ void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostPar
     root_node.calc_weight_(lambda); // TODO: check here
     root_node.n_instances = static_cast<int>(gradients.size());
     root_node.potential_nodes_indices.emplace_back(0);
+
+    gain_coef = sum_g2 / (sum_gh.h + lambda);
 }
 
 void DeltaTree::init_structure(int depth) {

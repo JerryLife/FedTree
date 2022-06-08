@@ -37,8 +37,20 @@ mkdir -p data
 #python python-utils/shuffle.py data/msd.train -s 0
 
 
+#echo "Downloading higgs from UCI Machine Learning Repository"
+#wget https://archive.ics.uci.edu/ml/machine-learning-databases/00280/HIGGS.csv.gz -O higgs.csv.gz
+#gzip -d higgs.csv.gz
+#python python-utils/train_test_split.py -v 0 -t 0.2 -s 0 --scale-y -if csv data/higgs.csv
+
+
+#echo "Removing samples from datasets"
+#for dataset in codrna cadata covtype gisette msd; do
+#  python python-utils/remove_sample.py -s 0 -r 0.01 data/"$dataset".train
+#  python python-utils/remove_sample.py -s 0 -r 0.001 data/"$dataset".train
+#done
+
 echo "Removing samples from datasets"
-for dataset in codrna cadata covtype gisette msd; do
+for dataset in higgs; do
   python python-utils/remove_sample.py -s 0 -r 0.01 data/"$dataset".train
   python python-utils/remove_sample.py -s 0 -r 0.001 data/"$dataset".train
 done

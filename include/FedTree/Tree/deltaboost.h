@@ -30,6 +30,8 @@ public:
     void predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, SyncArray<float_type> &y_predict,
                                  int num_trees=-1);
 
+    vector<float_type> predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, int num_trees=-1);
+
     void remove_samples(DeltaBoostParam &param, DataSet &dataset, const vector<int>& sample_indices);
 
 private:

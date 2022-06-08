@@ -406,7 +406,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                 default_left_gain.rch_g -= node.gain.missing_g;
                 default_left_gain.rch_h -= node.gain.missing_h;
                 default_left_gain.gain_value = default_left_gain.cal_gain_value();
-                if (ft_ge(fabs(default_left_gain.gain_value), fabs(node.gain.gain_value))) {
+                if (ft_ge(fabs(default_left_gain.gain_value), fabs(node.gain.gain_value), 1e-2)) {
                     // switch default direction to left (marginal default left)
                     node.gain = default_left_gain;
                     node.default_right = false;
@@ -420,7 +420,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                 default_right_gain.lch_g -= node.gain.missing_g;
                 default_right_gain.lch_h -= node.gain.missing_h;
                 default_right_gain.gain_value = -default_right_gain.cal_gain_value();
-                if (!ft_ge(fabs(node.gain.gain_value), fabs(default_right_gain.gain_value))) {
+                if (!ft_ge(fabs(node.gain.gain_value), fabs(default_right_gain.gain_value), 1e-2)) {
                     // switch default direction to right (marginal default left)
                     default_right_gain.gain_value = -default_right_gain.gain_value;
                     node.gain = default_right_gain;

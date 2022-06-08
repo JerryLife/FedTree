@@ -84,6 +84,7 @@ public:
     vector<int> random_feature_rank;       // random rank of feature in trees
 
     vector<bool> is_prior;       // ID: node index; Value: whether the node is prior node or not.
+    float_type delta_gain_eps;   // delta_gain_eps for this tree
 };
 
 #endif //FEDTREE_DELTA_TREE_BUILDER_H

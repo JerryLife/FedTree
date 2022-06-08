@@ -615,7 +615,7 @@ struct DeltaTree : public Tree {
         return *this;
     }
 
-    void init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostParam &param);
+    void init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostParam &param, float_type &gain_coef);
 
     void init_structure(int depth) override;
 

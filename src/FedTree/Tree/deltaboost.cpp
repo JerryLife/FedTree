@@ -256,3 +256,14 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
     }
 }
 
+vector<float_type> DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, int num_trees) {
+    /**
+     * This function is a wrapper for predict_raw with SyncArray. The return value is expected to be used for initialization
+     * instead of assignment. E.g., auto y_predict = predict_raw(param, ...); In this way, the copying would be optimized
+     * by "named return value optimization (NRVO)".
+     */
+    SyncArray<float_type> y_predict;
+    predict_raw(model_param, dataSet, y_predict, num_trees);
+    return y_predict.to_vec();
+}
+

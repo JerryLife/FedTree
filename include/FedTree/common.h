@@ -42,13 +42,13 @@ std::string string_format(const std::string &format, Args ... args) {
 //data types
 typedef double float_type;
 
+#define EPSILON 1e-9
 
+bool ft_eq(float_type a, float_type b, float_type eps=EPSILON);
 
-bool ft_eq(float_type a, float_type b);
+bool ft_ge(float_type a, float_type b, float_type eps=EPSILON);
 
-bool ft_ge(float_type a, float_type b);
-
-bool ft_le(float_type a, float_type b);
+bool ft_le(float_type a, float_type b, float_type eps=EPSILON);
 
 #undef EPSILON
 

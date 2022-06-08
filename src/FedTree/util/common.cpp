@@ -16,16 +16,17 @@ std::ostream &operator<<(std::ostream &os, const int_float &rhs) {
     return os;
 }
 
-#define EPSILON 1e-9
 
-bool ft_eq(float_type a, float_type b) {
-    return ((a - b) < EPSILON) && ((b - a) < EPSILON);
+
+bool ft_eq(float_type a, float_type b, const float_type eps) {
+    return ((a - b) < eps) && ((b - a) < eps);
 }
 
-bool ft_ge(float_type a, float_type b) {
-    return a > b - EPSILON;
+bool ft_ge(float_type a, float_type b, const float_type eps) {
+    return a > b - eps;
 }
 
-bool ft_le(float_type a, float_type b) {
-    return a < b + EPSILON;
+bool ft_le(float_type a, float_type b, const float_type eps) {
+    return a < b + eps;
 }
+
