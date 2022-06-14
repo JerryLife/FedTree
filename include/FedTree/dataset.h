@@ -15,9 +15,11 @@ class DataSet{
     ///load dataset from file
 //    void load_from_file(const string& file_name, FLParam &param);
     void load_from_file(string file_name, FLParam &param);
+    void load_from_csv(string file_name, FLParam &param);
 //    void load_from_file_dense(string file_name, FLParam &param);
     void load_from_files(vector<string>file_names, FLParam &param);
     void load_group_file(string file_name);
+    void group_label_without_reorder(int n_class);
     void group_label();
 
     void load_csc_from_file(string file_name, FLParam &param, int const nfeatures=500);
@@ -36,6 +38,7 @@ class DataSet{
     vector<int> group;
     vector<float_type> label;
 
+    std::map<float_type, int> label_map;
 
     // csc variables
     vector<float_type> csc_val;
@@ -54,6 +57,7 @@ class DataSet{
     bool use_cpu = true;
     bool has_csc = false;
     bool is_classification = false;
+    bool has_label = true;
 };
 
 #endif //FEDTREE_DATASET_H

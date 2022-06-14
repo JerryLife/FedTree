@@ -64,6 +64,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     gbdt_param->delete_data_path = "";
     gbdt_param->remain_data_path = "";
     gbdt_param->save_model_name = "";
+    gbdt_param->reorder_label = false;
 
     DeltaBoostParam *deltaboost_param = &fl_param.deltaboost_param;
     deltaboost_param->enable_delta = "false";
@@ -73,7 +74,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     deltaboost_param->max_bin_size = 100;
     deltaboost_param->gain_alpha = 0.0;
     deltaboost_param->nbr_size = 1;
-    deltaboost_param->delta_gain_eps = 0.0;
+    deltaboost_param->delta_gain_eps_feature = 0.0;
+    deltaboost_param->delta_gain_eps_sn = 0.0;
 
     if (argc < 2) {
         printf("Usage: <config>\n");
@@ -157,6 +159,9 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 gbdt_param->tree_method = val;
             else if (str_name.compare("metric") == 0)
                 gbdt_param->metric = val;
+            else if (str_name.compare("reorder_label") == 0)
+                gbdt_param->reorder_label = val;
+
             else if (str_name.compare("enable_delta") == 0)
                 deltaboost_param->enable_delta = (strcasecmp("true", val) == 0);
             else if (str_name.compare("remove_ratio") == 0)
@@ -175,8 +180,10 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 deltaboost_param->gain_alpha = atof(val);
             else if (str_name.compare("nbr_size") == 0)
                 deltaboost_param->nbr_size = atoi(val);
-            else if (str_name.compare("delta_gain_eps") == 0)
-                deltaboost_param->delta_gain_eps = atof(val);
+            else if (str_name.compare("delta_gain_eps_feature") == 0)
+                deltaboost_param->delta_gain_eps_feature = atof(val);
+            else if (str_name.compare("delta_gain_eps_sn") == 0)
+                deltaboost_param->delta_gain_eps_sn = atof(val);
             else
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {

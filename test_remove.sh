@@ -1,5 +1,5 @@
 n_trees=$1
-cpus="0-60"
+cpus="0-61"
 
 : ${1?"Number of trees unset."}
 

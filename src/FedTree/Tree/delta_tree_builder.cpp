@@ -5,6 +5,7 @@
 #include "FedTree/Tree/delta_tree_builder.h"
 #include "thrust/sequence.h"
 #include "thrust/iterator/discard_iterator.h"
+#include "openssl/md5.h"
 #include <algorithm>
 #include <utility>
 #include <numeric>
@@ -23,6 +24,7 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     this->param = param;
     this->sp = SyncArray<DeltaSplitPoint>();
     update_random_feature_rank_(0);
+    update_random_split_nbr_rank_(0);
 }
 
 void DeltaTreeBuilder::init_nocutpoints(DataSet &dataset, const DeltaBoostParam &param) {
@@ -64,7 +66,7 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
         this->ins2node_id.resize(n_instances);
         this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_instances));
         this->tree.init_CPU(this->gradients, param, gain_coef);
-        delta_gain_eps = param.delta_gain_eps * gain_coef;
+//        delta_gain_eps = param.delta_gain_eps * gain_coef;
         LOG(INFO) << "delta_gain_eps = " << delta_gain_eps;
         num_nodes_per_level.clear();
         ins2node_indices.clear();
@@ -313,34 +315,59 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
             int bid_start = cut.cut_col_ptr[j];
             int bid_end = cut.cut_col_ptr[j + 1];
             int n_nbrs = bid_end - bid_start - nbr_size + 1;
-            vector<float_type> scores_in_feature;
-            vector<float_type> remain_scores_in_feature;
+            vector<IdxScore> idx_scores_in_feature;
+//            vector<float_type> scores_in_feature;
+//            vector<float_type> remain_scores_in_feature;
             if (n_nbrs > 0){
-                scores_in_feature.resize(n_nbrs);
-                remain_scores_in_feature.resize(n_nbrs);
+                idx_scores_in_feature.resize(n_nbrs);
+//                scores_in_feature.resize(n_nbrs);
+//                remain_scores_in_feature.resize(n_nbrs);
                 for (int k = bid_start; k < bid_end - nbr_size + 1; ++k) {
                     float_type score = std::accumulate(gain_per_sp.begin() + i + k, gain_per_sp.begin() + i + k + nbr_size, 0.);
                     float_type remain_score = std::accumulate(remain_gain_per_sp.begin() + i + k, remain_gain_per_sp.begin() + i + k + nbr_size, 0.);
-                    scores_in_feature[k - bid_start] = score / static_cast<float_type>(nbr_size);
-                    remain_scores_in_feature[k - bid_start] = remain_score / static_cast<float_type>(nbr_size);
+                    idx_scores_in_feature[k - bid_start].idx_in_feature_start = k;
+                    idx_scores_in_feature[k - bid_start].idx_in_feature_end = std::min(k + nbr_size, bid_end);
+                    idx_scores_in_feature[k - bid_start].fid = j;
+                    idx_scores_in_feature[k - bid_start].score = score / static_cast<float_type>(nbr_size);
+                    idx_scores_in_feature[k - bid_start].remain_score = remain_score / static_cast<float_type>(nbr_size);
                 }
             } else {
+                idx_scores_in_feature.resize(1);
                 float_type score = std::accumulate(gain_per_sp.begin() + i + bid_start, gain_per_sp.begin() + i + bid_end, 0.);
                 float_type remain_score = std::accumulate(remain_gain_per_sp.begin() + i + bid_start, remain_gain_per_sp.begin() + i + bid_end, 0.);
                 if (bid_start != bid_end) {
-                    scores_in_feature = {score / static_cast<float_type>(bid_end - bid_start)};
-                    remain_scores_in_feature = {remain_score / static_cast<float_type>(bid_end - bid_start)};
+                    idx_scores_in_feature[0].score = score / static_cast<float_type>(bid_end - bid_start);
+                    idx_scores_in_feature[0].remain_score = remain_score / static_cast<float_type>(bid_end - bid_start);
                 } else {
-                    scores_in_feature = remain_scores_in_feature = {0.};
+                    idx_scores_in_feature[0].score = idx_scores_in_feature[0].remain_score = 0.;
                 }
+                idx_scores_in_feature[0].idx_in_feature_start = bid_start;
+                idx_scores_in_feature[0].idx_in_feature_end = bid_end;
+                idx_scores_in_feature[0].fid = j;
             }
 
-            auto best_score_in_feature_itr = std::max_element(scores_in_feature.begin(),scores_in_feature.end());
-            int best_idx_in_feature_start = static_cast<int>(best_score_in_feature_itr - scores_in_feature.begin() + bid_start);    // idx in range(n_bins)
-            int best_idx_in_feature_end = std::min(static_cast<int>(best_idx_in_feature_start + nbr_size), bid_end);
-            float_type remain_best_score_in_feature = remain_scores_in_feature[best_score_in_feature_itr - scores_in_feature.begin()];
-            float_type best_score_in_feature = param.gain_alpha * remain_best_score_in_feature + (1 - param.gain_alpha) * (*best_score_in_feature_itr);
-            idx_scores[j] = {best_idx_in_feature_start, best_idx_in_feature_end, j,best_score_in_feature, remain_best_score_in_feature};
+            std::sort(idx_scores_in_feature.begin(), idx_scores_in_feature.end(), std::greater<>());
+
+            // find the first gap larger than delta_gain_eps
+            int gap_idx;
+            for (gap_idx = 0; gap_idx < idx_scores_in_feature.size() - 1; ++gap_idx) {
+                if (idx_scores_in_feature[gap_idx].score - idx_scores_in_feature[gap_idx+1].score > param.delta_gain_eps_sn)
+                    break;
+            }
+
+            // choose the first split_nbr according to random feature order
+            auto best_idx_score_itr = std::max_element(idx_scores_in_feature.begin(),
+                                                       idx_scores_in_feature.begin() + gap_idx + 1, [&](const auto &a, const auto &b){
+                return RobustHistCut::cut_value_hash_comp(cut.cut_points_val[a.idx_in_feature_start], cut.cut_points_val[b.idx_in_feature_start]);
+            });
+
+//            auto best_score_in_feature_itr = std::max_element(scores_in_feature.begin(),scores_in_feature.end());
+//            int best_idx_in_feature_start = static_cast<int>(best_score_in_feature_itr - scores_in_feature.begin() + bid_start);    // idx in range(n_bins)
+//            int best_idx_in_feature_end = std::min(static_cast<int>(best_idx_in_feature_start + nbr_size), bid_end);
+//            float_type remain_best_score_in_feature = remain_scores_in_feature[best_score_in_feature_itr - scores_in_feature.begin()];
+//            float_type best_score_in_feature = param.gain_alpha * remain_best_score_in_feature + (1 - param.gain_alpha) * (*best_score_in_feature_itr);
+//            idx_scores[j] = {best_idx_in_feature_start, best_idx_in_feature_end, j,best_score_in_feature, remain_best_score_in_feature};
+            idx_scores[j] = *best_idx_score_itr;
         }
         // assert scores >= 0
 //        auto best_idx_score_itr = std::max_element(idx_scores.begin(), idx_scores.end(), [](const auto &a, const auto &b){
@@ -354,7 +381,8 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
 
 //        // get the second feature, check if the best feature is robust
 //        bool is_robust = true;
-//        for (int j = 0; j < idx_scores.size(); ++j) {
+
+    //        for (int j = 0; j < idx_scores.size(); ++j) {
 //            if (j != fid && best_score - std::get<2>(idx_scores[j]) < param.delta_gain_eps &&
 //                         remain_best_score - std::get<3>(idx_scores[j]) < param.delta_gain_eps) {
 //                is_robust = false;
@@ -369,7 +397,7 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         // find the first gap larger than delta_gain_eps
         int gap_idx;
         for (gap_idx = 0; gap_idx < idx_scores.size() - 1; ++gap_idx) {
-            if (idx_scores[gap_idx].score - idx_scores[gap_idx+1].score > delta_gain_eps)
+            if (idx_scores[gap_idx].score - idx_scores[gap_idx+1].score > param.delta_gain_eps_feature)
                 break;
         }
 
@@ -379,7 +407,7 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         });
 
         bool is_robust = true;
-        if (best_idx_score_itr->score < delta_gain_eps) {
+        if (best_idx_score_itr->score < std::max(param.delta_gain_eps_sn, param.delta_gain_eps_feature)) {
             is_robust = false;
         }
 
@@ -1242,6 +1270,21 @@ void DeltaTreeBuilder::update_random_feature_rank_(size_t seed) {
     std::iota(random_feature_rank.begin(), random_feature_rank.end(), 0);
     std::shuffle(random_feature_rank.begin(), random_feature_rank.end(), rng);
 }
+
+void DeltaTreeBuilder::update_random_split_nbr_rank_(size_t seed) {
+    std::mt19937 rng{seed};
+    int n_split_nbrs = 0;
+    for (int i = 0; i < cut.cut_col_ptr.size() - 1; ++i) {
+        int start = cut.cut_col_ptr[i];
+        int end = cut.cut_col_ptr[i+1];
+        n_split_nbrs += std::max(end - param.nbr_size + 1 - start, 1);
+    }
+    random_split_nbr_rank.resize(n_split_nbrs);
+    std::iota(random_split_nbr_rank.begin(), random_split_nbr_rank.end(), 0);
+    std::shuffle(random_split_nbr_rank.begin(), random_split_nbr_rank.end(), rng);
+}
+
+
 
 
 

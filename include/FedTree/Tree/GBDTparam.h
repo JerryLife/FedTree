@@ -40,6 +40,7 @@ struct GBDTParam {
     std::string delete_data_path;
     std::string save_model_name;
 
+    bool reorder_label = false;
 };
 
 struct DeltaBoostParam : public GBDTParam {
@@ -52,7 +53,8 @@ struct DeltaBoostParam : public GBDTParam {
     int max_bin_size = 100;
     float_type gain_alpha = 0.0;
     int nbr_size = 1;
-    float_type delta_gain_eps = 0.0;
+    float_type delta_gain_eps_feature = 0.0;
+    float_type delta_gain_eps_sn = 0.0;  // eps for split neighbors in a feature
 
     DeltaBoostParam() = default;
 
@@ -66,7 +68,8 @@ struct DeltaBoostParam : public GBDTParam {
     max_bin_size(deltaboost_param->max_bin_size),
     gain_alpha(deltaboost_param->gain_alpha),
     nbr_size(deltaboost_param->nbr_size),
-    delta_gain_eps(deltaboost_param->delta_gain_eps) {
+    delta_gain_eps_feature(deltaboost_param->delta_gain_eps_feature),
+    delta_gain_eps_sn(deltaboost_param->delta_gain_eps_sn) {
         if (deltaboost_param->n_used_trees > 0) {
             this->n_used_trees = deltaboost_param->n_used_trees;
         } else {

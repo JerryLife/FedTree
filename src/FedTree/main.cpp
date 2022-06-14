@@ -91,7 +91,7 @@ int main(int argc, char** argv){
     std::map<int, vector<int>> batch_idxs;
     DataSet dataset;
     bool use_global_test_set = !model_param.test_path.empty();
-    dataset.load_from_file(model_param.path, fl_param);
+    dataset.load_from_csv(model_param.path, fl_param);
     if (fl_param.partition == true && fl_param.mode != "centralized") {
         Partition partition;
         if (fl_param.partition_mode == "hybrid") {
@@ -141,7 +141,7 @@ int main(int argc, char** argv){
 
     DataSet test_dataset;
     if (use_global_test_set)
-        test_dataset.load_from_file(model_param.test_path, fl_param);
+        test_dataset.load_from_csv(model_param.test_path, fl_param);
 
 //    if (ObjectiveFunction::need_group_label(param.gbdt_param.objective)) {
 //        group_label();
@@ -237,10 +237,10 @@ int main(int argc, char** argv){
         bool test_on_remain = !fl_param.gbdt_param.remain_data_path.empty();
         bool test_on_delete = !fl_param.gbdt_param.delete_data_path.empty();
         if (test_on_remain) {
-            remain_dataset.load_from_file(fl_param.gbdt_param.remain_data_path, fl_param);
+            remain_dataset.load_from_csv(fl_param.gbdt_param.remain_data_path, fl_param);
         }
         if (test_on_delete) {
-            delete_dataset.load_from_file(fl_param.gbdt_param.delete_data_path, fl_param);
+            delete_dataset.load_from_csv(fl_param.gbdt_param.delete_data_path, fl_param);
         }
 
         if (fl_param.deltaboost_param.enable_delta) {
