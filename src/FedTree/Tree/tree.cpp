@@ -222,13 +222,14 @@ void DeltaTree::init_CPU(const SyncArray<GHPair> &gradients, const DeltaBoostPar
     float_type sum_g2 = std::accumulate(gradients.host_data(), gradients.host_end(), 0.0,
                                          [](float_type a, const GHPair &b){ return  a + b.g * b.g;});
     GHPair sum_gh = std::accumulate(gradients.host_data(), gradients.host_end(), GHPair());
+    GHPair sum_rest_gh = std::accumulate(gradients.host_data() + 11, gradients.host_end(), GHPair());
 
     float_type lambda = param.lambda;
     DeltaNode &root_node = nodes[0];
     root_node.sum_gh_pair = sum_gh;
     root_node.sum_g2 = sum_g2;
     root_node.is_valid = true;
-    root_node.calc_weight_(lambda); // TODO: check here
+    root_node.calc_weight_(lambda);
     root_node.n_instances = static_cast<int>(gradients.size());
     root_node.potential_nodes_indices.emplace_back(0);
 

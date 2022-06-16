@@ -83,7 +83,6 @@ public:
     SyncArray<SplitPoint> sp;
     bool has_split;
 
-protected:
 //    vector<Shard> shards;
 //    DataSet* dataset;
     DataSet sorted_dataset;

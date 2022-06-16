@@ -17,6 +17,9 @@ public:
     vector<vector<GHPair>> gh_pairs_per_sample;       // first index is the iteration, second index is the sample ID
     vector<vector<vector<int>>> ins2node_indices_per_tree;  // first index is tree id, second index is sample id, third index is node id
 
+    vector<vector<bool>> is_subset_indices_in_tree;     // whether an instance is trained in a tree. Size [n_trees, n_instances]
+                                                        // true means trained, false means not trained.
+
     DeltaBoost() = default;
 
     explicit DeltaBoost(const vector<vector<DeltaTree>>& gbdt){

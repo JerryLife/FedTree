@@ -254,4 +254,6 @@ std::vector<T> flatten(const std::vector<std::vector<T>> & vec) {
     return result;
 }
 
+std::vector<bool> indices_to_hash_table(const std::vector<int> &vec, size_t size);
+
 #endif //FEDTREE_COMMON_H

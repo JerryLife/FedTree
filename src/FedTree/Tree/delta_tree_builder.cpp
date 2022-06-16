@@ -14,7 +14,7 @@
 void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     TreeBuilder::init(dataset, param); // NOLINT(bugprone-parent-virtual-call)
     if (dataset.n_features() > 0) {
-        RobustHistCut ref_cut;
+//        RobustHistCut ref_cut;
 //        ref_cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
 //        cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
         cut.get_cut_points_by_feature_range_balanced(sorted_dataset, param.max_bin_size, n_instances);
@@ -27,8 +27,19 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     update_random_split_nbr_rank_(0);
 }
 
+void DeltaTreeBuilder::reset(DataSet &dataset, const DeltaBoostParam &param) {
+    TreeBuilder::init(dataset, param); // NOLINT(bugprone-parent-virtual-call)
+    get_bin_ids();
+    this->param = param;
+    this->sp = SyncArray<DeltaSplitPoint>();
+    update_random_feature_rank_(0);
+    update_random_split_nbr_rank_(0);
+}
+
+
 void DeltaTreeBuilder::init_nocutpoints(DataSet &dataset, const DeltaBoostParam &param) {
     TreeBuilder::init_nosortdataset(dataset, param);
+    this->param = param;
 }
 
 void DeltaTreeBuilder::broadcast_potential_node_indices(int node_id) {
@@ -1204,7 +1215,7 @@ void DeltaTreeBuilder::get_split_points(vector<gain_pair> &best_idx_gain, int n_
 
 void DeltaTreeBuilder::get_bin_ids() {
 //    SparseColumns &columns = shards[device_id].columns;
-    auto &cut = this->cut;
+//    auto &cut = this->cut;
 //    auto &dense_bin_id = this->dense_bin_id;
     using namespace thrust;
     int n_column = sorted_dataset.n_features();

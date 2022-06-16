@@ -1,11 +1,14 @@
 //
 // Created by liqinbin on 10/14/20.
 //
+#include <random>
 #include "omp.h"
 #include "FedTree/dataset.h"
 #include "thrust/scan.h"
 #include "thrust/execution_policy.h"
 #include "FedTree/objective/objective_function.h"
+#include "FedTree/MurmurHash3.h"
+
 
 void DataSet::load_group_file(string file_name) {
     LOG(INFO) << "loading group info from file \"" << file_name << "\"";
@@ -910,4 +913,161 @@ void DataSet::load_from_csv(string file_name, FLParam &param) {
 //    mem_size *= 12;
 //    if(mem_size > (5 * param.n_device))
 //        this->use_cpu = true;
+}
+
+
+void DataSet::get_subset(vector<int> &idx, DataSet& subset){
+//    if(has_csc){
+//        subset.csc_val.clear();
+//        subset.csc_row_idx.clear();
+//        subset.csc_col_ptr.clear();
+//        subset.csc_col_ptr.push_back(0);
+//        subset.n_features_ = n_features();
+//        subset.y.clear();
+//        std::sort(idx.begin(), idx.end());
+//        for(int i = 0; i < idx.size(); i++){
+//            subset.y.push_back(y[idx[i]]);
+//        }
+//        for(int i = 0; i < csc_col_ptr.size() - 1; i++){
+//            int n_val = 0;
+//            for(int j = csc_col_ptr[i]; j < csc_col_ptr[i+1]; j++){
+//                int rid = csc_row_idx[j];
+//                int offset = std::find(idx.begin(), idx.end(), rid) - idx.begin();
+//                if(offset != idx.size()){
+//                    float_type val = csc_val[j];
+//                    subset.csc_val.push_back(val);
+//                    subset.csc_row_idx.push_back(offset);
+//                    n_val++;
+//                }
+//            }
+//            subset.csc_col_ptr.push_back(n_val + subset.csc_col_ptr.back());
+//        }
+//        subset.csc_to_csr();
+//    }
+//    else {
+        subset.csr_val.clear();
+        subset.csr_col_idx.clear();
+        subset.csr_row_ptr.clear();
+        subset.csr_row_ptr.push_back(0);
+        subset.n_features_ = n_features();
+        subset.y.clear();
+        for (int i = 0; i < idx.size(); i++) {
+            int n_val = 0;
+            if (n_features_ != 0) {
+                for (int j = csr_row_ptr[idx[i]]; j < csr_row_ptr[idx[i] + 1]; j++) {
+                    float_type val = csr_val[j];
+                    int cid = csr_col_idx[j];
+                    subset.csr_val.push_back(val);
+                    subset.csr_col_idx.push_back(cid);
+                    n_val++;
+                }
+                subset.csr_row_ptr.push_back(n_val + subset.csr_row_ptr.back());
+            }
+            if(y.size())
+                subset.y.push_back(y[idx[i]]);
+        }
+
+//    }
+    subset.n_features_ = n_features_;
+    subset.label = label;
+    subset.label_map = label_map;
+    subset.group = group;
+    subset.is_classification = is_classification;
+    subset.has_label = has_label;
+
+    csr_to_csc();
+    has_csc = true;
+}
+
+void DataSet::csc_to_csr() {
+    //cpu transpose
+    int n_column = this->n_features();
+    int n_row = this->n_instances();
+    int nnz = this->csc_val.size();
+//    LOG(INFO) << n_column << "," << n_row << "," << nnz;
+
+
+    csr_val.resize(nnz);
+    csr_col_idx.resize(nnz);
+    csr_row_ptr.resize(n_row + 1);
+
+
+//    LOG(INFO) << string_format("#non-zeros = %ld, density = %.2f%%", nnz,
+//                               (float) nnz / n_column / n_row * 100);
+    for (int i = 0; i <= n_row; ++i) {
+        csr_row_ptr[i] = 0;
+    }
+
+#pragma omp parallel for // about 5s
+    for (int i = 0; i < nnz; ++i) {
+        int idx = csc_row_idx[i] + 1;
+#pragma omp atomic
+        csr_row_ptr[idx] += 1;
+    }
+
+    for (int i = 1; i < n_row + 1; ++i) {
+        csr_row_ptr[i] += csr_row_ptr[i - 1];
+    }
+    for (int col = 0; col < csc_col_ptr.size() - 1; col++) {
+        for (int j = csc_col_ptr[col]; j < csc_col_ptr[col + 1]; j++) {
+            int row = csc_row_idx[j];
+            int dest = csr_row_ptr[row];
+            csr_val[dest] = csc_val[j];
+            csr_col_idx[dest] = col;
+            csr_row_ptr[row] += 1;
+        }
+    }
+    for (int i = 0, last = 0; i < n_row; i++) {
+        int next_last = csr_row_ptr[i];
+        csr_row_ptr[i] = last;
+        last = next_last;
+    }
+
+//    has_csr = true;
+}
+
+DataSet &DataSet::get_sampled_dataset(int cur_sampling_round) {
+    return sampled_datasets.at(cur_sampling_round);
+}
+
+void DataSet::update_sampling_by_hashing_(int total_sampling_round) {
+    /***
+     * This function updates sampled_datasets to size total_sampling_round
+     */
+
+    std::uniform_int_distribution<std::mt19937::result_type> dist(std::mt19937::min(), std::mt19937::max());
+    auto hash_seed = dist(rng);
+
+    // map each instance to a "random" value by hashing
+    vector<int> row_category(n_instances());
+#pragma omp parallel for
+    for (int i = 0; i < this->n_instances(); ++i) {
+        if (n_features_ > 0) {
+            void *row_start = csr_val.data() + csr_row_ptr[i];
+            int row_len = (csr_row_ptr[i+1] - csr_row_ptr[i]) * static_cast<int>(sizeof(float_type));
+            uint32_t row_hash = 0;
+            MurmurHash3_x86_32(row_start, row_len, hash_seed, &row_hash);
+            row_category[i] = static_cast<int>(row_hash % total_sampling_round);
+        }
+    }
+
+    subset_indices.clear();
+    subset_indices.resize(total_sampling_round);
+    for (int i = 0; i < n_instances(); ++i) {
+        subset_indices[row_category[i]].push_back(i);
+    }
+
+    sampled_datasets.clear();
+    sampled_datasets.resize(total_sampling_round);
+    for (int i = 0; i < total_sampling_round; ++i) {
+        get_subset(subset_indices[i], sampled_datasets[i]);
+    }
+}
+
+vector<int>& DataSet::get_subset_indices(int cur_sampling_round) {
+    return subset_indices[cur_sampling_round];
+}
+
+void DataSet::set_seed(int seed) {
+    rng.seed(seed);
 }

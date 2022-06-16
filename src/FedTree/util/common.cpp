@@ -30,3 +30,14 @@ bool ft_le(float_type a, float_type b, const float_type eps) {
     return a < b + eps;
 }
 
+std::vector<bool> indices_to_hash_table(const std::vector<int> &indices, size_t size) {
+    /**
+     * Map a vector of indices to a hash table of size <size>. All the indices that exist in <indices> are set to true
+     * in the returned vector; otherwise, are set to false.
+     */
+    std::vector<bool> hash_table(size, false);
+    for (int i = 0; i < indices.size(); ++i) {
+        hash_table[indices[i]] = true;
+    }
+    return hash_table;
+}

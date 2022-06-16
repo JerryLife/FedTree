@@ -278,12 +278,12 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
         return 0;
     };
 
-    vector<vector<int>> nid_to_index_id(tree_ptr->nodes.size(), vector<int>());
-    for (int i = 0; i < indices.size(); ++i) {
-        for (auto node_id: ins2node_indices[i]) {
-            nid_to_index_id[node_id].push_back(i);
-        }
-    }
+//    vector<vector<int>> nid_to_index_id(tree_ptr->nodes.size(), vector<int>());
+//    for (int i = 0; i < indices.size(); ++i) {
+//        for (auto node_id: ins2node_indices[i]) {
+//            nid_to_index_id[node_id].push_back(i);
+//        }
+//    }
 
 
     // inference from the root, update split_nbrs layer by layer
@@ -338,6 +338,9 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                             node.split_nbr.gain[k].rch_g += delta_gh_pairs[j].g;
                             node.split_nbr.gain[k].rch_h += delta_gh_pairs[j].h;
                         }
+
+                        float_type gain_sign = node.split_nbr.gain[k].gain_value / std::abs(node.split_nbr.gain[k].gain_value);
+                        node.split_nbr.gain[k].gain_value = gain_sign * node.split_nbr.gain[k].cal_gain_value();
                     }
                 } else {
                     // non-root nodes
@@ -381,6 +384,9 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                             node.split_nbr.gain[k].rch_g += delta_gh_pairs[j].g;
                             node.split_nbr.gain[k].rch_h += delta_gh_pairs[j].h;
                         }
+
+                        float_type gain_sign = node.split_nbr.gain[k].gain_value / std::abs(node.split_nbr.gain[k].gain_value);
+                        node.split_nbr.gain[k].gain_value = gain_sign * node.split_nbr.gain[k].cal_gain_value();
                     }
                 }
             }

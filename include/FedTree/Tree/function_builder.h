@@ -69,8 +69,9 @@ public:
 
     static FunctionBuilder *create(std::string name);
 
-protected:
     SyncArray<float_type> y_predict;
+
+protected:
     GBDTParam param;
 };
 

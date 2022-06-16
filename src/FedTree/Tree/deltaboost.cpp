@@ -36,10 +36,25 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     LOG(INFO) << "starting building trees";
 
     DeltaBooster booster;
-    booster.init(dataset, param);   
+    booster.init(dataset, param);
+    dataset.set_seed(0);
     std::chrono::high_resolution_clock timer;
     auto start = timer.now();
     for (int i = 0; i < param.n_trees; ++i) {
+        // subsampling by hashing
+        if (param.hash_sampling_round > 1) {
+            if (i % param.hash_sampling_round == 0) {
+                dataset.update_sampling_by_hashing_(param.hash_sampling_round);
+            }
+            auto &sub_dataset = dataset.get_sampled_dataset(i % param.hash_sampling_round);
+            booster.reset(sub_dataset, param);
+            if (i > 0) {
+                predict_raw(param, sub_dataset, booster.fbuilder->y_predict);
+            }
+
+            auto subset_indices = dataset.get_subset_indices(i % param.hash_sampling_round);
+            is_subset_indices_in_tree.emplace_back(indices_to_hash_table(subset_indices, dataset.n_instances()));
+        }
         //one iteration may produce multiple trees, depending on objectives
         booster.boost(trees, gh_pairs_per_sample, ins2node_indices_per_tree);
         int valid_size = 0;
@@ -81,12 +96,12 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 //        DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs, ins2node_indices);
         DeltaTreeRemover& tree_remover = deltaboost_remover.tree_removers[i];
         const std::vector<GHPair>& gh_pairs = tree_remover.gh_pairs;
-        tree_remover.remove_samples_by_indices(sample_indices);
-        vector<bool> is_iid_removed(dataset.n_instances(), false);  // hash table to query if an instance is removed O(1)
-//#pragma omp parallel for
-        for (int j = 0; j < sample_indices.size(); ++j) {
-            is_iid_removed[sample_indices[j]] = true;
-        }
+        vector<int> trained_sample_indices;
+        std::copy_if(sample_indices.begin(), sample_indices.end(), std::back_inserter(trained_sample_indices), [&](int idx){
+            return is_subset_indices_in_tree[i][idx];
+        });
+        tree_remover.remove_samples_by_indices(trained_sample_indices);
+        vector<bool> is_iid_removed = indices_to_hash_table(sample_indices, dataset.n_instances());
 
         if (i > 0) {
             SyncArray<float_type> y_predict;
@@ -100,7 +115,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
             vector<int> adjust_indices;
             vector<GHPair> adjust_values;
             for (int j = 0; j < delta_gh_pairs.size(); ++j) {
-                if (is_iid_removed[j]) continue;
+                if (is_iid_removed[j] || !is_subset_indices_in_tree[i][j]) continue;
                 adjust_indices.emplace_back(j);
                 adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
 //                if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||

@@ -53,8 +53,10 @@ struct DeltaBoostParam : public GBDTParam {
     int max_bin_size = 100;
     float_type gain_alpha = 0.0;
     int nbr_size = 1;
-    float_type delta_gain_eps_feature = 0.0;
+    float_type delta_gain_eps_feature = 0.0; // eps for features
     float_type delta_gain_eps_sn = 0.0;  // eps for split neighbors in a feature
+    int hash_sampling_round = 1;  // Round of sampling (by hash). After <hash_sampling_round>, all the instances will be trained once.
+                                         // sampling_ratio = 1 / hash_sampling_round
 
     DeltaBoostParam() = default;
 
@@ -69,7 +71,8 @@ struct DeltaBoostParam : public GBDTParam {
     gain_alpha(deltaboost_param->gain_alpha),
     nbr_size(deltaboost_param->nbr_size),
     delta_gain_eps_feature(deltaboost_param->delta_gain_eps_feature),
-    delta_gain_eps_sn(deltaboost_param->delta_gain_eps_sn) {
+    delta_gain_eps_sn(deltaboost_param->delta_gain_eps_sn),
+    hash_sampling_round(deltaboost_param->hash_sampling_round) {
         if (deltaboost_param->n_used_trees > 0) {
             this->n_used_trees = deltaboost_param->n_used_trees;
         } else {

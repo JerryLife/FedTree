@@ -5,10 +5,13 @@
 #ifndef FEDTREE_DATASET_H
 #define FEDTREE_DATASET_H
 
+#include <random>
+
 
 #include "FedTree/FL/FLparam.h"
 #include "common.h"
 #include "syncarray.h"
+
 
 class DataSet{
     public:
@@ -58,6 +61,19 @@ class DataSet{
     bool has_csc = false;
     bool is_classification = false;
     bool has_label = true;
+
+    vector<DataSet> sampled_datasets;
+    vector<vector<int>> subset_indices;
+
+    std::mt19937 rng;
+
+    void get_subset(vector<int> &idx, DataSet &subset);
+    DataSet& get_sampled_dataset(int cur_sampling_round);
+    vector<int>& get_subset_indices(int cur_sampling_round);
+    void update_sampling_by_hashing_(int total_sampling_round);
+
+    void csc_to_csr();
+    void set_seed(int seed);
 };
 
 #endif //FEDTREE_DATASET_H
