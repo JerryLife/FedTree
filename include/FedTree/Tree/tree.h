@@ -397,7 +397,7 @@ struct DeltaTree : public Tree {
         void update_best_idx_() {
             if (gain.empty()) return;
             auto max_gain_itr = std::max_element(gain.begin(), gain.end(), [](const auto &a, const auto &b) {
-                return std::abs(a.gain_value) < std::abs(b.gain_value);
+                return std::abs(a.gain_value) < std::abs(b.gain_value) + 1e-6;
             });
             best_idx = static_cast<int>(max_gain_itr - gain.begin());
         }

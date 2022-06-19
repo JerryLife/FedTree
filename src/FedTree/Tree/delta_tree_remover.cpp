@@ -339,7 +339,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                             node.split_nbr.gain[k].rch_h += delta_gh_pairs[j].h;
                         }
 
-                        float_type gain_sign = node.split_nbr.gain[k].gain_value / std::abs(node.split_nbr.gain[k].gain_value);
+                        float_type gain_sign = node.split_nbr.gain[k].gain_value > 0 ? 1. : -1.;
                         node.split_nbr.gain[k].gain_value = gain_sign * node.split_nbr.gain[k].cal_gain_value();
                     }
                 } else {
@@ -385,7 +385,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                             node.split_nbr.gain[k].rch_h += delta_gh_pairs[j].h;
                         }
 
-                        float_type gain_sign = node.split_nbr.gain[k].gain_value / std::abs(node.split_nbr.gain[k].gain_value);
+                        float_type gain_sign = node.split_nbr.gain[k].gain_value > 0 ? 1. : -1.;
                         node.split_nbr.gain[k].gain_value = gain_sign * node.split_nbr.gain[k].cal_gain_value();
                     }
                 }
