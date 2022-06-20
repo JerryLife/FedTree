@@ -235,7 +235,7 @@ void DeltaTreeRemover::sort_potential_nodes_by_gain(int root_idx) {
     }
 }
 
-void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs,
+void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_indices, const vector<GHPair>& root_delta_gh_pairs,
                                                     bool remove_n_ins) {
     /**
      * @param id: the indices of sample to be adjusted gradients
@@ -289,29 +289,31 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
     // inference from the root, update split_nbrs layer by layer
     size_t n_nodes_in_layer;
     vector<int> visit_node_indices = {0};
+    vector<vector<GHPair>> delta_gh_pairs_in_nodes = {root_delta_gh_pairs};
 
-    // iid_indices_in_nodes: iid indices in each node of a level
-    vector<vector<int>> iid_indices_in_nodes(1, vector<int>(indices.size()));
-    // initialize with all the instances to be adjusted (root node)
-    std::iota(iid_indices_in_nodes[0].begin(), iid_indices_in_nodes[0].end(), 0);
+    // indices_in_nodes: indices in each node of a level
+    vector<vector<int>> indices_in_nodes = {adjusted_indices};
     while (!visit_node_indices.empty()) {
         n_nodes_in_layer = visit_node_indices.size();
-        vector<vector<int>> next_iid_indices_in_nodes;
-        assert(n_nodes_in_layer == iid_indices_in_nodes.size());
+        vector<vector<int>> next_indices_in_nodes;
+        vector<vector<GHPair>> next_delta_gh_pairs_in_nodes;
+        assert(n_nodes_in_layer == indices_in_nodes.size());
 
         // can try parallel
         for (int i = 0; i < n_nodes_in_layer; ++i) {
             int node_id = visit_node_indices[i];
             auto &node = tree_ptr->nodes[node_id];
-            auto &iid_indices = iid_indices_in_nodes[i];
+            const auto &indices = indices_in_nodes[i];
+            const auto &delta_gh_pairs = delta_gh_pairs_in_nodes[i];
+            if (node.parent_index == -1) {
+//#pragma omp parallel for
+                for (int j = 0; j < indices.size(); ++j) {
+//                    if (remove_n_ins) {
+//                        node.n_instances -= 1;
+//                        node.gain.n_instances -= 1;
+//                    }
+                    int iid = indices[j];                   
 
-            for (int j: iid_indices) {
-                if (remove_n_ins) {
-                    node.n_instances -= 1;
-                    node.gain.n_instances -= 1;
-                }
-
-                if (node.parent_index == -1) {
                     // root node
                     node.sum_gh_pair.g += delta_gh_pairs[j].g;
                     node.sum_gh_pair.h += delta_gh_pairs[j].h;
@@ -320,7 +322,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
 
                     // update missing_gh
                     bool is_missing;
-                    float_type feature_val = get_val(indices[j], node.split_feature_id, &is_missing);
+                    float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
 
                     // update all the neighbors
                     for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
@@ -342,34 +344,38 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                         float_type gain_sign = node.split_nbr.gain[k].gain_value > 0 ? 1. : -1.;
                         node.split_nbr.gain[k].gain_value = gain_sign * node.split_nbr.gain[k].cal_gain_value();
                     }
-                } else {
-                    // non-root nodes
-                    assert(node.parent_index >= 0);
+                }
+            } else {
+                // non-root nodes
+                assert(node.parent_index >= 0);
 
-                    // obtain self.gh_pair from parent
-                    const auto &parent_node = tree_ptr->nodes[node.parent_index];
-                    if (tree_ptr->is_left_child(node_id)) {
-                        // this node is the left child of its parent
-                        node.sum_gh_pair.g = parent_node.gain.lch_g;
-                        node.sum_gh_pair.h = parent_node.gain.lch_h;
-                        for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
-                            node.split_nbr.gain[k].self_g = parent_node.gain.lch_g;
-                            node.split_nbr.gain[k].self_h = parent_node.gain.lch_h;
-                        }
-                    } else {
-                        // this node is the right child of its parent
-                        node.sum_gh_pair.g = parent_node.gain.rch_g;
-                        node.sum_gh_pair.h = parent_node.gain.rch_h;
-                        for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
-                            node.split_nbr.gain[k].self_g = parent_node.gain.rch_g;
-                            node.split_nbr.gain[k].self_h = parent_node.gain.rch_h;
-                        }
+                // obtain self.gh_pair from parent
+                const auto &parent_node = tree_ptr->nodes[node.parent_index];
+                if (tree_ptr->is_left_child(node_id)) {
+                    // this node is the left child of its parent
+                    node.sum_gh_pair.g = parent_node.gain.lch_g;
+                    node.sum_gh_pair.h = parent_node.gain.lch_h;
+                    for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
+                        node.split_nbr.gain[k].self_g = parent_node.gain.lch_g;
+                        node.split_nbr.gain[k].self_h = parent_node.gain.lch_h;
                     }
+                } else {
+                    // this node is the right child of its parent
+                    node.sum_gh_pair.g = parent_node.gain.rch_g;
+                    node.sum_gh_pair.h = parent_node.gain.rch_h;
+                    for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
+                        node.split_nbr.gain[k].self_g = parent_node.gain.rch_g;
+                        node.split_nbr.gain[k].self_h = parent_node.gain.rch_h;
+                    }
+                }
 
-                    if (node.is_leaf) continue;
+                if (node.is_leaf) continue;
+//#pragma omp parallel for
+                for (int j = 0; j < indices.size(); ++j) {
+                    int iid = indices[j];
 
                     bool is_missing;
-                    float_type feature_val = get_val(indices[j], node.split_feature_id, &is_missing);
+                    float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
 
                     // update all the neighbors
                     for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
@@ -397,6 +403,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
             }
 
             // select new best gain
+            int old_best_idx = node.split_nbr.best_idx;
             node.split_nbr.update_best_idx_();
             node.gain = node.split_nbr.best_gain();
             node.split_bid = node.split_nbr.best_bid();
@@ -434,10 +441,16 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                 }
             }
 
-            // recalculate iid_indices of next layer (split_value may be changed)
-            vector<int> next_iid_indices_left;
-            vector<int> next_iid_indices_right;
-            for (int j: iid_indices) {
+            // recalculate indices to be adjusted (because they are in parents) in the next layer
+            // (split_value may be changed)
+            vector<int> next_indices_left(indices.size(), -1);
+            vector<int> next_indices_right(indices.size(), -1);
+            vector<GHPair> next_gh_left(indices.size(), GHPair(0, 0, true));    // true means invalid to be filtered
+            vector<GHPair> next_gh_right(indices.size(), GHPair(0, 0, true));
+//#pragma omp parallel for
+            for (int j = 0; j < indices.size(); ++j) {
+                int iid = indices[j];
+
                 bool is_missing;
                 float_type feature_val = get_val(indices[j], node.split_feature_id, &is_missing);
                 bool to_left;
@@ -448,13 +461,115 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
                 }
 
                 if (to_left) {
-                    next_iid_indices_left.push_back(j);
+                    next_indices_left[j] = iid;
+                    next_gh_left[j] = delta_gh_pairs[j];
                 } else {
-                    next_iid_indices_right.push_back(j);
+                    next_indices_right[j] = iid;
+                    next_gh_right[j] = delta_gh_pairs[j];
                 }
             }
-            next_iid_indices_in_nodes.emplace_back(next_iid_indices_left);
-            next_iid_indices_in_nodes.emplace_back(next_iid_indices_right);
+            next_indices_left.erase(std::remove_if(next_indices_left.begin(), next_indices_left.end(), [](int i) {
+                return i == -1;
+            }), next_indices_left.end());
+            next_indices_right.erase(std::remove_if(next_indices_right.begin(), next_indices_right.end(), [](int i) {
+                return i == -1;
+            }), next_indices_right.end());
+            next_gh_left.erase(std::remove_if(next_gh_left.begin(), next_gh_left.end(), [](GHPair &gh) {
+                return gh.encrypted;
+            }), next_gh_left.end());
+            next_gh_right.erase(std::remove_if(next_gh_right.begin(), next_gh_right.end(), [](GHPair &gh) {
+                return gh.encrypted;
+            }), next_gh_right.end());
+            GHPair left_acc1 = std::accumulate(next_gh_left.begin(), next_gh_left.end(), GHPair(), [](auto &a, auto &b){
+                return GHPair(a.g + b.g, a.h + b.h);
+            });
+            GHPair right_acc1 = std::accumulate(next_gh_right.begin(), next_gh_right.end(), GHPair(), [](auto &a, auto &b){
+                return GHPair(a.g + b.g, a.h + b.h);
+            });
+
+            // recalculate indices to be adjusted (because the split value is changed in this node) in the next layer
+            int cur_best_idx = node.split_nbr.best_idx;
+            vector<int> next_indices_left_add(dataSet->n_instances(), -1);
+            vector<int> next_indices_right_add(dataSet->n_instances(), -1);
+            vector<GHPair> next_gh_left_add(dataSet->n_instances(), GHPair(0, 0, true));    // true means invalid to be filtered
+            vector<GHPair> next_gh_right_add(dataSet->n_instances(), GHPair(0, 0, true));
+            if (old_best_idx != cur_best_idx) {
+                for (int j = 0; j < dataSet->n_instances(); ++j) {
+                    if (!is_subset_indices[j]) continue;    // not trained in this tree
+                    if (is_iid_removed[j]) continue;    // already removed in this tree
+
+                    auto lower_value = std::min(node.split_nbr.split_vals[old_best_idx], node.split_nbr.split_vals[cur_best_idx]);
+                    auto upper_value =  std::max(node.split_nbr.split_vals[old_best_idx], node.split_nbr.split_vals[cur_best_idx]);
+                    bool is_missing;
+                    float_type feature_val = get_val(j, node.split_feature_id, &is_missing);
+                    if (feature_val < lower_value || feature_val >= upper_value) continue;  // not marginal
+
+                    // marginal
+                    next_indices_left_add[j] = j;
+                    next_indices_right_add[j] = j;
+                    if (old_best_idx < cur_best_idx) {
+                        // move instances from right to left
+                        next_gh_left_add[j] = gh_pairs[j];
+                        next_gh_right_add[j] = -gh_pairs[j];
+                    } else {
+                        // move instances from left to right
+                        next_gh_left_add[j] = -gh_pairs[j];
+                        next_gh_right_add[j] = gh_pairs[j];
+                    }
+                }
+            }
+            GHPair left_acc2 = std::accumulate(next_gh_left_add.begin(), next_gh_left_add.end(), GHPair(), [](auto &a, auto &b){
+                return GHPair(a.g + b.g, a.h + b.h);
+            });
+            GHPair right_acc2 = std::accumulate(next_gh_right_add.begin(), next_gh_right_add.end(), GHPair(), [](auto &a, auto &b){
+                return GHPair(a.g + b.g, a.h + b.h);
+            });
+
+            // merge these two vectors into next_indices_left_add and next_indices_right_add
+            for (int j = 0; j < next_indices_left.size(); ++j) {
+                int iid = next_indices_left[j];
+                if (next_indices_left_add[iid] == -1) {
+                    next_indices_left_add[iid] = iid;
+                    next_gh_left_add[iid] = next_gh_left[j];
+                } else {
+                    next_gh_left_add[iid] += next_gh_left[j];
+                }
+            }
+            for (int j = 0; j < next_indices_right.size(); ++j) {
+                int iid = next_indices_right[j];
+                if (next_indices_right_add[iid] == -1) {
+                    next_indices_right_add[iid] = iid;
+                    next_gh_right_add[iid] = next_gh_right[j];
+                } else {
+                    next_gh_right_add[iid] += next_gh_right[j];
+                }
+            }
+
+            // remove invalid values
+            next_indices_left_add.erase(std::remove_if(next_indices_left_add.begin(), next_indices_left_add.end(), [](int i) {
+                return i == -1;
+            }), next_indices_left_add.end());
+            next_indices_right_add.erase(std::remove_if(next_indices_right_add.begin(), next_indices_right_add.end(), [](int i) {
+                return i == -1;
+            }), next_indices_right_add.end());
+            next_gh_left_add.erase(std::remove_if(next_gh_left_add.begin(), next_gh_left_add.end(), [](GHPair &gh) {
+                return gh.encrypted;
+            }), next_gh_left_add.end());
+            next_gh_right_add.erase(std::remove_if(next_gh_right_add.begin(), next_gh_right_add.end(), [](GHPair &gh) {
+                return gh.encrypted;
+            }), next_gh_right_add.end());
+
+            GHPair left_acc3 = std::accumulate(next_gh_left_add.begin(), next_gh_left_add.end(), GHPair(), [](auto &a, auto &b){
+                return GHPair(a.g + b.g, a.h + b.h);
+            });
+            GHPair right_acc3 = std::accumulate(next_gh_right_add.begin(), next_gh_right_add.end(), GHPair(), [](auto &a, auto &b){
+                return GHPair(a.g + b.g, a.h + b.h);
+            });
+
+            next_indices_in_nodes.emplace_back(next_indices_left_add);
+            next_indices_in_nodes.emplace_back(next_indices_right_add);
+            next_delta_gh_pairs_in_nodes.emplace_back(next_gh_left_add);
+            next_delta_gh_pairs_in_nodes.emplace_back(next_gh_right_add);
 
             // add indices of left and right children
             assert(node.lch_index > 0 && node.rch_index > 0);
@@ -462,8 +577,10 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& indices, 
             visit_node_indices.push_back(node.rch_index);
         }
         visit_node_indices.erase(visit_node_indices.begin(), visit_node_indices.begin() + n_nodes_in_layer);
-        iid_indices_in_nodes = next_iid_indices_in_nodes;
-        next_iid_indices_in_nodes.clear();
+        indices_in_nodes = next_indices_in_nodes;
+        delta_gh_pairs_in_nodes = next_delta_gh_pairs_in_nodes;
+        next_indices_in_nodes.clear();
+        next_delta_gh_pairs_in_nodes.clear();
     }
 }
 

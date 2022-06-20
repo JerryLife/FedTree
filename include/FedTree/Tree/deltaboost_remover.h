@@ -17,12 +17,13 @@
 class DeltaBoostRemover {
 public:
 
-    DeltaBoostRemover(const DataSet *dataSet, std::vector<std::vector<DeltaTree>>* trees_ptr, ObjectiveFunction *obj,
-                      const DeltaBoostParam &param) :
-    dataSet(dataSet), trees_ptr(trees_ptr), obj(obj), param(param) {
+    DeltaBoostRemover(const DataSet *dataSet, std::vector<std::vector<DeltaTree>>* trees_ptr,
+                      const vector<vector<bool>> &is_subset_indices_in_trees,
+                      ObjectiveFunction *obj, const DeltaBoostParam &param) :
+    dataSet(dataSet), trees_ptr(trees_ptr),  obj(obj), param(param) {
         for (int i = 0; i < param.n_used_trees; ++i) {
             tree_removers.emplace_back(*(std::unique_ptr<DeltaTreeRemover>(
-                    new DeltaTreeRemover(&((*trees_ptr)[i][0]), dataSet, param))));
+                    new DeltaTreeRemover(&((*trees_ptr)[i][0]), dataSet, param, is_subset_indices_in_trees[i]))));
         }
     }
 

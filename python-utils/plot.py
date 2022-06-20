@@ -4,11 +4,11 @@ import pathlib
 import argparse
 
 import pygraphviz as pgv
-import json
+import ujson as json
 
 
 def visualize(model_path, model_type: str, output_dir=None):
-
+    os.makedirs(output_dir, exist_ok=True)
     base_path = pathlib.Path(model_path).with_suffix('')
     if output_dir is not None:
         base_path = os.path.join(output_dir, base_path.stem)
@@ -21,6 +21,8 @@ def visualize(model_path, model_type: str, output_dir=None):
         Gs = json_to_dot_gbdt(js)
     elif model_type == 'deltaboost':
         Gs = json_to_dot_deltaboost(js)
+    elif model_type == 'deltaboostv2':
+        Gs = json_to_dot_deltaboostv2(js)
     else:
         assert False
     for i, G in enumerate(Gs):
@@ -137,15 +139,59 @@ def json_to_dot_deltaboost(model):
     return Gs
 
 
+def json_to_dot_deltaboostv2(model):
+    Gs = []
+    trees = model['deltaboost']['trees']
+    for tree_wrapper in trees:
+        G = pgv.AGraph(directed=True, ordering='in', ranksep=2)
+        tree = tree_wrapper[0]
+        nodes = tree['nodes']
+
+        visiting_nodes = [0]
+        next_visiting_nodes = []
+        while len(visiting_nodes) > 0 or len(next_visiting_nodes) > 0:
+            next_visiting_nodes = []
+            for node_id in visiting_nodes:
+                # insert prior node and edge to graph
+                node = nodes[node_id]
+
+                if node['is_leaf']:
+                    G.add_node(f"{node_id}", shape='oval',
+                               label=f"<ID={node_id}, N={node['n_instances']}<BR/>Weight={node['base_weight']:.4f}>")
+                else:
+                    lch_id = node['lch_index']
+                    rch_id = node['rch_index']
+                    split_bids = node['split_nbr']['split_bids']
+                    next_visiting_nodes.append(lch_id)
+                    next_visiting_nodes.append(rch_id)
+                    G.add_node(f"{node_id}", shape='box',
+                               label=f"<ID={node_id}, N={node['n_instances']}, Bid={node['split_bid']}, "
+                                     f"Fid={node['split_feature_id']}<BR/>Gain={node['gain']['gain_value']:.4f}"
+                                     f"<BR/>Split_nbr=[{split_bids[0]}, {split_bids[-1]}]>")
+
+                parent_index = nodes[node_id]['parent_index']
+                if parent_index >= 0:     # not root level
+                    is_right = (nodes[parent_index]['rch_index'] == node_id)
+                    color = 'red' if nodes[parent_index]['default_right'] is is_right else 'black'
+                    G.add_edge(f"{parent_index}", f"{node_id}", color=color)
+
+            visiting_nodes = next_visiting_nodes[:]
+        Gs.append(G)
+    return Gs
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str)
     parser.add_argument('--model-type', '-m', type=str, default='deltaboost')
     parser.add_argument('--output-dir', '-o', type=str, default='../fig/')
     args = parser.parse_args()
-    # visualize("trees/cod-rna.json")
-    # visualize("trees/gisette.json")
-    # visualize("trees/covtype.json")
-    # visualize("trees/cadata.json")
-    visualize(args.path, model_type=args.model_type, output_dir=args.output_dir)
+    dataset = 'codrna'
+    n_trees = 10
+    ratio = '1e-02'
+    # visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_deleted.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+    visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+    # visualize(f"../cache/{dataset}_tree{n_trees}_retrain_{ratio}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+
+    # visualize(args.path, model_type=args.model_type, output_dir=args.output_dir)
 

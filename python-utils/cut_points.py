@@ -120,7 +120,8 @@ def plot_gh_func(X, gh, tree_id=0, feature_id=0, save_path=None):
     plt.close()
 
 
-def plot_gain_func(X, gh, tree_id=0, feature_id=0, _lambda=1, save_path=None, remove_ratio=None, gh_bin_save_path=None):
+def plot_gain_func(X, gh, tree_id=0, feature_id=0, _lambda=1, save_path=None, remove_ratio=None, gh_bin_save_path=None,
+                   delta_gain=None):
     if remove_ratio is not None:
         remain_indices = np.random.choice(np.arange(X.shape[0]), size=int(X.shape[0] * (1 - remove_ratio)))
         X = X[remain_indices, :]
@@ -137,15 +138,18 @@ def plot_gain_func(X, gh, tree_id=0, feature_id=0, _lambda=1, save_path=None, re
     gain = np.maximum(gh_leftsum[0] ** 2 / (_lambda + gh_leftsum[1]) +
                       (sum_gh[0] - gh_leftsum[0]) ** 2 / (_lambda + sum_gh[1] - gh_leftsum[1]) -
                       sum_gh[0] ** 2 / (_lambda + sum_gh[1]), 0)
-    plt.plot(gh_leftsum[1], gain)
+    plt.plot(gh_leftsum[1], gain, label='Gain')
+    if delta_gain is not None:
+        plt.plot(gh_leftsum[1], gain + delta_gain, label='Gain after removal')
+        plt.legend()
     if save_path is None:
         plt.show()
     else:
         plt.savefig(save_path)
-    plt.close()
-    plt.plot(gh_leftsum[1], gh_leftsum[0])
     if gh_bin_save_path is not None:
+        plt.plot(gh_leftsum[1], gh_leftsum[0])
         plt.savefig(gh_bin_save_path)
+    plt.close()
 
 
 def analyze_delta_gain(X, gh, tree_id=0, feature_id=0, _lambda=1, remove_ratio=0.01, n_rounds=1000,

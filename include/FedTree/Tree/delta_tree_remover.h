@@ -15,12 +15,12 @@ public:
     DeltaTreeRemover() = default;
 
     DeltaTreeRemover(DeltaTree* tree_ptr, const DataSet* dataSet, DeltaBoostParam param, vector<GHPair> gh_pairs,
-                     vector<vector<int>> ins2node_indices):
+                     vector<vector<int>> ins2node_indices, const vector<bool>& is_subset_indices):
     tree_ptr(tree_ptr), dataSet(dataSet), param(std::move(param)), gh_pairs(std::move(gh_pairs)),
-    ins2node_indices(std::move(ins2node_indices)) { }
+    ins2node_indices(std::move(ins2node_indices)), is_subset_indices(is_subset_indices) { }
 
-    DeltaTreeRemover(DeltaTree *tree_ptr, const DataSet *dataSet, const DeltaBoostParam &param) :
-    tree_ptr(tree_ptr), dataSet(dataSet), param(param) {
+    DeltaTreeRemover(DeltaTree *tree_ptr, const DataSet *dataSet, const DeltaBoostParam &param, const vector<bool>& is_subset_indices) :
+    tree_ptr(tree_ptr), dataSet(dataSet), param(param), is_subset_indices(is_subset_indices) {
         gh_pairs = *(std::unique_ptr<std::vector<GHPair>>(new std::vector<GHPair>(dataSet->n_instances())));
         ins2node_indices = *(std::unique_ptr<std::vector<std::vector<int>>>(
                 new std::vector<std::vector<int>>(dataSet->n_instances(), std::vector<int>(0))));
@@ -37,6 +37,8 @@ public:
     DeltaBoostParam param;
     vector<GHPair> gh_pairs;
     vector<vector<int>> ins2node_indices;
+    vector<bool> is_subset_indices;
+    vector<bool> is_iid_removed;
 
     const DataSet* dataSet = nullptr;
 };

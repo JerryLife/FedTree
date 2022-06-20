@@ -70,6 +70,7 @@ void DeltaBoostRemover::get_info_by_prediction() {
                 SyncArray<GHPair> gh_pair_arr(1);
                 obj->get_gradient(y_arr, y_pred_arr, gh_pair_arr);
                 tree_removers[iter].gh_pairs[iid] = gh_pair_arr.host_data()[0];
+                assert(gh_pair_arr.host_data()[0].h >= 0);
 
                 const DeltaTree::DeltaNode *end_leaf;
                 const auto &nodes = trees[iter][t].nodes;

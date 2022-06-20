@@ -132,9 +132,7 @@ struct GHPair {
     }
 
     HOST_DEVICE GHPair operator-() {
-        g = -g;
-        h = -h;
-        return *this;
+        return {-g, -h, encrypted};
     }
 
     HOST_DEVICE GHPair operator-(const GHPair &rhs) const {
@@ -182,6 +180,8 @@ struct GHPair {
     }
 
     HOST_DEVICE GHPair() : g(0), h(0) {};
+
+    HOST_DEVICE GHPair(float_type g, float_type h, bool encrypted) : g(g), h(h), encrypted(encrypted) {};
 
     HOST_DEVICE GHPair(float_type v) : g(v), h(v) {};
 

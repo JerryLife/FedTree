@@ -12,7 +12,7 @@ class Evaluative(abc.ABC):
 
 class Node:
     def __init__(self, is_leaf=False, split_feature_id=None, split_value=None, base_weight=None, default_right=False,
-                 lch_id=-1, rch_id=-1, parent_id=-1, n_instances=0):
+                 lch_id=-1, rch_id=-1, parent_id=-1, n_instances=0, split_nbr=None, split_bid=-1, final_id=-1):
         self.parent_id = parent_id
         self.lch_id = lch_id
         self.rch_id = rch_id
@@ -22,6 +22,9 @@ class Node:
         self.default_right = default_right
         self.is_leaf = is_leaf
         self.n_instances = n_instances
+        self.split_nbr = split_nbr
+        self.split_bid = split_bid
+        self.final_id = final_id
 
     def decide_right(self, x) -> bool:
         """
@@ -36,6 +39,11 @@ class Node:
 
     @classmethod
     def load_from_json(cls, js: dict):
+        if js['is_leaf']:
+            min_split_bid = max_split_bid = 0
+        else:
+            min_split_bid = js['split_nbr']['split_bids'][0]
+            max_split_bid = js['split_nbr']['split_bids'][-1]
         return cls(parent_id=int(js['parent_index']),
                    lch_id=int(js['lch_index']),
                    rch_id=int(js['rch_index']),
@@ -44,22 +52,25 @@ class Node:
                    base_weight=float(js['base_weight']),
                    default_right=bool(js['default_right']),
                    is_leaf=bool(js['is_leaf']),
-                   n_instances=js['n_instances'])
+                   n_instances=js['n_instances'],
+                   split_nbr=(min_split_bid, max_split_bid + 1),
+                   split_bid=js['split_bid'],
+                   final_id=js['final_id'])
 
     def __repr__(self):
         return f"{self.parent_id=} {self.lch_id=} {self.rch_id=} {self.split_feature_id=} {self.split_value=} " \
                f"{self.base_weight=} {self.default_right=} {self.is_leaf=} {self.n_instances=}"
 
     def __eq__(self, other):
-        if self.is_leaf != other.is_leaf or self.n_instances != other.n_instances:
+        if self.is_leaf != other.is_leaf:
             return False
 
         if self.is_leaf:
-            return self.base_weight == other.base_weight
+            return np.isclose(self.base_weight, other.base_weight)
         else:
             return self.split_feature_id == other.split_feature_id \
                and self.default_right == other.default_right \
-               and self.split_value == other.split_value
+               and np.isclose(self.split_value, other.split_value)
 
 
 class Tree:
