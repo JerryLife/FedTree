@@ -84,8 +84,13 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
     LOG(INFO) << "Preparing for deletion";
 
     std::vector<std::vector<DeltaTree>> used_trees(trees.begin(), trees.begin() + param.n_used_trees);
+    DeltaBoostRemover deltaboost_remover;
+    if (param.hash_sampling_round > 1) {
+        deltaboost_remover = *std::make_unique<DeltaBoostRemover>(&dataset, &trees, is_subset_indices_in_tree, obj.get(), param);
+    } else {
+        deltaboost_remover = *std::make_unique<DeltaBoostRemover>(&dataset, &trees, obj.get(), param);
+    }
 
-    DeltaBoostRemover deltaboost_remover(&dataset, &trees, is_subset_indices_in_tree, obj.get(), param);
     deltaboost_remover.get_info_by_prediction();
     LOG(INFO) << "Deleting...";
 
@@ -99,9 +104,14 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
         tree_remover.is_iid_removed = is_iid_removed;
         const std::vector<GHPair>& gh_pairs = tree_remover.gh_pairs;
         vector<int> trained_sample_indices;
-        std::copy_if(sample_indices.begin(), sample_indices.end(), std::back_inserter(trained_sample_indices), [&](int idx){
-            return is_subset_indices_in_tree[i][idx];
-        });
+        if (param.hash_sampling_round > 1) {
+            std::copy_if(sample_indices.begin(), sample_indices.end(), std::back_inserter(trained_sample_indices), [&](int idx){
+                return is_subset_indices_in_tree[i][idx];
+            });
+        } else {
+            trained_sample_indices = sample_indices;
+        }
+
         tree_remover.remove_samples_by_indices(trained_sample_indices);
 
         if (i > 0) {
@@ -116,13 +126,12 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
             vector<int> adjust_indices;
             vector<GHPair> adjust_values;
             for (int j = 0; j < delta_gh_pairs.size(); ++j) {
-                if (is_iid_removed[j] || !is_subset_indices_in_tree[i][j]) continue;
-                adjust_indices.emplace_back(j);
-                adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
-//                if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
-//                    std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
-//
-//                }
+                if (is_iid_removed[j] || (param.hash_sampling_round > 1 && !is_subset_indices_in_tree[i][j])) continue;
+                if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
+                    std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
+                    adjust_indices.emplace_back(j);
+                    adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
+                }
             }
 //            GHPair sum_delta_gh_pair = std::accumulate(adjust_values.begin(), adjust_values.end(), GHPair());
 

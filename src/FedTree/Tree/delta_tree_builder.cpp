@@ -418,9 +418,9 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         });
 
         bool is_robust = true;
-        if (best_idx_score_itr->score < std::max(param.delta_gain_eps_sn, param.delta_gain_eps_feature)) {
-            is_robust = false;
-        }
+//        if (best_idx_score_itr->score < std::max(param.delta_gain_eps_sn, param.delta_gain_eps_feature)) {
+//            is_robust = false;
+//        }
 
         if (is_robust) {
             // extract best split neighborhood according to best_bid
