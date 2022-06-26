@@ -256,4 +256,11 @@ std::vector<T> flatten(const std::vector<std::vector<T>> & vec) {
 
 std::vector<bool> indices_to_hash_table(const std::vector<int> &vec, size_t size);
 
+template<typename T>
+auto clean_vectors_(vector<vector<T>>& vectors) {
+    vectors.erase(std::remove_if(vectors.begin(), vectors.end(), [](vector<T> &vec){
+        return vec.empty();
+    }), vectors.end());
+}
+
 #endif //FEDTREE_COMMON_H

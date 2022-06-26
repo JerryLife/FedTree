@@ -84,4 +84,12 @@ IndexIt remove_indices(Container &items, IndexIt indices_begin, IndexIt const &i
     return indices_begin;
 }
 
+template<typename T>
+auto clean_vectors_by_indices_(vector<vector<T>>& vectors, const vector<int> &indices) {
+    vectors.erase(std::remove_if(vectors.begin(), vectors.end(), [&](vector<T> &vec){
+        int index = &vec - &*vectors.begin();
+        return indices[index] == -1;
+    }), vectors.end());
+}
+
 #endif //FEDTREE_DELTA_TREE_REMOVER_H
