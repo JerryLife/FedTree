@@ -385,6 +385,8 @@ struct DeltaTree : public Tree {
         vector<int> split_bids;     // size nbr_size
         vector<DeltaTree::DeltaGain> gain;  // size: nbr_size
         vector<float_type> split_vals;  // size nbr_size
+        vector<vector<int>> marginal_indices;   // marginal indices between each split value
+//        vector<GHPair> marginal_gh; // marginal gh between each split value (same size as marginal_indices)
 
         SplitNeighborhood() = default;
 

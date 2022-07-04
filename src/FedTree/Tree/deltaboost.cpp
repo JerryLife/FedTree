@@ -76,6 +76,8 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
 
 
 void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const vector<int>& sample_indices) {
+
+
     SyncArray<float_type> y = SyncArray<float_type>(dataset.n_instances());
     y.copy_from(dataset.y.data(), dataset.n_instances());
     std::unique_ptr<ObjectiveFunction> obj(ObjectiveFunction::create(param.objective));
@@ -84,12 +86,22 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
     LOG(INFO) << "Preparing for deletion";
 
     std::vector<std::vector<DeltaTree>> used_trees(trees.begin(), trees.begin() + param.n_used_trees);
+
     DeltaBoostRemover deltaboost_remover;
     if (param.hash_sampling_round > 1) {
         deltaboost_remover = *std::make_unique<DeltaBoostRemover>(&dataset, &trees, is_subset_indices_in_tree, obj.get(), param);
     } else {
+        typedef std::chrono::high_resolution_clock clock;
+        auto start_time = clock::now();
+
         deltaboost_remover = *std::make_unique<DeltaBoostRemover>(&dataset, &trees, obj.get(), param);
+
+        auto end_time = clock::now();
+        std::chrono::duration<float> duration = end_time - start_time;
+        LOG(INFO) << "[Removing time] Step 0 (Prediction) = " << duration.count();
     }
+
+
 
     deltaboost_remover.get_info_by_prediction();
     LOG(INFO) << "Deleting...";
@@ -99,6 +111,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 //        vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
 //        auto &ins2node_indices = ins2node_indices_per_tree[i];
 //        DeltaTreeRemover tree_remover(&tree, &dataset, param, gh_pairs, ins2node_indices);
+
         DeltaTreeRemover& tree_remover = deltaboost_remover.tree_removers[i];
         vector<bool> is_iid_removed = indices_to_hash_table(sample_indices, dataset.n_instances());
         tree_remover.is_iid_removed = is_iid_removed;

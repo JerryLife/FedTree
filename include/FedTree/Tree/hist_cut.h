@@ -47,6 +47,8 @@ public:
     vector<int> cut_fid;
     // Number of instances in bins B1, B2, ..., Bn. Bi is the #intances in (Ci-1, Ci]
     vector<vector<int>> n_instances_in_hist;
+    // The indices in each bin. Size (n_features x n_bins_in_feature x n_instances_in_bin)
+    vector<vector<vector<int>>> indices_in_hist;
 
     RobustHistCut() = default;
 

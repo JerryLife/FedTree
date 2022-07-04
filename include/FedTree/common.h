@@ -263,4 +263,15 @@ auto clean_vectors_(vector<vector<T>>& vectors) {
     }), vectors.end());
 }
 
+template<typename T, typename IteratorType>
+vector<T> flatten(IteratorType itr_begin, IteratorType itr_end) {
+    std::vector<T> result;
+    for (auto it = itr_begin; it != itr_end; ++it)
+        result.insert(result.end(), (*it).begin(), (*it).end());
+    return result;
+}
+
+void clean_gh_(vector<GHPair>& ghs);
+void clean_indices_(vector<int>& indices);
+
 #endif //FEDTREE_COMMON_H

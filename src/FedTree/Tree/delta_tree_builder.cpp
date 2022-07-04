@@ -180,6 +180,7 @@ void DeltaTreeBuilder::find_split(int level) {
 
     vector<DeltaTree::SplitNeighborhood> best_split_nbr(n_nodes_in_level);
     get_best_split_nbr(gain, best_split_nbr, n_nodes_in_level, n_bins, param.nbr_size);
+    update_indices_in_split_nbr(best_split_nbr);
 
 //    vector<int> n_samples_in_nodes(n_nodes_in_level);
 //    for (int i = nid_start_idx; i < nid_start_idx + n_nodes_in_level; ++i) {
@@ -195,6 +196,8 @@ void DeltaTreeBuilder::find_split(int level) {
 //    //LOG(INFO) << best_idx_gain;
 //    get_potential_split_points(potential_idx_gain, update_n_nodes_in_a_level, hist_fid_data, missing_gh, hist, hist_g2, level);
 //    //LOG(INFO) << this->sp;
+
+
 
     num_nodes_per_level.emplace_back(n_nodes_in_level);
 }
@@ -286,10 +289,10 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
                                           vector<DeltaTree::SplitNeighborhood> &best_split_nbr,
                                           int n_nodes_in_level, int n_bins, int nbr_size) {
     auto arg_abs_max = [](const gain_pair &a, const gain_pair &b) {
-        if (fabsf(a.second.gain_value) == fabsf(b.second.gain_value))
+        if (std::abs(a.second.gain_value) == std::abs(b.second.gain_value))
             return a.first < b.first;
         else
-            return fabsf(a.second.gain_value) > fabsf(b.second.gain_value);
+            return std::abs(a.second.gain_value) > std::abs(b.second.gain_value);
     };
 
     // calculate score
@@ -1293,6 +1296,20 @@ void DeltaTreeBuilder::update_random_split_nbr_rank_(size_t seed) {
     random_split_nbr_rank.resize(n_split_nbrs);
     std::iota(random_split_nbr_rank.begin(), random_split_nbr_rank.end(), 0);
     std::shuffle(random_split_nbr_rank.begin(), random_split_nbr_rank.end(), rng);
+}
+
+void DeltaTreeBuilder::update_indices_in_split_nbr(vector<DeltaTree::SplitNeighborhood> &split_nbrs) {
+#pragma omp parallel for
+    for (int i = 0; i < split_nbrs.size(); ++i) {
+        auto &split_nbr = split_nbrs[i];
+        split_nbr.marginal_indices.resize(split_nbr.split_bids.size());
+#pragma omp parallel for
+        for (int j = 0; j < split_nbr.split_bids.size(); ++j) {
+            int bid = split_nbr.split_bids[j];
+            int feature_offset = cut.cut_col_ptr[split_nbr.fid];
+            split_nbr.marginal_indices[j] = cut.indices_in_hist[split_nbr.fid][bid - feature_offset];
+        }
+    }
 }
 
 

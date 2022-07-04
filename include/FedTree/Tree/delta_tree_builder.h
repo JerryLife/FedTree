@@ -75,6 +75,8 @@ public:
 
     void update_random_split_nbr_rank_(size_t seed);
 
+    void update_indices_in_split_nbr(vector<DeltaTree::SplitNeighborhood> &split_nbr);
+
     DeltaTree tree;
     DeltaBoostParam param;
     SyncArray<DeltaSplitPoint> sp;
