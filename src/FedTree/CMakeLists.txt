@@ -5,7 +5,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 file(GLOB SRC util/*.c* DP/*.c* FL/*.c* Tree/*.c* Encryption/*.c* objective/*.c* metric/*.c* *.c*)
 list(REMOVE_ITEM SRC "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
 
-#set(BOOST_ROOT /home/zhaomin/.local)
+
+#set(DBoost_NO_SYSTEM_PATHS TRUE)
+#set(Boost_NO_BOOST_CMAKE TRUE)
+#set(BOOST_ROOT /home/zhaomin/software/boost)    # required on 3090
+#set(Boost_LIBRARIES /home/zhaomin/software/boost/lib)
+#set(Boost_INCLUDE_DIR /home/zhaomin/software/boost/include)
 find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 #find_package(TBB REQUIRED PATHS ${TBB_RELEASE})
