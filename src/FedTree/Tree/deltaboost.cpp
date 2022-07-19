@@ -89,16 +89,16 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 
     DeltaBoostRemover deltaboost_remover;
     if (param.hash_sampling_round > 1) {
-        deltaboost_remover = *std::make_unique<DeltaBoostRemover>(&dataset, &trees, is_subset_indices_in_tree, obj.get(), param);
+        deltaboost_remover = DeltaBoostRemover(&dataset, &trees, is_subset_indices_in_tree, obj.get(), param);
     } else {
         typedef std::chrono::high_resolution_clock clock;
         auto start_time = clock::now();
 
-        deltaboost_remover = *std::make_unique<DeltaBoostRemover>(&dataset, &trees, obj.get(), param);
+        deltaboost_remover = DeltaBoostRemover(&dataset, &trees, obj.get(), param);
 
         auto end_time = clock::now();
         std::chrono::duration<float> duration = end_time - start_time;
-        LOG(INFO) << "[Removing time] Step 0 (Prediction) = " << duration.count();
+        LOG(DEBUG) << "[Removing time] Step 0 (out) = " << duration.count();
     }
 
 

@@ -1,16 +1,16 @@
 mkdir -p data
 
-#echo "Downloading codrna from LIBSVM"
-#wget https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/cod-rna -O data/codrna.train
-#wget https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/cod-rna.t -O data/codrna.test
-#python python-utils/shuffle.py data/codrna.train -s 0 -if libsvm -of csv
-#python python-utils/scale_y.py data/codrna.train -if csv -of csv
-#python python-utils/scale_y.py data/codrna.test -if libsvm -of csv
-#
-#echo "Downloading cadata from LIBSVM"
-#wget https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/cadata -O data/cadata
-#python python-utils/scale_y.py data/cadata -if libsvm -of csv
-#python python-utils/train_test_split.py -v 0 -t 0.2 -s 0 --scale-y data/cadata -if csv -of csv
+echo "Downloading codrna from LIBSVM"
+wget https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/cod-rna -O data/codrna.train
+wget https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/cod-rna.t -O data/codrna.test
+python python-utils/shuffle.py data/codrna.train -s 0 -if libsvm -of csv
+python python-utils/scale_y.py data/codrna.train -if csv -of csv
+python python-utils/scale_y.py data/codrna.test -if libsvm -of csv
+
+echo "Downloading cadata from LIBSVM"
+wget https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/cadata -O data/cadata
+python python-utils/scale_y.py data/cadata -if libsvm -of csv
+python python-utils/train_test_split.py -v 0 -t 0.2 -s 0 --scale-y data/cadata -if csv -of csv
 
 echo "Downloading covtype from LIBSVM"
 wget https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/covtype.libsvm.binary.scale.bz2 -O data/covtype.bz2

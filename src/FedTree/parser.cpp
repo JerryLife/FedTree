@@ -218,8 +218,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
 
     if (deltaboost_param->enable_delta) {
         // copy gbdt params into deltaboost params
-        fl_param.deltaboost_param = *(std::make_unique<DeltaBoostParam>(
-                gbdt_param, deltaboost_param));
+        fl_param.deltaboost_param = DeltaBoostParam(gbdt_param, deltaboost_param);
     }
 }
 

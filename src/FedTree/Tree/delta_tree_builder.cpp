@@ -140,6 +140,8 @@ void DeltaTreeBuilder::find_split(int level) {
     int n_bins = static_cast<int>(cut.cut_points_val.size());
     int n_max_nodes = n_nodes_in_level * 2;
     int n_max_splits = n_max_nodes * n_bins;
+    vector<int> node_indices(n_nodes_in_level);
+    std::iota(node_indices.begin(), node_indices.end(), tree.nodes.size() - n_nodes_in_level);
 
     auto cut_fid_data = cut.cut_fid.data();
 
@@ -180,7 +182,7 @@ void DeltaTreeBuilder::find_split(int level) {
 
     vector<DeltaTree::SplitNeighborhood> best_split_nbr(n_nodes_in_level);
     get_best_split_nbr(gain, best_split_nbr, n_nodes_in_level, n_bins, param.nbr_size);
-    update_indices_in_split_nbr(best_split_nbr);
+    update_indices_in_split_nbr(best_split_nbr, node_indices);
 
 //    vector<int> n_samples_in_nodes(n_nodes_in_level);
 //    for (int i = nid_start_idx; i < nid_start_idx + n_nodes_in_level; ++i) {
@@ -595,16 +597,24 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                     auto hist_data = hist.host_data() + nid0_to_compute * n_bins;
                     this->total_hist_num++;
 
+                    int cnt_425 = 0;
                     for (int j = 0; j < nid_to_iid[nid0].size() * n_column; j++) {
                         int iid = nid_to_iid[nid0][j / n_column];
                         int fid = j % n_column;
                         int bid = dense_bin_id_data[iid * n_column + fid];
+
+                        if (bid == 425) {
+                            cnt_425++;
+                            LOG(DEBUG);
+                        }
+
                         if (bid != -1) {
                             int feature_offset = cut_col_ptr_data[fid];
                             hist_data[feature_offset + bid] += gh_data[iid];
                             hist_g2[nid0_to_compute * n_bins + feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
                         }
                     }
+                    LOG(DEBUG);
                 }
 
                 //subtract to the histogram of the other node
@@ -1113,7 +1123,7 @@ void DeltaTreeBuilder::get_split_points(vector<DeltaTree::SplitNeighborhood> &be
     auto &nodes_data = tree.nodes;
 
     parent_indices.clear();
-    parent_indices = *std::make_unique<vector<int>>(2 * n_nodes_in_level);
+    parent_indices = vector<int>(2 * n_nodes_in_level);
 
     auto cut_col_ptr_data = cut.cut_col_ptr.data();
     int n_bins = static_cast<int>(cut.cut_points_val.size());
@@ -1251,6 +1261,9 @@ void DeltaTreeBuilder::get_bin_ids() {
 #pragma omp parallel for
         for (int cid = 0; cid < n_column; cid++) {
             for (int i = csc_col_ptr_data[cid]; i < csc_col_ptr_data[cid + 1]; i++) {
+                if (i == 51650) {
+                    LOG(DEBUG);
+                }
                 auto search_begin = cut_points_ptr + cut_col_ptr[cid];
                 auto search_end = cut_points_ptr + cut_col_ptr[cid + 1];
                 auto val = csc_val_data[i];
@@ -1272,10 +1285,14 @@ void DeltaTreeBuilder::get_bin_ids() {
     for (int fid = 0; fid < n_column; fid++) {
         for (int i = csc_col_ptr_data[fid]; i < csc_col_ptr_data[fid + 1]; i++) {
             int row = csc_row_idx_data[i];
+            if (row == 239) {
+                LOG(DEBUG);
+            }
             auto bid = bin_id_data[i];
             dense_bin_id_data[row * n_column + fid] = bid;
         }
     }
+    LOG(DEBUG);
 }
 
 void DeltaTreeBuilder::update_random_feature_rank_(size_t seed) {
@@ -1298,16 +1315,28 @@ void DeltaTreeBuilder::update_random_split_nbr_rank_(size_t seed) {
     std::shuffle(random_split_nbr_rank.begin(), random_split_nbr_rank.end(), rng);
 }
 
-void DeltaTreeBuilder::update_indices_in_split_nbr(vector<DeltaTree::SplitNeighborhood> &split_nbrs) {
-#pragma omp parallel for
+void DeltaTreeBuilder::update_indices_in_split_nbr(vector<DeltaTree::SplitNeighborhood> &split_nbrs, const vector<int>& node_indices) {
+//#pragma omp parallel for
     for (int i = 0; i < split_nbrs.size(); ++i) {
         auto &split_nbr = split_nbrs[i];
+        int node_id = node_indices[i];
         split_nbr.marginal_indices.resize(split_nbr.split_bids.size());
-#pragma omp parallel for
+//#pragma omp parallel for
         for (int j = 0; j < split_nbr.split_bids.size(); ++j) {
             int bid = split_nbr.split_bids[j];
+            if (split_nbr.fid == 7) {
+                LOG(DEBUG);
+            }
             int feature_offset = cut.cut_col_ptr[split_nbr.fid];
-            split_nbr.marginal_indices[j] = cut.indices_in_hist[split_nbr.fid][bid - feature_offset];
+            split_nbr.marginal_indices[j] = {};
+            const auto &all_marginal_indices = cut.indices_in_hist[split_nbr.fid][bid - feature_offset];
+            std::copy_if(all_marginal_indices.begin(), all_marginal_indices.end(),
+                         std::back_inserter(split_nbr.marginal_indices[j]),
+                         [&](int id){
+                             return ins2node_indices[id][0] == node_id;
+            });
+            LOG(DEBUG);
+//            split_nbr.marginal_indices[j] = cut.indices_in_hist[split_nbr.fid][bid - feature_offset];
         }
     }
 }

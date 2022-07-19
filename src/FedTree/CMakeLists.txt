@@ -11,11 +11,14 @@ list(REMOVE_ITEM SRC "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
 #set(BOOST_ROOT /home/zhaomin/software/boost)    # required on 3090
 #set(Boost_LIBRARIES /home/zhaomin/software/boost/lib)
 #set(Boost_INCLUDE_DIR /home/zhaomin/software/boost/include)
+set(Boost_INCLUDE_DIR /usr/local/include/boost/)
+set(Boost_LIBRARIES /usr/local/lib)
 find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 #find_package(TBB REQUIRED PATHS ${TBB_RELEASE})
 
 find_package(OpenSSL REQUIRED)
+
 
 find_library(NTL_LIB ntl)
 if(NOT NTL_LIB)

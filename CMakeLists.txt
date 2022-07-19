@@ -25,6 +25,8 @@ if (MSVC AND BUILD_SHARED_LIBS)
     set (CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif ()
 
+#find_package(OpenCLHeaders REQUIRED)
+
 if (USE_CUDA)
     message("Compile with CUDA")
     find_package(CUDA REQUIRED QUIET)
@@ -64,6 +66,7 @@ configure_file(include/FedTree/config.h.in config.h)
 
 include_directories(${COMMON_INCLUDES})
 include_directories(/usr/local/include/)
+include_directories(/usr/include/openssl)
 
 if (USE_CUDA)
     include_directories(${PROJECT_SOURCE_DIR}/cub)

@@ -368,7 +368,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
     }
     auto end_time = clock::now();
     std::chrono::duration<float> duration = end_time - start_time;
-    LOG(INFO) << "[Removing time] Step 1 (remove gradients) = " << duration.count();
+    LOG(DEBUG) << "[Removing time] Step 1 (remove gradients) = " << duration.count();
 
     /**
     * Update marginal gradients that are shifted
@@ -408,6 +408,13 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 
             int node_id = visit_node_indices[i];
             auto &node = tree_ptr->nodes[node_id];
+
+            if (node_id == 12) {
+                LOG(DEBUG);
+            }
+            if (node_id == 25) {
+                LOG(DEBUG);
+            }
 
 //            const auto &indices_in_node = indices_in_nodes[i];
 //            const auto &marginal_indices_in_node = marginal_indices[i];
@@ -465,7 +472,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 
             auto end_time_step_2_1 = clock::now();
             duration = end_time_step_2_1 - start_time_step_2_1;
-            LOG(INFO) << "[Removing time] Level " << depth << " Step 2.1 (adjust gh according to marginal) = " << duration.count();
+            LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.1 (adjust gh according to marginal) = " << duration.count();
 
             if (node.is_leaf) continue;
 
@@ -515,7 +522,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             }
             auto end_time_step_2_2 = clock::now();
             duration = end_time_step_2_2 - start_time_step_2_2;
-            LOG(INFO) << "[Removing time] Level " << depth << " Step 2.2 (update best gain) = " << duration.count();
+            LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.2 (update best gain) = " << duration.count();
 
             auto start_time_step_2_3 = clock::now();
             // recalculate indices to be adjusted in the next layer
@@ -536,6 +543,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 #pragma omp parallel for
                 for (int j = 0; j < added_marginal_indices.size(); ++j) {
                     int iid = added_marginal_indices[j];
+                    if (is_iid_removed[iid]) continue;
                     next_marginal_shift_left[iid] =  -gh_pairs[iid];
                     next_marginal_shift_right[iid] = gh_pairs[iid];
                 }
@@ -545,13 +553,24 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 #pragma omp parallel for
                 for (int j = 0; j < added_marginal_indices.size(); ++j) {
                     int iid = added_marginal_indices[j];
+                    if (is_iid_removed[iid]) continue;
                     next_marginal_shift_left[iid] =  gh_pairs[iid];
                     next_marginal_shift_right[iid] = -gh_pairs[iid];
                 }
             }
             auto end_time_step_2_3 = clock::now();
             duration = end_time_step_2_3 - start_time_step_2_3;
-            LOG(INFO) << "[Removing time] Level " << depth << " Step 2.3 (calculate marginal indices for the next layer) = " << duration.count();
+            LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.3 (calculate marginal indices for the next layer) = " << duration.count();
+
+            GHPair left_acc1 = std::accumulate(next_marginal_shift_left.begin(), next_marginal_shift_left.end(), GHPair(), [](auto &a, auto &b){
+                return a + b.second;
+            });
+            GHPair right_acc1 = std::accumulate(next_marginal_shift_right.begin(), next_marginal_shift_right.end(), GHPair(), [](auto &a, auto &b){
+                return a + b.second;
+            });
+            GHPair base_acc1 = std::accumulate(marginal_shifts_in_node.begin(), marginal_shifts_in_node.end(), GHPair(), [](auto &a, auto &b){
+                return a + b.second;
+            });
 
             auto start_time_step_2_4 = clock::now();
             // merge these the marginal gh in this node into the next_marginal_gh_left and next_marginal_gh_right
@@ -560,7 +579,10 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
                 auto shift_it = marginal_shifts_in_node.begin();
                 std::advance(shift_it, j);  // move to the index j of map
                 int iid = shift_it->first;
-                if (std::find(ins2node_indices[iid].begin(), ins2node_indices[iid].end(), node.lch_index) != ins2node_indices[iid].end()) {
+                bool is_missing;
+                float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
+//                if (std::find(ins2node_indices[iid].begin(), ins2node_indices[iid].end(), node.lch_index) != ins2node_indices[iid].end()) {
+                if (feature_val < old_split_value) {
                     // this iid goes left
                     if (next_marginal_shift_left.count(iid)) {
 #pragma omp atomic
@@ -585,7 +607,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 
             auto end_time_step_2_4 = clock::now();
             duration = end_time_step_2_4 - start_time_step_2_4;
-            LOG(INFO) << "[Removing time] Level " << depth << " Step 2.4 (merge marginal indices) = " << duration.count();
+            LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.4 (merge marginal indices) = " << duration.count();
 //
 //            if (old_best_idx == cur_best_idx) {
 //                // simply determine all the instances go to left or right child
@@ -682,7 +704,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 //            });
 //            auto end_time_step_2_3 = clock::now();
 //            duration = end_time_step_2_3 - start_time_step_2_3;
-//            LOG(INFO) << "[Removing time] Step 2.3 (calculate marginal indices for the next layer) = " << duration.count();
+//            LOG(DEBUG) << "[Removing time] Step 2.3 (calculate marginal indices for the next layer) = " << duration.count();
 //
 //            auto start_time_step_2_4 = clock::now();
 //            // remove invalid values
@@ -706,14 +728,16 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 //            next_visiting_node_indices.push_back(node.rch_index);
             next_visiting_node_indices[2 * i] = node.lch_index;
             next_visiting_node_indices[2 * i + 1] = node.rch_index;
+            next_marginal_shifts[2 * i] = next_marginal_shift_left;
+            next_marginal_shifts[2 * i + 1] = next_marginal_shift_right;
 
 //            auto end_time_step_2_4 = clock::now();
 //            duration = end_time_step_2_4 - start_time_step_2_4;
-//            LOG(INFO) << "[Removing time] Step 2.4 (remove invalid values) = " << duration.count();
+//            LOG(DEBUG) << "[Removing time] Step 2.4 (remove invalid values) = " << duration.count();
 
             auto end_time_in_node = clock::now();
             duration = end_time_in_node - start_time_in_node;
-            LOG(INFO) << "[Removing time] Level " << depth << " Step 2 (in node) = " << duration.count();
+            LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2 (in node) = " << duration.count();
         }
 //        clean_vectors_by_indices_(next_indices_in_nodes, next_visiting_node_indices);
 //        clean_vectors_by_indices_(next_marginal_indices_in_nodes, next_visiting_node_indices);
@@ -726,13 +750,13 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
         marginal_shifts = next_marginal_shifts;
         auto end_time_level = clock::now();
         duration = end_time_level - start_time_level;
-        LOG(INFO) << "Level " << depth << " finished, time = " << duration.count();
+        LOG(DEBUG) << "Level " << depth << " finished, time = " << duration.count();
         depth++;
     }
 
     auto overall_end_time_step2 = clock::now();
     duration = overall_end_time_step2 - overall_start_time_step2;
-    LOG(INFO) << "[Removing time] Step 2 (split point shifting) = " << duration.count();
+    LOG(DEBUG) << "[Removing time] Step 2 (split point shifting) = " << duration.count();
 }
 
 

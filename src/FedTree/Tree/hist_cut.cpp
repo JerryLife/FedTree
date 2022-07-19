@@ -244,15 +244,15 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
     vector<int> cut_col_ptr_base(n_features + 1);
     n_instances_in_hist.resize(n_features);
     indices_in_hist.resize(n_features);
-#pragma omp parallel for
+//#pragma omp parallel for
     for(int fid = 0; fid < n_features; fid ++) {
         float_type min_value = f_range[fid][0];
         float_type max_value = f_range[fid][1];
         std::vector<float_type> split_values  = {min_value, max_value + 0.5f};
         std::vector<std::pair<int, bool>> n_instances_in_bins_with_flag = {{n_instances, true}};
         auto& indices = indices_in_hist[fid];
-        indices = vector<vector<int>>(1, vector<int>(n_instances));   // indices in each bin
-        std::iota(indices[0].begin(), indices[0].end(), 0);
+        indices = vector<vector<int>>(1, vector<int>(dataset.csc_row_idx.begin() + dataset.csc_col_ptr[fid],
+                                                     dataset.csc_row_idx.begin() + dataset.csc_col_ptr[fid + 1]));   // indices in each bin
 
         while(true) {
             auto split_bin_id = std::distance(n_instances_in_bins_with_flag.begin(),
@@ -283,6 +283,12 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
 #pragma omp parallel for
             for (int i = 0; i < indices[split_bin_id].size(); ++i) {
                 int iid = indices[split_bin_id][i];
+                if (iid == 239) {
+                    LOG(DEBUG);
+                }
+                if (iid == 51650) {
+                    LOG(DEBUG);
+                }
                 int feature_offset = dataset.csc_col_ptr[fid];
                 float_type value = dataset.csc_val[feature_offset + iid];
                 if (split_values[split_bin_id] <= value && value < mid_value) {
@@ -308,14 +314,28 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
         }
 
         // filter non-empty bins; remove the last split point (max)
-//        cut_points_val_vec[fid].push_back(split_values[0]);
+        /**********************************/
+        auto indices_copy = indices;
+        indices.clear();
+        /*********************************/
         for (int i = static_cast<int>(n_instances_in_bins_with_flag.size() - 1); i >= 0; --i) {
             if (n_instances_in_bins_with_flag[i].first > 0) {
                 n_instances_in_hist[fid].push_back(n_instances_in_bins_with_flag[i].first);
                 cut_points_val_vec[fid].push_back(split_values[i + 1]);
+                /******************************************************
+                 * Remap the indices with dataset csc_row_idx to ensure the correctness of indices in each bin.
+                 * I do not know why these lines are useful or even correct, but they work in practice. If and
+                 * only if with these lines can I get the correct result. Further exploration is required.
+                 */
+                for (int j = 0; j < indices_copy[i].size(); ++j) {
+                    indices_copy[i][j] = dataset.csc_row_idx[dataset.csc_col_ptr[fid] + indices_copy[i][j]];
+                }
+                /******************************************************/
+                indices.emplace_back(indices_copy[i]);
             }
         }
-        clean_vectors_(indices);
+//        clean_vectors_(indices);
+//        std::reverse(indices.begin(), indices.end());
         cut_fid_vec[fid] = std::vector<int>(n_instances_in_hist[fid].size(), fid);
         cut_col_ptr_base[fid + 1] = static_cast<int>(n_instances_in_hist[fid].size());
     }
