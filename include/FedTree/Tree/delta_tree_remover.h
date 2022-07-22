@@ -2,14 +2,16 @@
 // Created by HUSTW on 8/17/2021.
 //
 
+#ifndef FEDTREE_DELTA_TREE_REMOVER_H
+#define FEDTREE_DELTA_TREE_REMOVER_H
+
+
 #include <memory>
 #include <utility>
 #include <FedTree/dataset.h>
 
 #include "FedTree/Tree/tree.h"
 
-#ifndef FEDTREE_DELTA_TREE_REMOVER_H
-#define FEDTREE_DELTA_TREE_REMOVER_H
 
 class DeltaTreeRemover {
 public:
@@ -40,6 +42,9 @@ public:
     void remove_samples_by_indices(const vector<int>& indices);
 
     void sort_potential_nodes_by_gain(int root_idx);
+
+    void get_invalid_sp(const vector<int> &dense_bin_id, const RobustHistCut& cut, const vector<int>& removed_indices,
+                        vector<vector<int>> &invalid_bids);
 
     DeltaTree *tree_ptr = nullptr;
     DeltaBoostParam param;

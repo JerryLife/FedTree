@@ -34,6 +34,9 @@ void DeltaTreeRemover::remove_samples_by_indices(const vector<int>& indices) {
         gh_pair_vec[i] = -gh_pairs[indices[i]];
     }
 
+    vector<vector<int>> invalid_bids;
+    get_invalid_sp(tree_ptr->dense_bin_id, tree_ptr->cut, indices, invalid_bids);
+
     // this function is parallel
     adjust_split_nbrs_by_indices(indices, gh_pair_vec, true);
 }
@@ -363,6 +366,17 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 #pragma omp atomic
                     node.split_nbr.gain[j].rch_h += root_delta_gh_pairs[i].h;
                 }
+
+                // Remove marginal indices in each split_nbr if needed, disable invalid split values
+                if (remove_n_ins) {
+                    auto &marginal_indices = node.split_nbr.marginal_indices[j];
+                    marginal_indices.erase(adjusted_indices[i]);
+//                    if (marginal_indices.find(adjusted_indices[i]) != marginal_indices.end()){
+//                        // the adjusted id is in this bin
+//#pragma omp atomic
+//                        node.split_nbr.remove_count[j] ++;
+//                    }
+                }
             }
         }
     }
@@ -373,7 +387,6 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
     /**
     * Update marginal gradients that are shifted
     */
-
     auto overall_start_time_step2 = clock::now();
 
     // inference from the root, update split_nbrs layer by layer
@@ -381,15 +394,6 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
     vector<int> visit_node_indices = {0};
     int depth = 0;
 
-    // indices_in_nodes: indices in each node of a level
-//    vector<vector<int>> indices_in_nodes = {{}};
-//    vector<int> all_indices(dataSet->n_instances());
-//    std::iota(all_indices.begin(), all_indices.end(), 0);
-//    std::copy_if(all_indices.begin(), all_indices.end(), std::back_inserter(indices_in_nodes[0]), [&](int i) {
-//        return !is_iid_removed[i];
-//    });
-//    vector<vector<int>> marginal_indices = {{}};
-//    vector<vector<GHPair>> marginal_gh = {{}};
     vector<std::map<int, GHPair>> marginal_shifts(1, std::map<int, GHPair>());
     while (!visit_node_indices.empty()) {
         n_nodes_in_layer = visit_node_indices.size();
@@ -397,9 +401,6 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 
         // reset the info vectors with default placeholder (for parallel)
         vector<int> next_visiting_node_indices(visit_node_indices.size() * 2, -1);
-//        vector<vector<int>> next_indices_in_nodes(indices_in_nodes.size() * 2, vector<int>());
-//        vector<vector<int>> next_marginal_indices_in_nodes(marginal_indices.size() * 2, vector<int>());
-//        vector<vector<GHPair>> next_marginal_gh_in_nodes(marginal_gh.size() * 2, vector<GHPair>());
         vector<std::map<int, GHPair>> next_marginal_shifts(marginal_shifts.size() * 2, std::map<int, GHPair>());
 
 #pragma omp parallel for
@@ -409,7 +410,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             int node_id = visit_node_indices[i];
             auto &node = tree_ptr->nodes[node_id];
 
-            if (node_id == 12) {
+            if (node_id == 28) {
                 LOG(DEBUG);
             }
             if (node_id == 25) {
@@ -481,6 +482,10 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             for (int j = 0; j < node.split_nbr.split_bids.size(); ++j) {
                 node.split_nbr.gain[j].gain_value = node.split_nbr.gain[j].cal_gain_value();
             }
+
+            // remove invalid split points in split_nbr
+
+
             // update the best gain
             int old_best_idx = node.split_nbr.best_idx;
             node.split_nbr.update_best_idx_();
@@ -527,11 +532,6 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             auto start_time_step_2_3 = clock::now();
             // recalculate indices to be adjusted in the next layer
             int cur_best_idx = node.split_nbr.best_idx;
-//            vector<GHPair> next_marginal_gh_left;
-//            vector<GHPair> next_marginal_gh_right;
-//            vector<int> next_marginal_indices_left, next_marginal_indices_right;
-//            vector<int> next_indices_left(dataSet->n_instances(), -1);
-//            vector<int> next_indices_right(dataSet->n_instances(), -1);
             std::map<int, GHPair> next_marginal_shift_left, next_marginal_shift_right;
 
             // record marginal instances
@@ -562,15 +562,15 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             duration = end_time_step_2_3 - start_time_step_2_3;
             LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.3 (calculate marginal indices for the next layer) = " << duration.count();
 
-            GHPair left_acc1 = std::accumulate(next_marginal_shift_left.begin(), next_marginal_shift_left.end(), GHPair(), [](auto &a, auto &b){
-                return a + b.second;
-            });
-            GHPair right_acc1 = std::accumulate(next_marginal_shift_right.begin(), next_marginal_shift_right.end(), GHPair(), [](auto &a, auto &b){
-                return a + b.second;
-            });
-            GHPair base_acc1 = std::accumulate(marginal_shifts_in_node.begin(), marginal_shifts_in_node.end(), GHPair(), [](auto &a, auto &b){
-                return a + b.second;
-            });
+//            GHPair left_acc1 = std::accumulate(next_marginal_shift_left.begin(), next_marginal_shift_left.end(), GHPair(), [](auto &a, auto &b){
+//                return a + b.second;
+//            });
+//            GHPair right_acc1 = std::accumulate(next_marginal_shift_right.begin(), next_marginal_shift_right.end(), GHPair(), [](auto &a, auto &b){
+//                return a + b.second;
+//            });
+//            GHPair base_acc1 = std::accumulate(marginal_shifts_in_node.begin(), marginal_shifts_in_node.end(), GHPair(), [](auto &a, auto &b){
+//                return a + b.second;
+//            });
 
             auto start_time_step_2_4 = clock::now();
             // merge these the marginal gh in this node into the next_marginal_gh_left and next_marginal_gh_right
@@ -608,119 +608,13 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             auto end_time_step_2_4 = clock::now();
             duration = end_time_step_2_4 - start_time_step_2_4;
             LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.4 (merge marginal indices) = " << duration.count();
-//
-//            if (old_best_idx == cur_best_idx) {
-//                // simply determine all the instances go to left or right child
-//#pragma omp parallel for
-//                for (int j = 0; j < indices_in_node.size(); ++j) {
-//                    int iid = indices_in_node[j];
-//                    bool is_missing;
-//                    float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
-//                    if (feature_val < old_split_value) {
-//                        next_indices_left[iid] = iid;
-//                    } else {
-//                        next_indices_right[iid] = iid;
-//                    }
-//                }
-//            } else {
-//#pragma omp parallel for
-//                for (int j = 0; j < indices_in_node.size(); ++j) {
-//                    if (param.hash_sampling_round > 1 && !is_subset_indices[j]) continue;    // not trained in this tree
-//                    int iid = indices_in_node[j];
-//                    assert(!is_iid_removed[iid]);
-//
-//                    auto lower_value = std::min(node.split_nbr.split_vals[old_best_idx], node.split_nbr.split_vals[cur_best_idx]);
-//                    auto upper_value =  std::max(node.split_nbr.split_vals[old_best_idx], node.split_nbr.split_vals[cur_best_idx]);
-//                    bool is_missing;
-//                    float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
-//
-//                    if (feature_val < node.split_value) {
-//                        next_indices_left[iid] = iid;
-//                    } else {
-//                        next_indices_right[iid] = iid;
-//                    }
-//                    if (feature_val >= lower_value && feature_val < upper_value) {
-//                        // marginal instances
-//                        // |---right node-----|----marginal instances---|-----left node------|
-//                        // (the split indices is sorted in descending order of feature values)
-//                        next_marginal_indices_left[iid] = iid;
-//                        next_marginal_indices_right[iid] = iid;
-//                        if (old_best_idx < cur_best_idx) {
-//                            // move instances from left to right
-//                            next_marginal_gh_left[iid] = -gh_pairs[iid];
-//                            next_marginal_gh_right[iid] = gh_pairs[iid];
-//                        } else {
-//                            // move instances from right to left
-//                            next_marginal_gh_left[iid] = gh_pairs[iid];
-//                            next_marginal_gh_right[iid] = -gh_pairs[iid];
-//                        }
-//                    }
-//                }
-//            }
-////            GHPair left_acc1 = std::accumulate(next_marginal_gh_left.begin(), next_marginal_gh_left.end(), GHPair(), [](auto &a, auto &b){
-////                return GHPair(a.g + b.g, a.h + b.h);
-////            });
-////            GHPair right_acc1 = std::accumulate(next_marginal_gh_right.begin(), next_marginal_gh_right.end(), GHPair(), [](auto &a, auto &b){
-////                return GHPair(a.g + b.g, a.h + b.h);
-////            });
-//
-//            // merge these the marginal gh in this node into the next_marginal_gh_left and next_marginal_gh_right
-//#pragma omp parallel for
-//            for (int j = 0; j < marginal_indices_in_node.size(); ++j) {
-//                int iid = marginal_indices_in_node[j];
-//                bool is_missing;
-//                float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
-//
-//                if (feature_val < old_split_value) {
-//                    // this parent's marginal instance goes left
-//                    if (next_marginal_indices_left[iid] == -1) {
-////#pragma omp atomic
-//                        next_marginal_indices_left[iid] = iid;
-//                        next_marginal_gh_left[iid] = shift_it->second;
-//                    } else {
-//#pragma omp atomic
-//                        next_marginal_gh_left[iid].g += shift_it->second.g;
-//#pragma omp atomic
-//                        next_marginal_gh_left[iid].h += shift_it->second.h;
-//                    }
-//                } else {
-//                    if (next_marginal_indices_right[iid] == -1) {
-//                        next_marginal_indices_right[iid] = iid;
-//                        next_marginal_gh_right[iid] = shift_it->second;
-//                    } else {
-//#pragma omp atomic
-//                        next_marginal_gh_right[iid].g += shift_it->second.g;
-//#pragma omp atomic
-//                        next_marginal_gh_right[iid].h += shift_it->second.h;
-//                    }
-//                }
-//            }
-//
-//            GHPair left_acc2 = std::accumulate(next_marginal_gh_left.begin(), next_marginal_gh_left.end(), GHPair(), [](auto &a, auto &b){
+
+//            GHPair left_acc1 = std::accumulate(next_marginal_gh_left.begin(), next_marginal_gh_left.end(), GHPair(), [](auto &a, auto &b){
 //                return GHPair(a.g + b.g, a.h + b.h);
 //            });
-//            GHPair right_acc2 = std::accumulate(next_marginal_gh_right.begin(), next_marginal_gh_right.end(), GHPair(), [](auto &a, auto &b){
+//            GHPair right_acc1 = std::accumulate(next_marginal_gh_right.begin(), next_marginal_gh_right.end(), GHPair(), [](auto &a, auto &b){
 //                return GHPair(a.g + b.g, a.h + b.h);
 //            });
-//            auto end_time_step_2_3 = clock::now();
-//            duration = end_time_step_2_3 - start_time_step_2_3;
-//            LOG(DEBUG) << "[Removing time] Step 2.3 (calculate marginal indices for the next layer) = " << duration.count();
-//
-//            auto start_time_step_2_4 = clock::now();
-//            // remove invalid values
-//            clean_gh_(next_marginal_gh_left);
-//            clean_gh_(next_marginal_gh_right);
-//            clean_indices_(next_indices_left);
-//            clean_indices_(next_indices_right);
-//            clean_indices_(next_marginal_indices_left);
-//            clean_indices_(next_marginal_indices_right);
-//
-//            next_indices_in_nodes[2 * i] = next_indices_left;
-//            next_indices_in_nodes[2 * i + 1] = next_indices_right;
-//            next_marginal_indices_in_nodes[2 * i] = next_marginal_indices_left;
-//            next_marginal_indices_in_nodes[2 * i + 1] = next_marginal_indices_right;
-//            next_marginal_gh_in_nodes[2 * i] = next_marginal_gh_left;
-//            next_marginal_gh_in_nodes[2 * i + 1] = next_marginal_gh_right;
 
             // add indices of left and right children
             assert(node.lch_index > 0 && node.rch_index > 0);
@@ -731,22 +625,12 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             next_marginal_shifts[2 * i] = next_marginal_shift_left;
             next_marginal_shifts[2 * i + 1] = next_marginal_shift_right;
 
-//            auto end_time_step_2_4 = clock::now();
-//            duration = end_time_step_2_4 - start_time_step_2_4;
-//            LOG(DEBUG) << "[Removing time] Step 2.4 (remove invalid values) = " << duration.count();
-
             auto end_time_in_node = clock::now();
             duration = end_time_in_node - start_time_in_node;
             LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2 (in node) = " << duration.count();
         }
-//        clean_vectors_by_indices_(next_indices_in_nodes, next_visiting_node_indices);
-//        clean_vectors_by_indices_(next_marginal_indices_in_nodes, next_visiting_node_indices);
-//        clean_vectors_by_indices_(next_marginal_gh_in_nodes, next_visiting_node_indices);
         clean_indices_(next_visiting_node_indices);     // clean lastly
         visit_node_indices = next_visiting_node_indices;
-//        indices_in_nodes = next_indices_in_nodes;
-//        marginal_indices = next_marginal_indices_in_nodes;
-//        marginal_gh = next_marginal_gh_in_nodes;
         marginal_shifts = next_marginal_shifts;
         auto end_time_level = clock::now();
         duration = end_time_level - start_time_level;
@@ -758,6 +642,37 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
     duration = overall_end_time_step2 - overall_start_time_step2;
     LOG(DEBUG) << "[Removing time] Step 2 (split point shifting) = " << duration.count();
 }
+
+void DeltaTreeRemover::get_invalid_sp(const vector<int> &dense_bin_id, const RobustHistCut& cut, const vector<int> &removed_indices,
+                                      vector<vector<int>> &invalid_bids) {
+    size_t n_features = dataSet->n_features();
+
+    // initialize #removed instances in each bin as 0
+    vector<vector<int>> n_remove_in_bins(n_features);
+#pragma omp parallel for
+    for (int fid = 0; fid < n_features; ++fid) {
+        n_remove_in_bins[fid] = vector<int>(cut.n_instances_in_hist[fid].size(), 0);
+    }
+
+    auto n_remain_in_bins = cut.n_instances_in_hist;
+
+    invalid_bids.resize(n_features);
+#pragma omp parallel for
+    for (int fid = 0; fid < n_features; ++fid) {
+#pragma omp parallel for
+        for (int i = 0; i < removed_indices.size(); ++i) {
+            int iid = removed_indices[i];
+            int bid = dense_bin_id[iid * n_features + fid];
+#pragma omp atomic
+            n_remove_in_bins[fid][bid]++;
+#pragma omp atomic
+            n_remain_in_bins[fid][bid]--;
+        }
+    }
+
+    LOG(DEBUG);
+}
+
 
 
 

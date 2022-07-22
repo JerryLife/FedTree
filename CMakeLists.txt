@@ -25,6 +25,7 @@ if (MSVC AND BUILD_SHARED_LIBS)
     set (CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif ()
 
+
 #find_package(OpenCLHeaders REQUIRED)
 
 if (USE_CUDA)
@@ -57,6 +58,8 @@ add_definitions("-DELPP_THREAD_SAFE")
 add_definitions("-DELPP_STL_LOGGING")
 add_definitions("-DELPP_NO_LOG_TO_FILE")
 
+
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 
 # includes

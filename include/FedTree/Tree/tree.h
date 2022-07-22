@@ -9,10 +9,12 @@
 #include "boost/serialization/vector.hpp"
 #include "boost/serialization/base_object.hpp"
 #include <boost/json.hpp>
+#include <unordered_set>
 
 #include "sstream"
 #include "FedTree/syncarray.h"
 #include "GBDTparam.h"
+#include "FedTree/Tree/hist_cut.h"
 //#include "VacuumFilter/vacuum.h"  // cannot include
 
 namespace json = boost::json;
@@ -244,6 +246,7 @@ struct DeltaTree : public Tree {
         float_type missing_g2 = 0.;
         int n_instances = 0;
         int n_remove = 0;
+        int is_valid = true;
 
         DeltaGain() = default;
 
@@ -385,7 +388,9 @@ struct DeltaTree : public Tree {
         vector<int> split_bids;     // size nbr_size
         vector<DeltaTree::DeltaGain> gain;  // size: nbr_size
         vector<float_type> split_vals;  // size nbr_size
-        vector<vector<int>> marginal_indices;   // marginal indices between each split value
+
+        static int hash_func(const int &i) { return i; };
+        vector<std::unordered_set<int>> marginal_indices;   // marginal indices between each split value
 //        vector<GHPair> marginal_gh; // marginal gh between each split value (same size as marginal_indices)
 
         SplitNeighborhood() = default;
@@ -398,10 +403,22 @@ struct DeltaTree : public Tree {
 
         void update_best_idx_() {
             if (gain.empty()) return;
-            auto max_gain_itr = std::max_element(gain.begin(), gain.end(), [](const auto &a, const auto &b) {
-                return std::abs(a.gain_value) < std::abs(b.gain_value) + 1e-6;
+            // select the best valid gain
+            // the first split value (with unknown left bin) should never be chosen as the best index
+            // i.e., the return value of update_best_idx_() should never be 0
+            auto max_gain_itr = std::max_element(gain.begin() + 1, gain.end(), [](const auto &a, const auto &b) {
+                float_type a_coef = a.is_valid ? 1. : 0.;
+                float_type b_coef = b.is_valid ? 1. : 0.;
+                return std::abs(a.gain_value) * a_coef < std::abs(b.gain_value) * b_coef + 1e-6;
             });
             best_idx = static_cast<int>(max_gain_itr - gain.begin());
+        }
+
+        void remove_invalid_sp_(vector<int> &removing_bids) {
+            for (int bid: removing_bids) {
+                size_t idx = std::find(split_bids.begin(), split_bids.end(), bid) - split_bids.begin();
+                gain[idx].is_valid = false;
+            }
         }
 
         inline DeltaTree::DeltaGain best_gain() const {
@@ -608,12 +625,16 @@ struct DeltaTree : public Tree {
         nodes = other.nodes;
         n_nodes_level = other.n_nodes_level;
         final_depth = other.final_depth;
+        dense_bin_id = other.dense_bin_id;
+        cut = other.cut;
     }
 
     DeltaTree &operator=(const DeltaTree &tree) {
         nodes = tree.nodes;
         n_nodes_level = tree.n_nodes_level;
         final_depth = tree.final_depth;
+        dense_bin_id = tree.dense_bin_id;
+        cut = tree.cut;
         return *this;
     }
 
@@ -635,6 +656,8 @@ struct DeltaTree : public Tree {
     }
 
     vector<DeltaNode> nodes;    // contains all the nodes including potential nodes
+    vector<int> dense_bin_id;
+    RobustHistCut cut;
 
 private:
     friend class boost::serialization::access;

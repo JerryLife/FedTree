@@ -258,12 +258,14 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
             auto split_bin_id = std::distance(n_instances_in_bins_with_flag.begin(),
                                               std::max_element(n_instances_in_bins_with_flag.begin(), n_instances_in_bins_with_flag.end(),
                                                                [](std::pair<int, bool> a, std::pair<int, bool> b){
-                                                                   if (!a.second) return false;
-                                                                   if (!b.second) return true;
-                                                                   return a.first < b.first;
+                                                                   float_type a_coef = a.second ? 1 : 0;
+                                                                   float_type b_coef = b.second ? 1 : 0;
+                                                                   return a.first * a_coef < b.first * b_coef;
                                               }));
-            if (!n_instances_in_bins_with_flag[split_bin_id].second || n_instances_in_bins_with_flag[split_bin_id].first < max_bin_size)
+            if (!n_instances_in_bins_with_flag[split_bin_id].second || n_instances_in_bins_with_flag[split_bin_id].first < max_bin_size) {
+                LOG(DEBUG);
                 break;
+            }
             float_type mid_value = (split_values[split_bin_id] + split_values[split_bin_id + 1]) / 2;
 
 //            size_t n_instances_left = std::count_if(dataset.csc_val.begin() + dataset.csc_col_ptr[fid],
@@ -283,12 +285,6 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
 #pragma omp parallel for
             for (int i = 0; i < indices[split_bin_id].size(); ++i) {
                 int iid = indices[split_bin_id][i];
-                if (iid == 239) {
-                    LOG(DEBUG);
-                }
-                if (iid == 51650) {
-                    LOG(DEBUG);
-                }
                 int feature_offset = dataset.csc_col_ptr[fid];
                 float_type value = dataset.csc_val[feature_offset + iid];
                 if (split_values[split_bin_id] <= value && value < mid_value) {
@@ -311,6 +307,7 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
             n_instances_in_bins_with_flag[split_bin_id] = std::make_pair(static_cast<int>(n_instances_left), left_splittable);
             n_instances_in_bins_with_flag.insert(n_instances_in_bins_with_flag.begin() + split_bin_id + 1,
                                                  std::make_pair(static_cast<int>(n_instances_right), right_splittable));
+            LOG(DEBUG);
         }
 
         // filter non-empty bins; remove the last split point (max)
@@ -323,6 +320,8 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
                 n_instances_in_hist[fid].push_back(n_instances_in_bins_with_flag[i].first);
                 cut_points_val_vec[fid].push_back(split_values[i + 1]);
                 /******************************************************
+                 * Do not touch these lines if you really know what you are doing!!!
+                 *
                  * Remap the indices with dataset csc_row_idx to ensure the correctness of indices in each bin.
                  * I do not know why these lines are useful or even correct, but they work in practice. If and
                  * only if with these lines can I get the correct result. Further exploration is required.

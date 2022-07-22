@@ -1,6 +1,6 @@
 n_trees=$1
 dataset=$2
-cpus="0-60"
+cpus="0-90"
 
 : ${1?"Number of trees unset."}
 : ${1?"Dataset unset."}

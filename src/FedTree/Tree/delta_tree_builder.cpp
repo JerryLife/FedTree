@@ -10,6 +10,7 @@
 #include <utility>
 #include <numeric>
 #include <random>
+#include <unordered_set>
 
 void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     TreeBuilder::init(dataset, param); // NOLINT(bugprone-parent-virtual-call)
@@ -123,6 +124,8 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
         if(update_y_predict)
             predict_in_training(k);
         tree_k.nodes = tree.nodes;
+        tree_k.dense_bin_id = dense_bin_id.to_vec();
+        tree_k.cut = cut;
     }
 
     ins2node_indices_in_tree = ins2node_indices;    // return this value for removal
@@ -1261,9 +1264,6 @@ void DeltaTreeBuilder::get_bin_ids() {
 #pragma omp parallel for
         for (int cid = 0; cid < n_column; cid++) {
             for (int i = csc_col_ptr_data[cid]; i < csc_col_ptr_data[cid + 1]; i++) {
-                if (i == 51650) {
-                    LOG(DEBUG);
-                }
                 auto search_begin = cut_points_ptr + cut_col_ptr[cid];
                 auto search_end = cut_points_ptr + cut_col_ptr[cid + 1];
                 auto val = csc_val_data[i];
@@ -1316,22 +1316,22 @@ void DeltaTreeBuilder::update_random_split_nbr_rank_(size_t seed) {
 }
 
 void DeltaTreeBuilder::update_indices_in_split_nbr(vector<DeltaTree::SplitNeighborhood> &split_nbrs, const vector<int>& node_indices) {
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < split_nbrs.size(); ++i) {
         auto &split_nbr = split_nbrs[i];
         int node_id = node_indices[i];
         split_nbr.marginal_indices.resize(split_nbr.split_bids.size());
-//#pragma omp parallel for
+#pragma omp parallel for
         for (int j = 0; j < split_nbr.split_bids.size(); ++j) {
             int bid = split_nbr.split_bids[j];
             if (split_nbr.fid == 7) {
                 LOG(DEBUG);
             }
             int feature_offset = cut.cut_col_ptr[split_nbr.fid];
-            split_nbr.marginal_indices[j] = {};
+            split_nbr.marginal_indices[j] = std::unordered_set<int>();
             const auto &all_marginal_indices = cut.indices_in_hist[split_nbr.fid][bid - feature_offset];
             std::copy_if(all_marginal_indices.begin(), all_marginal_indices.end(),
-                         std::back_inserter(split_nbr.marginal_indices[j]),
+                         std::inserter(split_nbr.marginal_indices[j], split_nbr.marginal_indices[j].begin()),
                          [&](int id){
                              return ins2node_indices[id][0] == node_id;
             });
