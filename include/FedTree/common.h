@@ -263,6 +263,21 @@ auto clean_vectors_(vector<vector<T>>& vectors) {
     }), vectors.end());
 }
 
+template<typename T1, typename T2>
+auto clean_vectors_(vector<std::map<T1, T2>>& vectors) {
+    vectors.erase(std::remove_if(vectors.begin(), vectors.end(), [](auto &vec){
+        return vec.empty();
+    }), vectors.end());
+}
+
+template<typename T1, typename T2>
+auto clean_vectors_by_indices_(vector<std::map<T1, T2>>& vectors, const vector<int> &indices) {
+    vectors.erase(std::remove_if(vectors.begin(), vectors.end(), [&](auto &vec){
+        int idx = &vec - &*vectors.begin();
+        return indices[idx] == -1;
+    }), vectors.end());
+}
+
 template<typename T, typename IteratorType>
 vector<T> flatten(IteratorType itr_begin, IteratorType itr_end) {
     std::vector<T> result;

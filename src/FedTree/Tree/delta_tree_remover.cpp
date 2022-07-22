@@ -368,15 +368,10 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
                 }
 
                 // Remove marginal indices in each split_nbr if needed, disable invalid split values
-                if (remove_n_ins) {
-                    auto &marginal_indices = node.split_nbr.marginal_indices[j];
-                    marginal_indices.erase(adjusted_indices[i]);
-//                    if (marginal_indices.find(adjusted_indices[i]) != marginal_indices.end()){
-//                        // the adjusted id is in this bin
-//#pragma omp atomic
-//                        node.split_nbr.remove_count[j] ++;
-//                    }
-                }
+//                if (remove_n_ins) {
+//                    auto &marginal_indices = node.split_nbr.marginal_indices[j];
+//                    marginal_indices.erase(adjusted_indices[i]);
+//                }
             }
         }
     }
@@ -410,10 +405,10 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             int node_id = visit_node_indices[i];
             auto &node = tree_ptr->nodes[node_id];
 
-            if (node_id == 28) {
+            if (node_id == 125) {
                 LOG(DEBUG);
             }
-            if (node_id == 25) {
+            if (node_id == 62) {
                 LOG(DEBUG);
             }
 
@@ -562,15 +557,15 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             duration = end_time_step_2_3 - start_time_step_2_3;
             LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.3 (calculate marginal indices for the next layer) = " << duration.count();
 
-//            GHPair left_acc1 = std::accumulate(next_marginal_shift_left.begin(), next_marginal_shift_left.end(), GHPair(), [](auto &a, auto &b){
-//                return a + b.second;
-//            });
-//            GHPair right_acc1 = std::accumulate(next_marginal_shift_right.begin(), next_marginal_shift_right.end(), GHPair(), [](auto &a, auto &b){
-//                return a + b.second;
-//            });
-//            GHPair base_acc1 = std::accumulate(marginal_shifts_in_node.begin(), marginal_shifts_in_node.end(), GHPair(), [](auto &a, auto &b){
-//                return a + b.second;
-//            });
+            GHPair left_acc1 = std::accumulate(next_marginal_shift_left.begin(), next_marginal_shift_left.end(), GHPair(), [](auto &a, auto &b){
+                return a + b.second;
+            });
+            GHPair right_acc1 = std::accumulate(next_marginal_shift_right.begin(), next_marginal_shift_right.end(), GHPair(), [](auto &a, auto &b){
+                return a + b.second;
+            });
+            GHPair base_acc1 = std::accumulate(marginal_shifts_in_node.begin(), marginal_shifts_in_node.end(), GHPair(), [](auto &a, auto &b){
+                return a + b.second;
+            });
 
             auto start_time_step_2_4 = clock::now();
             // merge these the marginal gh in this node into the next_marginal_gh_left and next_marginal_gh_right
@@ -629,9 +624,11 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             duration = end_time_in_node - start_time_in_node;
             LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2 (in node) = " << duration.count();
         }
+        clean_vectors_by_indices_(next_marginal_shifts, next_visiting_node_indices);
         clean_indices_(next_visiting_node_indices);     // clean lastly
         visit_node_indices = next_visiting_node_indices;
         marginal_shifts = next_marginal_shifts;
+        assert(visit_node_indices.size() == marginal_shifts.size());
         auto end_time_level = clock::now();
         duration = end_time_level - start_time_level;
         LOG(DEBUG) << "Level " << depth << " finished, time = " << duration.count();

@@ -244,7 +244,7 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
     vector<int> cut_col_ptr_base(n_features + 1);
     n_instances_in_hist.resize(n_features);
     indices_in_hist.resize(n_features);
-//#pragma omp parallel for
+#pragma omp parallel for
     for(int fid = 0; fid < n_features; fid ++) {
         float_type min_value = f_range[fid][0];
         float_type max_value = f_range[fid][1];
@@ -320,7 +320,7 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
                 n_instances_in_hist[fid].push_back(n_instances_in_bins_with_flag[i].first);
                 cut_points_val_vec[fid].push_back(split_values[i + 1]);
                 /******************************************************
-                 * Do not touch these lines if you really know what you are doing!!!
+                 * Do not touch these lines unless you really know what you are doing!!!
                  *
                  * Remap the indices with dataset csc_row_idx to ensure the correctness of indices in each bin.
                  * I do not know why these lines are useful or even correct, but they work in practice. If and
