@@ -10,6 +10,7 @@
 //#include "tree.h"
 #include "openssl/md5.h"
 #include <random>
+#include <utility>
 
 class HistCut {
 public:
@@ -98,6 +99,64 @@ public:
         auto v2_value = dist(rng_v2);
         return v1_value < v2_value;
     }
+};
+
+
+class DeltaCut: public RobustHistCut {
+public:
+    struct Bin {
+        float_type left;
+        float_type right;
+        int n_instances;
+        bool splittable;
+        bool is_leaf = true;
+        bool is_valid = true;
+        int lch_id = -1;
+        int rch_id = -1;
+        int parent_id = -1;
+        vector<int> indices;    // indices in this bin (optional, can be further optimized)
+
+        Bin() = default;
+        Bin(float_type left, float_type right, int n_instances, bool splittable, bool is_leaf=true, bool is_valid=true):
+                left(left), right(right), n_instances(n_instances), splittable(splittable), is_leaf(is_leaf), is_valid(is_valid) {}
+        Bin(float_type left, float_type right, int n_instances, bool splittable, bool is_leaf, bool is_valid, int lch_id, int rch_id, int parent_id):
+                left(left), right(right), n_instances(n_instances), splittable(splittable), is_leaf(is_leaf), is_valid(is_valid), lch_id(lch_id), rch_id(rch_id), parent_id(parent_id) {}
+        Bin(const Bin& bin) = default;
+
+        [[nodiscard]] float_type mid_value() const {
+            return (left + right) / 2;
+        }
+    };
+
+    struct BinTree {
+        vector<Bin> bins;
+
+        BinTree() = default;
+        BinTree(const BinTree &tree) = default;
+        explicit BinTree(Bin &root) : bins({root}) {}
+
+        [[nodiscard]] inline int get_largest_bin_id();
+
+        void split_bin_(int bin_id, int fid, float_type split_value, const DataSet &dataset);
+        void get_leaf_bins(vector<Bin> &leaf_bins) const;
+        void get_split_values(vector<float_type> &split_values) const;
+        void get_n_instances_in_bins(vector<int> &n_instances_in_bins) const;
+        void get_indices_in_bins(vector<vector<int>> &indices_in_bins) const;
+        void trim_empty_bins_();
+        void remove_instances_(const vector<float_type> &values);
+
+        void prune_(float_type threshold);
+    };
+
+    vector<BinTree> bin_trees;  // Should be the same size of n_features. Each BinTree contains the bins for one feature.
+
+    DeltaCut() = default;
+    DeltaCut(const DeltaCut &cut) = default;
+    explicit DeltaCut(vector<BinTree> bin_trees): bin_trees(std::move(bin_trees)) {};
+
+    void generate_bin_trees_(DataSet &dataset, int max_num_bins);
+    void update_cut_points_(const DataSet *dataset);
+    inline int n_features() const { return bin_trees.size(); }
 };
 
 

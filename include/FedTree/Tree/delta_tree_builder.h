@@ -80,7 +80,8 @@ public:
     DeltaTree tree;
     DeltaBoostParam param;
     SyncArray<DeltaSplitPoint> sp;
-    RobustHistCut cut;
+//    RobustHistCut cut;
+    DeltaCut cut;
 
     vector<int> num_nodes_per_level;    // number of nodes in each level, including potential nodes
     vector<vector<int>> ins2node_indices;   // each instance may be in multiple nodes

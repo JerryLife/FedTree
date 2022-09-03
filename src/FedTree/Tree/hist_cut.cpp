@@ -7,7 +7,6 @@
 #include <thrust/transform.h>
 #include "thrust/unique.h"
 #include "thrust/execution_policy.h"
-//#include "FedTree/common.h"
 #include <numeric>
 
 
@@ -411,4 +410,316 @@ void RobustHistCut::get_cut_points_by_instance(DataSet &dataset, int max_num_bin
     LOG(DEBUG) << "--->>>> cut fid: " << cut_fid;
     LOG(DEBUG) << "TOTAL CP:" << cut_fid.size();
     LOG(DEBUG) << "NNZ: " << dataset.csc_val.size();
+}
+
+int DeltaCut::BinTree::get_largest_bin_id() {
+    int largest_bin_id = -1;
+    for(int i = 0; i < bins.size(); i++) {
+        if (bins[i].is_valid && bins[i].splittable && bins[i].is_leaf
+            && (largest_bin_id == -1 || bins[i].n_instances > bins[largest_bin_id].n_instances)) {
+            largest_bin_id = i;
+        }
+    }
+    return largest_bin_id;
+}
+
+void DeltaCut::BinTree::split_bin_(int bin_id, int fid, float_type split_value, const DataSet &dataset) {
+    // split the bin into two bins
+    auto column_begin = dataset.csc_val.begin() + dataset.csc_col_ptr[fid];
+    auto column_end = dataset.csc_val.begin() + dataset.csc_col_ptr[fid+1];
+    auto &bin = bins[bin_id];
+
+    size_t left_bin_size, right_bin_size;
+    vector<int> indices_left, indices_right;
+
+    // Split the parent indices into two vectors and store them in the child bins in parallel.
+    assert(bin.n_instances == bin.indices.size());
+    size_t n_ins = bin.n_instances;
+    indices_left.resize(n_ins, -1);
+    indices_right.resize(n_ins, -1);
+#pragma omp parallel for
+    for (int i = 0; i < n_ins; ++i) {
+        int iid = bin.indices[i];
+        int feature_offset = dataset.csc_col_ptr[fid];
+        float_type value = dataset.csc_val[feature_offset + iid];
+        if (bin.left <= value && value < bin.mid_value()) {
+            indices_left[i] = iid;
+        } else {
+            assert(bin.mid_value() <= value && value < bin.right);
+            indices_right[i] = iid;
+        }
+    }
+    clean_indices_(indices_left);
+    clean_indices_(indices_right);  // remove -1 indices
+
+    left_bin_size = indices_left.size();
+    right_bin_size = indices_right.size();
+
+
+    float_type tol = 1e-8;
+    bool left_splittable = std::abs(split_value - bin.left) > tol;
+    bool right_splittable = std::abs(split_value - bin.right) > tol;
+
+    // update bin info after split
+    bin.is_leaf = false;
+    bin.lch_id = (int)(bins.size());
+    bin.rch_id = (int)(bins.size() + 1);
+
+    auto left_bin = Bin(bin.left, split_value, (int)left_bin_size, left_splittable, true, true, -1, -1, bin_id);
+    auto right_bin = Bin(split_value, bin.right, (int)right_bin_size, right_splittable, true, true, -1, -1, bin_id);
+
+
+
+    left_bin.indices = indices_left;
+    right_bin.indices = indices_right;
+
+    bins.emplace_back(left_bin);
+    bins.emplace_back(right_bin);
+}
+
+void DeltaCut::BinTree::get_leaf_bins(vector<Bin> &leaf_bins) const {
+    /**
+     * return all the leaves by DFS
+     * leaf_bins is the output, all leave bins will be appended to the end of leaf_bins
+     */
+     vector<int> visit = {0};
+     while(!visit.empty()){
+         int cur = visit.back();
+         visit.pop_back();
+         if(bins[cur].is_leaf)
+             leaf_bins.push_back(bins[cur]);
+         else{
+             visit.push_back(bins[cur].lch_id);
+             visit.push_back(bins[cur].rch_id);
+         }
+     }
+}
+
+void DeltaCut::BinTree::get_split_values(vector<float_type> &split_values) const {
+    /**
+     * calculate all the split values based on the left value of leaf bins
+     */
+    vector<Bin> leaf_bins;
+    get_leaf_bins(leaf_bins);
+    split_values.push_back(leaf_bins[0].right);
+    for(const auto &bin : leaf_bins){
+        split_values.push_back(bin.left);
+    }
+
+    // remove the last redundant element of split_values
+    split_values.pop_back();
+}
+
+void DeltaCut::BinTree::trim_empty_bins_() {
+    /**
+     * Remove empty bins from root by DFS
+     */
+    vector<int> visit = {0};
+    int empty_cnt = 0;
+    while (!visit.empty()) {
+        int cur = visit.back();
+        auto node = bins[cur];
+        visit.pop_back();
+        if (bins[cur].is_leaf)
+            continue;
+
+        // check if child node is empty
+        if (bins[node.lch_id].n_instances == 0) {
+            bins[node.lch_id].is_valid = false;
+            int updated_lch_id = bins[node.rch_id].lch_id;
+            int updated_rch_id = bins[node.rch_id].rch_id;
+            bins[cur].lch_id = updated_lch_id;
+            bins[cur].rch_id = updated_rch_id;
+            empty_cnt++;
+            if (updated_lch_id == -1 && updated_rch_id == -1)
+                bins[cur].is_leaf = true;
+            else visit.push_back(cur);
+        } else if (bins[node.rch_id].n_instances == 0) {
+            bins[node.rch_id].is_valid = false;
+            int updated_lch_id = bins[node.lch_id].lch_id;
+            int updated_rch_id = bins[node.lch_id].rch_id;
+            bins[cur].lch_id = updated_lch_id;
+            bins[cur].rch_id = updated_rch_id;
+            empty_cnt++;
+            if (updated_lch_id == -1 && updated_rch_id == -1)
+                bins[cur].is_leaf = true;
+            else visit.push_back(cur);
+        } else {
+            visit.push_back(node.lch_id);
+            visit.push_back(node.rch_id);
+        }
+    }
+}
+
+void DeltaCut::BinTree::prune_(float_type threshold) {
+    /**
+     * Prune all the nodes and their subtrees below threshold by DFS
+     */
+    vector<int> visit = {0};
+    vector<bool> keep_flag = {true};
+    while (!visit.empty()) {
+        int cur = visit.back();
+        auto &node = bins[cur];
+        visit.pop_back();
+        bool keep = keep_flag.back();
+        keep_flag.pop_back();
+        node.is_valid = keep;
+
+        if (node.is_leaf)
+            continue;
+
+        if (node.n_instances < threshold) {
+            node.is_leaf = true;
+            node.splittable = false;
+            keep_flag.push_back(false), keep_flag.push_back(false);
+        } else {
+            keep_flag.push_back(keep), keep_flag.push_back(keep);
+        }
+        visit.push_back(node.lch_id);
+        visit.push_back(node.rch_id);
+    }
+
+}
+
+void DeltaCut::BinTree::get_n_instances_in_bins(vector<int> &n_instances_in_bins) const {
+    /**
+     * calculate all the n_instances based on the leaf_bins
+     */
+    vector<Bin> leaf_bins;
+    get_leaf_bins(leaf_bins);
+    for(const auto &bin : leaf_bins){
+        n_instances_in_bins.push_back(bin.n_instances);
+    }
+}
+
+void DeltaCut::BinTree::get_indices_in_bins(vector<vector<int>> &indices_in_bins) const {
+    /**
+     * calculate all the indices based on the leaf_bins
+     */
+    vector<Bin> leaf_bins;
+    get_leaf_bins(leaf_bins);
+    indices_in_bins.clear();
+    for(const auto &bin : leaf_bins){
+        indices_in_bins.push_back(bin.indices);
+    }
+
+}
+
+void DeltaCut::BinTree::remove_instances_(const vector<float_type> &values) {
+    /**
+     * remove the values from the root by DFS
+     */
+#pragma omp parallel for
+    for(int i = 0; i < values.size(); i++){
+        auto v = values[i];
+        vector<int> visit = {0};
+        while (!visit.empty()) {
+            int nid = visit.back();
+            auto &node = bins[nid];
+            visit.pop_back();
+#pragma omp atomic
+            node.n_instances -= 1;
+            // node.indices remains unchanged
+            if (node.is_leaf)
+                continue;
+            if (v < node.mid_value()) visit.push_back(node.lch_id);
+            else visit.push_back(node.rch_id);
+        }
+    }
+}
+
+
+void DeltaCut::generate_bin_trees_(DataSet &dataset, int max_bin_size) {
+    /**
+     * Generate bin trees for all features
+     */
+     size_t n_features = dataset.n_features();
+     size_t n_instances = dataset.n_instances();
+
+    // obtain min-max value of each feature
+    vector<vector<float_type>> f_range(n_features, vector<float_type>(2));
+#pragma omp parallel for
+    for (int fid = 0; fid < n_features; ++fid) {
+        auto min_value = *std::min_element(dataset.csc_val.begin() + dataset.csc_col_ptr[fid],
+                                           dataset.csc_val.begin() + dataset.csc_col_ptr[fid + 1]);
+        auto max_value = *std::max_element(dataset.csc_val.begin() + dataset.csc_col_ptr[fid],
+                                           dataset.csc_val.begin() + dataset.csc_col_ptr[fid + 1]);
+        f_range[fid][0] = min_value;
+        f_range[fid][1] = max_value;
+    }
+
+    // generate bin trees for all features
+    bin_trees.resize(n_features);
+#pragma omp parallel for
+    for (int fid = 0; fid < n_features; fid++) {
+        auto min_value = f_range[fid][0];
+        auto max_value = f_range[fid][1] + 0.5;
+        auto root_node = Bin(min_value, max_value, (int)n_instances, true);
+        // fill in root node with all indices
+//        root_node.indices = vector<int>(n_instances);
+//        std::iota(root_node.indices.begin(), root_node.indices.end(), 0);
+        root_node.indices = vector<int>(dataset.csc_row_idx.begin() + dataset.csc_col_ptr[fid],
+                                        dataset.csc_row_idx.begin() + dataset.csc_col_ptr[fid + 1]);
+        auto &bin_tree = bin_trees[fid] = BinTree(root_node);
+
+        while (true) {
+           int split_bin_id = bin_tree.get_largest_bin_id();
+           auto bin = bin_tree.bins[split_bin_id];
+           if (bin.n_instances < max_bin_size)
+               break;
+           bin_tree.split_bin_(split_bin_id, fid, bin.mid_value(), dataset);
+        }
+        bin_tree.trim_empty_bins_();
+    }
+}
+
+void DeltaCut::update_cut_points_(const DataSet *dataset) {
+    /**
+     * Update cut_points_val, cut_col_ptr, cut_fid, n_instances_in_hist according to bin_trees
+     * dataset: the sorted dataset
+     */
+     size_t n_features = bin_trees.size();
+     vector<vector<float_type>> cut_points_val_vec(n_features, vector<float_type>());
+     vector<vector<int>> cut_fid_vec(n_features, vector<int>());
+     n_instances_in_hist = vector<vector<int>>(n_features, vector<int>());
+#pragma omp parallel for
+    for (int fid = 0; fid < bin_trees.size(); ++fid) {
+        const auto &bin_tree = bin_trees[fid];
+        bin_tree.get_split_values(cut_points_val_vec[fid]);
+        cut_fid_vec[fid] = vector<int>(cut_points_val_vec[fid].size(), fid);
+        bin_tree.get_n_instances_in_bins(n_instances_in_hist[fid]);
+    }
+
+    cut_points_val = flatten(cut_points_val_vec);
+    cut_fid = flatten(cut_fid_vec);
+    cut_col_ptr = vector<int>(n_features + 1);
+    cut_col_ptr[0] = 0;
+    for (int fid = 0; fid < n_features; ++fid) {
+        cut_col_ptr[fid + 1] = cut_col_ptr[fid] + (int)n_instances_in_hist[fid].size();
+    }
+
+    // update indices_in_hist according to the bin tree
+    indices_in_hist.resize(n_features, vector<vector<int>>());
+#pragma omp parallel for
+    for (int fid = 0; fid < n_features; ++fid) {
+        const auto &bin_tree = bin_trees[fid];
+        vector<vector<int>> base_indices;
+        bin_tree.get_indices_in_bins(base_indices);
+        indices_in_hist[fid].resize(base_indices.size());
+        for (int bid = 0; bid < base_indices.size(); ++bid) {
+            indices_in_hist[fid][bid].resize(base_indices[bid].size());
+            for (int i = 0; i < base_indices[bid].size(); ++i) {
+                /**
+                 * We need indices of original dataset, not the indices of sorted_dataset. During the removal,
+                 * the sorted information should not be used.
+                */
+                indices_in_hist[fid][bid][i] = dataset->csc_row_idx[dataset->csc_col_ptr[fid] + base_indices[bid][i]];
+                /***************************************************************/
+            }
+        }
+
+
+    }
+
+
 }

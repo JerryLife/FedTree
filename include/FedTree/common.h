@@ -69,8 +69,8 @@ bool ft_le(float_type a, float_type b, float_type eps=EPSILON);
 #define HOST_DEVICE __host__ __device__
 
 struct GHPair {
-    float_type g;
-    float_type h;
+    float_type g = 0.;
+    float_type h = 0.;
     NTL::ZZ g_enc;
     NTL::ZZ h_enc;
     Paillier paillier;
@@ -271,7 +271,7 @@ auto clean_vectors_(vector<std::map<T1, T2>>& vectors) {
 }
 
 template<typename T1, typename T2>
-auto clean_vectors_by_indices_(vector<std::map<T1, T2>>& vectors, const vector<int> &indices) {
+auto clean_vectors_by_indices_(vector<std::unordered_map<T1, T2>>& vectors, const vector<int> &indices) {
     vectors.erase(std::remove_if(vectors.begin(), vectors.end(), [&](auto &vec){
         int idx = &vec - &*vectors.begin();
         return indices[idx] == -1;

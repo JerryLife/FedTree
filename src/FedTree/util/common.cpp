@@ -36,7 +36,7 @@ std::vector<bool> indices_to_hash_table(const std::vector<int> &indices, size_t 
      * in the returned vector; otherwise, are set to false.
      */
     std::vector<bool> hash_table(size, false);
-//#pragma omp parallel for
+//#pragma omp parallel for  // wield bug
     for (int i = 0; i < indices.size(); ++i) {
         hash_table[indices[i]] = true;
     }

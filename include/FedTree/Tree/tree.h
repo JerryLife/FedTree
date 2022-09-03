@@ -10,6 +10,7 @@
 #include "boost/serialization/base_object.hpp"
 #include <boost/json.hpp>
 #include <unordered_set>
+#include <boost/functional/hash.hpp>
 
 #include "sstream"
 #include "FedTree/syncarray.h"
@@ -401,17 +402,53 @@ struct DeltaTree : public Tree {
 
         SplitNeighborhood &operator=(const SplitNeighborhood &other) = default;
 
+//        void update_best_idx_() {
+//            if (gain.empty()) return;
+//            // select the best valid gain
+//            // the first split value (with unknown left bin) should never be chosen as the best index
+//            // i.e., the return value of update_best_idx_() should never be 0
+//            auto max_gain_itr = std::max_element(gain.begin() + 1, gain.end(), [](const auto &a, const auto &b) {
+//                float_type a_coef = a.is_valid ? 1. : 0.;
+//                float_type b_coef = b.is_valid ? 1. : 0.;
+//                return std::abs(a.gain_value) * a_coef < std::abs(b.gain_value) * b_coef + 1e-6;
+//            });
+//            best_idx = static_cast<int>(max_gain_itr - gain.begin());
+//        }
+
         void update_best_idx_() {
             if (gain.empty()) return;
             // select the best valid gain
             // the first split value (with unknown left bin) should never be chosen as the best index
             // i.e., the return value of update_best_idx_() should never be 0
-            auto max_gain_itr = std::max_element(gain.begin() + 1, gain.end(), [](const auto &a, const auto &b) {
-                float_type a_coef = a.is_valid ? 1. : 0.;
-                float_type b_coef = b.is_valid ? 1. : 0.;
-                return std::abs(a.gain_value) * a_coef < std::abs(b.gain_value) * b_coef + 1e-6;
-            });
-            best_idx = static_cast<int>(max_gain_itr - gain.begin());
+
+            DeltaGain best_gain;
+            best_gain.n_instances = -1;     // a flag for the first placeholder
+            for (int i = 1; i < gain.size(); ++i) {     // start with index 1
+                if (gain[i].is_valid) {
+                    if (best_gain.n_instances == -1 || std::abs(gain[i].gain_value) > std::abs(best_gain.gain_value)) {
+                        best_idx = i;
+                        best_gain = gain[i];
+                    }
+                }
+            }
+        }
+
+        void update_best_idx_(const std::unordered_map<std::pair<int, int>, bool, boost::hash<std::pair<int, int>>> &is_bin_valid) {
+            if (gain.empty()) return;
+            // select the best valid gain
+            // the first split value (with unknown left bin) should never be chosen as the best index
+            // i.e., the return value of update_best_idx_() should never be 0
+
+            DeltaGain best_gain;
+            best_gain.n_instances = -1;     // a flag for the first placeholder
+            for (int i = 1; i < gain.size(); ++i) {     // start with index 1
+                if ((is_bin_valid.find({fid, split_bids[i]}) == is_bin_valid.end()) && gain[i].is_valid) {
+                    if (best_gain.n_instances == -1 || std::abs(gain[i].gain_value) > std::abs(best_gain.gain_value)) {
+                        best_idx = i;
+                        best_gain = gain[i];
+                    }
+                }
+            }
         }
 
         void remove_invalid_sp_(vector<int> &removing_bids) {
@@ -657,7 +694,8 @@ struct DeltaTree : public Tree {
 
     vector<DeltaNode> nodes;    // contains all the nodes including potential nodes
     vector<int> dense_bin_id;
-    RobustHistCut cut;
+//    RobustHistCut cut;
+    DeltaCut cut;
 
 private:
     friend class boost::serialization::access;

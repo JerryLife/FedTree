@@ -61,7 +61,7 @@ add_definitions("-DELPP_NO_LOG_TO_FILE")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
-
+add_executable(test_um playground.cpp)
 # includes
 set(COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
 set(DATASET_DIR ${PROJECT_SOURCE_DIR}/data/)

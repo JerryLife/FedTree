@@ -18,8 +18,14 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
 //        RobustHistCut ref_cut;
 //        ref_cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
 //        cut.get_cut_points_by_instance(sorted_dataset, param.max_num_bin, n_instances);
-        cut.get_cut_points_by_feature_range_balanced(sorted_dataset, param.max_bin_size, n_instances);
+
+        RobustHistCut ref_cut;
+        ref_cut.get_cut_points_by_feature_range_balanced(sorted_dataset, param.max_bin_size, n_instances);
+
 //        last_hist.resize((2 << param.depth) * cut.cut_points_val.size());
+
+        cut.generate_bin_trees_(sorted_dataset, param.max_bin_size);
+        cut.update_cut_points_(&sorted_dataset);
         get_bin_ids();
     }
     this->param = param;
@@ -269,7 +275,7 @@ int DeltaTreeBuilder::get_threshold_gain_in_a_level(const vector<DeltaTree::Delt
 
         vector<gain_pair> potential_idx_gain_per_node;
         std::sort(idx_gain.begin() + i, idx_gain.begin() + i + n_bins, arg_abs_max);
-        float_type last_gain = fabsf(idx_gain[i].second.gain_value);
+        float_type last_gain = std::abs(idx_gain[i].second.gain_value);
         potential_idx_gain_per_node.emplace_back(idx_gain[i]);
         for (int j = i + 1; j < i + n_bins; ++j) {
             if (fabs(idx_gain[j].second.gain_value) < fabs(idx_gain[i].second.gain_value) - max_range_node) {
@@ -600,16 +606,10 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                     auto hist_data = hist.host_data() + nid0_to_compute * n_bins;
                     this->total_hist_num++;
 
-                    int cnt_425 = 0;
                     for (int j = 0; j < nid_to_iid[nid0].size() * n_column; j++) {
                         int iid = nid_to_iid[nid0][j / n_column];
                         int fid = j % n_column;
                         int bid = dense_bin_id_data[iid * n_column + fid];
-
-                        if (bid == 425) {
-                            cnt_425++;
-                            LOG(DEBUG);
-                        }
 
                         if (bid != -1) {
                             int feature_offset = cut_col_ptr_data[fid];
@@ -1324,17 +1324,20 @@ void DeltaTreeBuilder::update_indices_in_split_nbr(vector<DeltaTree::SplitNeighb
 #pragma omp parallel for
         for (int j = 0; j < split_nbr.split_bids.size(); ++j) {
             int bid = split_nbr.split_bids[j];
-            if (split_nbr.fid == 7) {
-                LOG(DEBUG);
-            }
             int feature_offset = cut.cut_col_ptr[split_nbr.fid];
             split_nbr.marginal_indices[j] = std::unordered_set<int>();
             const auto &all_marginal_indices = cut.indices_in_hist[split_nbr.fid][bid - feature_offset];
-            std::copy_if(all_marginal_indices.begin(), all_marginal_indices.end(),
-                         std::inserter(split_nbr.marginal_indices[j], split_nbr.marginal_indices[j].begin()),
-                         [&](int id){
-                             return ins2node_indices[id][0] == node_id;
-            });
+            // copy all_marginal_indices in this node to split_nbr.marginal_indices[j]
+            for (int id: all_marginal_indices) {
+                if (ins2node_indices[id][0] == node_id) {
+                    split_nbr.marginal_indices[j].insert(id);
+                }
+            }
+//            std::copy_if(all_marginal_indices.begin(), all_marginal_indices.end(),
+//                         std::inserter(split_nbr.marginal_indices[j], split_nbr.marginal_indices[j].begin()),
+//                         [&](int id){
+//                             return ins2node_indices[id][0] == node_id;
+//            });
             LOG(DEBUG);
 //            split_nbr.marginal_indices[j] = cut.indices_in_hist[split_nbr.fid][bid - feature_offset];
         }
