@@ -413,6 +413,7 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
 //                is_robust = false;
 //            }
 //        }
+//
 //        if (remain_best_score < param.delta_gain_eps || best_score < param.delta_gain_eps) {
 //            is_robust = false;
 //        }
@@ -432,7 +433,7 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         });
 
         bool is_robust = true;
-//        if (best_idx_score_itr->score < std::max(param.delta_gain_eps_sn, param.delta_gain_eps_feature)) {
+//        if (best_idx_score_itr->score < param.min_child_weight) {
 //            is_robust = false;
 //        }
 

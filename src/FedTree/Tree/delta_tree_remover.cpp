@@ -745,6 +745,42 @@ void DeltaTreeRemover::get_invalid_sp(DeltaCut &cut, const DataSet &dataset, con
 
 }
 
+void DeltaTreeRemover::prune() {
+    /**
+     * Prune invalid nodes, including
+     * 1. If the weight of a node is less param.min_child_weight, set the node to invalid and its parent to leaf.
+     *    (this scenario would not happen if all the bins are non-empty)
+     * 2. If the gain of an internal node is less than param.rt_eps, set the node to leaf and its subtrees to invalid.
+     */
+    auto &nodes = tree_ptr->nodes;
+    for (int nid = 0; nid < nodes.size(); ++nid) {
+        auto &node = nodes[nid];
+        if (!node.is_valid) continue;
+//        if (node.gain.self_h < param.min_child_weight) {
+//            node.is_valid = false;
+//            assert(node.parent_index != -1);
+//            auto parent = nodes[node.parent_index];
+//            parent.is_leaf = true;
+//        }
+        if (!node.is_leaf && node.gain.gain_value < param.rt_eps) {
+            node.is_leaf = true;
+
+            // set all children to invalid  (optional)
+            vector<int> visit = {node.lch_index, node.rch_index};
+            while (!visit.empty()) {
+                int cur_nid = visit.back();
+                visit.pop_back();
+                auto &cur_node = nodes[cur_nid];
+                cur_node.is_valid = false;
+                if (!cur_node.is_leaf) {
+                    visit.push_back(cur_node.lch_index);
+                    visit.push_back(cur_node.rch_index);
+                }
+            }
+        }
+    }
+}
+
 
 
 

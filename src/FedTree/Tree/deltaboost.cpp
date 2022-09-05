@@ -126,6 +126,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
         }
 
         tree_remover.remove_samples_by_indices(trained_sample_indices);
+        tree_remover.prune();
 
         if (i > 0) {
             SyncArray<float_type> y_predict;

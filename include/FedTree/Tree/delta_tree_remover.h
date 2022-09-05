@@ -41,7 +41,7 @@ public:
     void adjust_gradients_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs);
     void adjust_split_nbrs_by_indices(const vector<int>& indices, const vector<GHPair>& delta_gh_pairs, bool remove_n_ins=false);
     void remove_samples_by_indices(const vector<int>& indices);
-
+    void prune();
     void sort_potential_nodes_by_gain(int root_idx);
 
     void get_invalid_sp(const vector<int> &dense_bin_id, const RobustHistCut& cut, const vector<int>& removed_indices,
