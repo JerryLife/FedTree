@@ -46,8 +46,7 @@ public:
 
     void get_invalid_sp(const vector<int> &dense_bin_id, const RobustHistCut& cut, const vector<int>& removed_indices,
                         vector<vector<int>> &invalid_bids);
-    void get_invalid_sp(DeltaCut &cut, const DataSet &dataset, const vector<int>& removed_indices, int max_bin_size,
-                        std::unordered_map<std::pair<int, int>, bool, boost::hash<std::pair<int, int>>> &is_bin_valid);
+    void get_invalid_sp(DeltaCut &cut, const DataSet &dataset, const vector<int>& removed_indices, int max_bin_size);
 
     DeltaTree *tree_ptr = nullptr;
     DeltaBoostParam param;
@@ -55,7 +54,7 @@ public:
     vector<vector<int>> ins2node_indices;
     vector<bool> is_subset_indices;
     vector<bool> is_iid_removed;
-    std::unordered_map<std::pair<int, int>, bool, boost::hash<std::pair<int, int>>> is_bin_valid;
+    std::unordered_set<std::pair<int, int>, boost::hash<std::pair<int, int>>> invalid_bins;
 
     const DataSet* dataSet = nullptr;   // this dataset should be the original dataset instead of the sorted_dataset
 };

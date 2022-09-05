@@ -7,6 +7,7 @@
 #include <random>
 #include <chrono>
 #include <boost/functional/hash.hpp>
+#include <unordered_set>
 #include <unordered_map>
 
 #include "FedTree/Tree/delta_tree_remover.h"
@@ -31,6 +32,11 @@ void testPrint(std::unordered_map<int,GHPair> & m, int i )
     SHOW( m.find(i)->first );
 }
 
+void testPrint(std::unordered_set<std::pair<int,int>, boost::hash<std::pair<int, int>>> & m, int i, int j )
+{
+    SHOW( m.find({i, j}) != m.end() );
+}
+
 template class std::unordered_map<int, GHPair>;     // explicit instantiation for debug unordered_map
 
 void DeltaTreeRemover::remove_sample_by_id(int id) {
@@ -48,7 +54,7 @@ void DeltaTreeRemover::remove_samples_by_indices(const vector<int>& indices) {
     }
 
 //    get_invalid_sp(tree_ptr->dense_bin_id, tree_ptr->cut, indices, invalid_bids);
-    get_invalid_sp(tree_ptr->cut, *dataSet, indices, param.max_bin_size, is_bin_valid);
+    get_invalid_sp(tree_ptr->cut, *dataSet, indices, param.max_bin_size);
 
     // this function is parallel
     adjust_split_nbrs_by_indices(indices, gh_pair_vec, true);
@@ -486,7 +492,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 
             // update the best gain
             int old_best_idx = node.split_nbr.best_idx;
-            node.split_nbr.update_best_idx_(is_bin_valid);      // update without invalid bins
+            node.split_nbr.update_best_idx_(invalid_bins);      // update without invalid bins
             node.gain = node.split_nbr.best_gain();
             float_type old_split_value = node.split_value;
             node.split_value = node.split_nbr.best_split_value();
@@ -682,14 +688,13 @@ void DeltaTreeRemover::get_invalid_sp(const vector<int> &dense_bin_id, const Rob
     LOG(DEBUG);
 }
 
-void DeltaTreeRemover::get_invalid_sp(DeltaCut &cut, const DataSet &dataset, const vector<int>& removed_indices, int max_bin_size,
-                    std::unordered_map<std::pair<int, int>, bool, boost::hash<std::pair<int, int>>> &is_bin_valid) {
+void DeltaTreeRemover::get_invalid_sp(DeltaCut &cut, const DataSet &dataset, const vector<int>& removed_indices, int max_bin_size) {
     /**
-     * Get invalid split points, stored in is_bin_valid.
+     * Get invalid split points, stored in invalid_bins.
      * cut: the original DeltaCut to be removed from
      * removed_indices: the indices of instances to be removed
      * max_bin_size: the maximum bin size allowed
-     * is_bin_valid: fid x bid -> true if the bin is invalid else false
+     * invalid_bins: fid x bid -> true if the bin is invalid else false
      */
 
     // extract removed values for each feature
@@ -705,10 +710,12 @@ void DeltaTreeRemover::get_invalid_sp(DeltaCut &cut, const DataSet &dataset, con
     }
 
     // remove values from cut
+    vector<std::unordered_set<std::pair<int, int>, boost::hash<std::pair<int, int>>>> invalid_bin_vec(dataset.n_features());
 #pragma omp parallel for
     for (int fid = 0; fid < cut.n_features(); ++fid) {
         cut.bin_trees[fid].remove_instances_(removed_values[fid]);
         cut.bin_trees[fid].prune_(max_bin_size);
+        cut.bin_trees[fid].trim_empty_bins_();
         vector<float_type> split_values_after_removal;
         cut.bin_trees[fid].get_split_values(split_values_after_removal);
         // cut.cut_points_val still remains unchanged
@@ -716,18 +723,25 @@ void DeltaTreeRemover::get_invalid_sp(DeltaCut &cut, const DataSet &dataset, con
                                                  cut.cut_points_val.begin() + cut.cut_col_ptr[fid + 1]);
 
         // check if each split value in split_values_original is in split_values_after_removal,
-        // store the result in is_bin_valid
+        // store the result in invalid_bins
         int j = 0;
         for (int i = 0; i < split_values_original.size(); ++i) {
             if (!ft_eq(split_values_original[i], split_values_after_removal[j], 1e-6)) {
-                is_bin_valid.insert({{fid, i}, false}); //seg fault here
+                invalid_bin_vec[fid].insert({fid, i}); //seg fault here
             } else {
                 j++;
             }
         }
-        assert(j == split_values_after_removal.size());
+        if (j != split_values_after_removal.size()) {
+            LOG(WARNING) << "Some split values in split_values_after_removal do not exist in split_values_original";
+        }
     }
 
+    // merge the invalid bins from different threads
+    invalid_bins.clear();
+    for (int fid = 0; fid < invalid_bin_vec.size(); ++fid) {
+        invalid_bins.insert(invalid_bin_vec[fid].begin(), invalid_bin_vec[fid].end());
+    }
 
 }
 

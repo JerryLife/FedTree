@@ -433,7 +433,7 @@ struct DeltaTree : public Tree {
             }
         }
 
-        void update_best_idx_(const std::unordered_map<std::pair<int, int>, bool, boost::hash<std::pair<int, int>>> &is_bin_valid) {
+        void update_best_idx_(const std::unordered_set<std::pair<int, int>, boost::hash<std::pair<int, int>>> &is_bin_valid) {
             if (gain.empty()) return;
             // select the best valid gain
             // the first split value (with unknown left bin) should never be chosen as the best index

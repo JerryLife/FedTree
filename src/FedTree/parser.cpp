@@ -86,6 +86,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     //parsing parameter values from configuration file or command line
     auto parse_value = [&](const char *name_val) {
         char name[256], val[256];
+        name[0] = '\0', val[0] = '\0';
         if (sscanf(name_val, "%[^=]=%s", name, val) == 2) {
             string str_name(name);
 
@@ -191,7 +192,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {
             string str_name(name);
-            if (str_name.compare("-help") == 0) {
+            if (str_name == "-help") {
                 printf("please refer to \"docs/parameters.md\" in the GitHub repository for more information about setting the options\n");
                 exit(0);
             }

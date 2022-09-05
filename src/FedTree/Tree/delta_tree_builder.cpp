@@ -1174,7 +1174,7 @@ void DeltaTreeBuilder::get_split_points(vector<DeltaTree::SplitNeighborhood> &be
     vector<bool> prior_flags(2 * n_nodes_in_level, true);
     for (int i = 0; i < child_nodes.size(); ++i) {
         size_t parent_index = child_nodes[i].parent_index = parent_indices[i] + nid_offset;
-        child_nodes[i].gain = *(new DeltaTree::DeltaGain());
+        child_nodes[i].gain = DeltaTree::DeltaGain();
         child_nodes[i].final_id = nid_offset + n_nodes_in_level + i;
         child_nodes[i].is_leaf = is_last_layer;
         child_nodes[i].potential_nodes_indices = {nid_offset + n_nodes_in_level + i};

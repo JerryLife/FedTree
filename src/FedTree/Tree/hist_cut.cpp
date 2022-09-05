@@ -413,6 +413,9 @@ void RobustHistCut::get_cut_points_by_instance(DataSet &dataset, int max_num_bin
 }
 
 int DeltaCut::BinTree::get_largest_bin_id() {
+    /**
+     * return the largest bin id. Returning -1 means no splittable bins found. Should stop.
+     */
     int largest_bin_id = -1;
     for(int i = 0; i < bins.size(); i++) {
         if (bins[i].is_valid && bins[i].splittable && bins[i].is_leaf
@@ -530,6 +533,14 @@ void DeltaCut::BinTree::trim_empty_bins_() {
             int updated_rch_id = bins[node.rch_id].rch_id;
             bins[cur].lch_id = updated_lch_id;
             bins[cur].rch_id = updated_rch_id;
+            if (updated_lch_id != -1) {
+                bins[updated_lch_id].left = bins[cur].left;
+                bins[updated_lch_id].parent_id = cur;
+            }
+            if (updated_rch_id != -1) {
+                bins[updated_rch_id].parent_id = cur;
+            }
+
             empty_cnt++;
             if (updated_lch_id == -1 && updated_rch_id == -1)
                 bins[cur].is_leaf = true;
@@ -540,11 +551,20 @@ void DeltaCut::BinTree::trim_empty_bins_() {
             int updated_rch_id = bins[node.lch_id].rch_id;
             bins[cur].lch_id = updated_lch_id;
             bins[cur].rch_id = updated_rch_id;
+            if (updated_lch_id != -1) {
+                bins[updated_lch_id].parent_id = cur;
+            }
+            if (updated_rch_id != -1) {
+                bins[updated_rch_id].right = bins[cur].right;
+                bins[updated_rch_id].parent_id = cur;
+            }
             empty_cnt++;
             if (updated_lch_id == -1 && updated_rch_id == -1)
                 bins[cur].is_leaf = true;
             else visit.push_back(cur);
         } else {
+            bins[bins[cur].lch_id].left = bins[cur].left;
+            bins[bins[cur].rch_id].right = bins[cur].right;
             visit.push_back(node.lch_id);
             visit.push_back(node.rch_id);
         }
@@ -554,6 +574,7 @@ void DeltaCut::BinTree::trim_empty_bins_() {
 void DeltaCut::BinTree::prune_(float_type threshold) {
     /**
      * Prune all the nodes and their subtrees below threshold by DFS
+     * Note that the parent node is not updated after pruning. it would however not affect the tree structure.
      */
     vector<int> visit = {0};
     vector<bool> keep_flag = {true};
@@ -622,7 +643,8 @@ void DeltaCut::BinTree::remove_instances_(const vector<float_type> &values) {
             // node.indices remains unchanged
             if (node.is_leaf)
                 continue;
-            if (v < node.mid_value()) visit.push_back(node.lch_id);
+            float_type split_value = bins[node.lch_id].right;   // split_value may not be mid_value() after empty bins are removed.
+            if (v < split_value) visit.push_back(node.lch_id);
             else visit.push_back(node.rch_id);
         }
     }
@@ -664,6 +686,7 @@ void DeltaCut::generate_bin_trees_(DataSet &dataset, int max_bin_size) {
 
         while (true) {
            int split_bin_id = bin_tree.get_largest_bin_id();
+           if (split_bin_id == -1) break;   // no bin to split
            auto bin = bin_tree.bins[split_bin_id];
            if (bin.n_instances < max_bin_size)
                break;
