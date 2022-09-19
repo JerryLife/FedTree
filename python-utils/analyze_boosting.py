@@ -81,7 +81,7 @@ def plot_score_diff(dataset, n_trees, remove_ratio: str, output_dir, print_metri
     gbdt_remain = GBDT.load_from_json(js2, 'deltaboost')
     gbdt_deleted = GBDT.load_from_json(js3, 'deltaboost')
     # train_X, train_y = load_data(f"../data/{dataset}.train", data_fmt='libsvm', output_dense=True)
-    remain_X, remain_y = load_data(f"../data/{dataset}.train.remain_{remove_ratio}", data_fmt='libsvm',
+    remain_X, remain_y = load_data(f"../data/{dataset}.train.remain_{remove_ratio}", data_fmt='csv',
                                    output_dense=True)
 
     # plt.style.use('seaborn-deep')
@@ -131,7 +131,7 @@ def plot_score_diff(dataset, n_trees, remove_ratio: str, output_dir, print_metri
 
 
 if __name__ == '__main__':
-    n_trees = 10
+    n_trees = 1
     # for dataset, metric in zip(['codrna', 'cadata', 'covtype', 'gisette', 'msd'],
     #                            ['error', 'rmse', 'error', 'error', 'rmse']):
     #     for remove_ratio in ['1e-03', '1e-02']:
@@ -139,8 +139,8 @@ if __name__ == '__main__':
     #         plot_gradient_diff(dataset, n_trees, remove_ratio, output_dir)
 
     dataset = 'covtype'
-    remove_ratio = '1e-03'
+    remove_ratio = '1e-02'
     # output_g_dir = "fig/gradient_diff"
     # plot_gradient_diff(dataset, n_trees, remove_ratio, output_g_dir)
-    output_p_dir = "../../DeltaBoost-Python/fig/prediction_diff"
+    output_p_dir = "fig/prediction_diff"
     plot_score_diff(dataset, n_trees, remove_ratio, output_p_dir)

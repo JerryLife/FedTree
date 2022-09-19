@@ -77,6 +77,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     deltaboost_param->delta_gain_eps_feature = 0.0;
     deltaboost_param->delta_gain_eps_sn = 0.0;
     deltaboost_param->hash_sampling_round = 1;
+    deltaboost_param->perform_remove = true;
 
     if (argc < 2) {
         printf("Usage: <config>\n");
@@ -188,6 +189,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 deltaboost_param->delta_gain_eps_sn = atof(val);
             else if (str_name.compare("hash_sampling_round") == 0)
                 deltaboost_param->hash_sampling_round = atoi(val);
+            else if (str_name.compare("perform_remove") == 0)
+                deltaboost_param->perform_remove = (strcasecmp("true", val) == 0);
             else
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {

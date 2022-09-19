@@ -1,5 +1,5 @@
 n_trees=$1
-cpus="0-90"
+cpus="0-72"
 
 : ${1?"Number of trees unset."}
 
@@ -8,7 +8,7 @@ outdir="out/remove_test/$subdir/"
 mkdir -p $outdir
 
 for dataset in codrna cadata covtype gisette msd; do
-  for ratio in 0.01 0.001; do
+  for ratio in 0.001 0.01; do
     if [ $ratio = "0.01" ]; then
       taskset -c $cpus ./main conf/"$dataset"_1e-02.conf data=./data/"$dataset".train remove_ratio="$ratio" n_trees=$n_trees \
         save_model_name="$dataset"_tree"$n_trees"_original_1e-02 remain_data=./data/"$dataset".train.remain_1e-02 delete_data=./data/"$dataset".train.delete_1e-02 > \

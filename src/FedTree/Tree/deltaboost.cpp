@@ -126,7 +126,6 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
         }
 
         tree_remover.remove_samples_by_indices(trained_sample_indices);
-        tree_remover.prune();
 
         if (i > 0) {
             SyncArray<float_type> y_predict;
@@ -159,6 +158,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 
             tree_remover.adjust_split_nbrs_by_indices(adjust_indices, adjust_values, false);
         }
+        tree_remover.prune();
     }
 }
 
@@ -230,7 +230,7 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
 //    int NUM_BLOCK = (n_instances - 1) / BLOCK_SIZE + 1;
 
     //use sparse format and binary search
-#pragma omp parallel for      // remove for debug
+#pragma omp parallel for  // remove for debug
     for (int iid = 0; iid < n_instances; iid++) {
         auto get_next_child = [&](const DeltaTree::DeltaNode& node, float_type feaValue) {
             return feaValue < node.split_value ? node.lch_index : node.rch_index;

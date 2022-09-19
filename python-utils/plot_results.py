@@ -27,7 +27,8 @@ def plot_score_before_after_removal(out_dir, datasets, remove_ratios, save_path=
     summary = []
     for dataset in datasets:
         df_ratios = []
-        for ratio in remove_ratios:
+        for raw_ratio in remove_ratios:
+            ratio = "0.01" if raw_ratio == '1e-02' else "0.001"
             out_path = os.path.join(out_dir, f"{dataset}_deltaboost_{ratio}.out")
             out_retrain_path = os.path.join(out_dir, f"{dataset}_deltaboost_{ratio}_retrain.out")
             metric, out_data = get_scores_from_file(out_path, out_fmt='float')
@@ -37,7 +38,12 @@ def plot_score_before_after_removal(out_dir, datasets, remove_ratios, save_path=
             _, out_retrain_data = get_scores_from_file(out_retrain_path, out_fmt='float')
             scores_retrain = out_retrain_data[:3]
 
-            x_labels = [r'$D$', r'$D_f$', r'$D_r$']
+            # reorder the result
+            scores = np.array([scores[2], scores[1], scores[0]])
+            scores_del = np.array([scores_del[2], scores_del[1], scores_del[0]])
+            scores_retrain = np.array([scores_retrain[2], scores_retrain[1], scores_retrain[0]])
+
+            x_labels = [r'$D_r$', r'$D_f$', r'$D_{test}$']
             df = pd.DataFrame(data={'Original': scores, 'Remove (ours)': scores_del,
                                     'Retrain (target)': scores_retrain})
             if plot_type == 'fig':
@@ -172,18 +178,18 @@ def print_model_diff(datasets, n_trees, remove_ratios):
 
 if __name__ == '__main__':
     # datasets = ['codrna', 'cadata', 'covtype', 'gisette', 'msd']
-    datasets = ['codrna']
+    datasets = ['cadata']
     remove_ratios = ['1e-03', '1e-02']
     # remove_ratios = ['0.001', '0.01']
     # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)
     # plot_score_before_after_removal("../out/remove_test/tree30", datasets, remove_ratios)
-    # plot_score_before_after_removal("../out/remove_test/tree10", datasets, remove_ratios)
+    plot_score_before_after_removal("../out/remove_test/tree10", datasets, remove_ratios)
     # plot_score_before_after_removal("../out/remove_test/tree1", datasets, remove_ratios)
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=50)
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=30)
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=10)
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=1)
-    print_model_diff(datasets, 1, remove_ratios)
-    # print_model_diff(datasets, 10, remove_ratios)
+    # print_model_diff(datasets, 1, remove_ratios)
+    print_model_diff(datasets, 10, remove_ratios)
     # print_model_diff(datasets, 30, remove_ratios)
     # print_model_diff(datasets, 50, remove_ratios)
