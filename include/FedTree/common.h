@@ -40,7 +40,7 @@ std::string string_format(const std::string &format, Args ... args) {
 }
 
 //data types
-typedef double float_type;
+typedef long double float_type;
 
 #define EPSILON 1e-9
 
@@ -235,10 +235,10 @@ private:
     //json parser
     friend void tag_invoke(json::value_from_tag, json::value& v, GHPair const& gh_pair) {
         v = json::object{
-                {"g",         gh_pair.g},
-                {"h",         gh_pair.h},
+                {"g",         (double) gh_pair.g},
+                {"h",         (double) gh_pair.h},
                 {"encrypted", gh_pair.encrypted}
-        };
+        };  // store all floating points as double
     }
 };
 

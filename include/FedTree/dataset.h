@@ -67,6 +67,7 @@ class DataSet{
 
     vector<DataSet> sampled_datasets;
     vector<vector<int>> subset_indices;
+    vector<int> row_hash;
 
     std::mt19937 rng;
 
@@ -74,6 +75,7 @@ class DataSet{
     DataSet& get_sampled_dataset(int cur_sampling_round);
     vector<int>& get_subset_indices(int cur_sampling_round);
     void update_sampling_by_hashing_(int total_sampling_round);
+    void get_row_hash_();
 
     void csc_to_csr();
     void set_seed(int seed);

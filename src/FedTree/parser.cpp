@@ -191,6 +191,10 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 deltaboost_param->hash_sampling_round = atoi(val);
             else if (str_name.compare("perform_remove") == 0)
                 deltaboost_param->perform_remove = (strcasecmp("true", val) == 0);
+            else if (str_name.compare("n_quantized_bins") == 0)
+                deltaboost_param->n_quantize_bins = atoi(val);
+            else if (str_name.compare("seed") == 0)
+                deltaboost_param->seed = (size_t) atoi(val);
             else
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {
@@ -363,7 +367,19 @@ void Parser::save_model_to_json(const string &model_path, DeltaBoostParam &model
     v["num_class"] = model_param.num_class;
     v["n_trees"] = model_param.n_trees;
     v["label_size"] = dataSet.label.size();
-    v["labels"] = json::value_from(dataSet.label);
+
+    assert(dataSet.label.empty() == false);
+
+    if constexpr(std::is_same_v<float_type, double>) {
+        v["labels"] = json::value_from(dataSet.label);
+    } else {
+        vector<double> labels(dataSet.label.size());
+        for (int i = 0; i < dataSet.label.size(); ++i) {
+            labels[i] = (double) dataSet.label[i];
+        }
+        v["labels"] = json::value_from(labels);
+    }
+
 
     v["deltaboost"] = json::value_from(model);
 
@@ -383,7 +399,18 @@ void Parser::save_model_to_json(const string &model_path, GBDTParam &model_param
     v["num_class"] = model_param.num_class;
     v["n_trees"] = model_param.n_trees;
     v["label_size"] = dataSet.label.size();
-    v["labels"] = json::value_from(dataSet.label);
+
+    assert(dataSet.label.empty() == false);
+
+    if constexpr(std::is_same_v<float_type, double>) {
+        v["labels"] = json::value_from(dataSet.label);
+    } else {
+        vector<double> labels(dataSet.label.size());
+        for (int i = 0; i < dataSet.label.size(); ++i) {
+            labels[i] = (double) dataSet.label[i];
+        }
+        v["labels"] = json::value_from(labels);
+    }
 
     v["gbdt"] = json::value_from(model);
 

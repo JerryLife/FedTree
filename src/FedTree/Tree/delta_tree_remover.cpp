@@ -48,7 +48,7 @@ void DeltaTreeRemover::remove_sample_by_id(int id) {
 void DeltaTreeRemover::remove_samples_by_indices(const vector<int>& indices) {
     vector<GHPair> gh_pair_vec(indices.size());
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int i = 0; i < indices.size(); ++i) {
         gh_pair_vec[i] = -gh_pairs[indices[i]];
     }
@@ -265,39 +265,48 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
      * @param remove_n_ins: whether to remove n_instances from visited nodes
      */
 
-    SyncArray<int> csr_col_idx(dataSet->csr_col_idx.size());
-    SyncArray<float_type> csr_val(dataSet->csr_val.size());
-    SyncArray<int> csr_row_ptr(dataSet->csr_row_ptr.size());
-    csr_col_idx.copy_from(dataSet->csr_col_idx.data(), dataSet->csr_col_idx.size());
-    csr_val.copy_from(dataSet->csr_val.data(), dataSet->csr_val.size());
-    csr_row_ptr.copy_from(dataSet->csr_row_ptr.data(), dataSet->csr_row_ptr.size());
+//    SyncArray<int> csr_col_idx(dataSet->csr_col_idx.size());
+//    SyncArray<float_type> csr_val(dataSet->csr_val.size());
+//    SyncArray<int> csr_row_ptr(dataSet->csr_row_ptr.size());
+//    csr_col_idx.copy_from(dataSet->csr_col_idx.data(), dataSet->csr_col_idx.size());
+//    csr_val.copy_from(dataSet->csr_val.data(), dataSet->csr_val.size());
+//    csr_row_ptr.copy_from(dataSet->csr_row_ptr.data(), dataSet->csr_row_ptr.size());
 
-    const auto csr_col_idx_data = csr_col_idx.host_data();
-    const auto csr_val_data = csr_val.host_data();
-    const auto csr_row_ptr_data = csr_row_ptr.host_data();
+//    const auto csr_col_idx_data = csr_col_idx.host_data();
+//    const auto csr_val_data = csr_val.host_data();
+//    const auto csr_row_ptr_data = csr_row_ptr.host_data();
 
-    auto get_val = [&](int iid, int fid,
-                       bool *is_missing) -> float_type {
-        int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
-        float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
-        int row_len = csr_row_ptr_data[iid + 1] - csr_row_ptr_data[iid];
+    auto csr_col_idx_data = dataSet->csr_col_idx.data();
+    auto csr_val_data = dataSet->csr_val.data();
+    auto csr_row_ptr_data = dataSet->csr_row_ptr.data();
 
-        //binary search to get feature value
-        const int *left = col_idx;
-        const int *right = col_idx + row_len;
+//    auto get_val = [&](int iid, int fid,
+//                       bool *is_missing) -> float_type {
+//        int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
+//        float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
+//        int row_len = csr_row_ptr_data[iid + 1] - csr_row_ptr_data[iid];
+//
+//        //binary search to get feature value
+//        const int *left = col_idx;
+//        const int *right = col_idx + row_len;
+//
+//        while (left != right) {
+//            const int *mid = left + (right - left) / 2;
+//            if (*mid == fid) {
+//                *is_missing = false;
+//                return row_val[mid - col_idx];
+//            }
+//            if (*mid > fid)
+//                right = mid;
+//            else left = mid + 1;
+//        }
+//        *is_missing = true;
+//        return 0;
+//    };
 
-        while (left != right) {
-            const int *mid = left + (right - left) / 2;
-            if (*mid == fid) {
-                *is_missing = false;
-                return row_val[mid - col_idx];
-            }
-            if (*mid > fid)
-                right = mid;
-            else left = mid + 1;
-        }
-        *is_missing = true;
-        return 0;
+    auto get_val_dense = [&](int iid, int fid) -> float_type {
+        const float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
+        return row_val[fid];
     };
 
 //    vector<vector<int>> nid_to_index_id(tree_ptr->nodes.size(), vector<int>());
@@ -336,9 +345,9 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             node.gain.self_h += root_delta_gh_pairs[i].h;
 
             // obtain feature value of instance adjusted_indices[i] in feature node.split_feature_id
-            bool is_missing;
-            float_type feature_val = get_val(adjusted_indices[i], node.split_feature_id, &is_missing);
-
+            bool is_missing = false;
+//            float_type feature_val = get_val(adjusted_indices[i], node.split_feature_id, &is_missing);
+            float_type feature_val = get_val_dense(adjusted_indices[i], node.split_feature_id);
             // update missing_gh
             if (is_missing) {
 #pragma omp atomic
@@ -436,8 +445,9 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
                 auto shift_it = marginal_shifts_in_node.begin();
                 std::advance(shift_it, j);      // move the iterator to index j of map
                 int iid = shift_it->first;
-                bool is_missing;
-                float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
+                bool is_missing = false;
+//                float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
+                float_type feature_val = get_val_dense(iid, node.split_feature_id);
 
                 // update self gh
 #pragma omp atomic
@@ -587,8 +597,9 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
                 auto shift_it = marginal_shifts_in_node.begin();
                 std::advance(shift_it, j);  // move to the index j of map
                 int iid = shift_it->first;
-                bool is_missing;
-                float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
+                bool is_missing = false;
+//                float_type feature_val = get_val(iid, node.split_feature_id, &is_missing);
+                float_type feature_val = get_val_dense(iid, node.split_feature_id);
 //                if (std::find(ins2node_indices[iid].begin(), ins2node_indices[iid].end(), node.lch_index) != ins2node_indices[iid].end()) {
                 if (feature_val < node.split_nbr.best_split_value()) {
                     // this iid goes left

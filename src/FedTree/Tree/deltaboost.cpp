@@ -37,7 +37,8 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
 
     DeltaBooster booster;
     booster.init(dataset, param);
-    dataset.set_seed(0);
+    dataset.set_seed((int)param.seed);
+    dataset.get_row_hash_();
     std::chrono::high_resolution_clock timer;
     auto start = timer.now();
     for (int i = 0; i < param.n_trees; ++i) {
@@ -56,7 +57,7 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
             is_subset_indices_in_tree.emplace_back(indices_to_hash_table(subset_indices, dataset.n_instances()));
         }
         //one iteration may produce multiple trees, depending on objectives
-        booster.boost(trees, gh_pairs_per_sample, ins2node_indices_per_tree);
+        booster.boost(trees, gh_pairs_per_sample, ins2node_indices_per_tree, dataset.row_hash);
         int valid_size = 0;
         for (const auto &node: trees[trees.size() - 1][0].nodes) {
             if (node.is_valid) ++valid_size;
@@ -101,9 +102,8 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
         LOG(DEBUG) << "[Removing time] Step 0 (out) = " << duration.count();
     }
 
+    deltaboost_remover.get_info_by_prediction(gh_pairs_per_sample);
 
-
-    deltaboost_remover.get_info_by_prediction();
     LOG(INFO) << "Deleting...";
 
     for (int i = 0; i < used_trees.size(); ++i) {
@@ -126,6 +126,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
         }
 
         tree_remover.remove_samples_by_indices(trained_sample_indices);
+        tree_remover.prune();
 
         if (i > 0) {
             SyncArray<float_type> y_predict;
@@ -134,17 +135,18 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
             SyncArray<GHPair> updated_gh_pairs_array(y.size());
             obj->get_gradient(y, y_predict, updated_gh_pairs_array);
             vector<GHPair> delta_gh_pairs = updated_gh_pairs_array.to_vec();
-            GHPair sum_gh_pair = std::accumulate(delta_gh_pairs.begin(), delta_gh_pairs.end(), GHPair());
+            auto quantized_gh_pairs = DeltaBooster::quantize_gradients(delta_gh_pairs, param.n_quantize_bins, dataset.row_hash);
+//            GHPair sum_gh_pair = std::accumulate(delta_gh_pairs.begin(), delta_gh_pairs.end(), GHPair());
 
             vector<int> adjust_indices;
             vector<GHPair> adjust_values;
-            for (int j = 0; j < delta_gh_pairs.size(); ++j) {
+            for (int j = 0; j < quantized_gh_pairs.size(); ++j) {
                 if (is_iid_removed[j] || (param.hash_sampling_round > 1 && !is_subset_indices_in_tree[i][j])) continue;
-                if (std::fabs(delta_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
-                    std::fabs(delta_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
+//                if (std::fabs(quantized_gh_pairs[j].g - gh_pairs[j].g) > 1e-6 ||
+//                    std::fabs(quantized_gh_pairs[j].h - gh_pairs[j].h) > 1e-6) {
                     adjust_indices.emplace_back(j);
-                    adjust_values.emplace_back(delta_gh_pairs[j] - gh_pairs[j]);
-                }
+                    adjust_values.emplace_back(quantized_gh_pairs[j] - gh_pairs[j]);
+//                }
             }
 //            GHPair sum_delta_gh_pair = std::accumulate(adjust_values.begin(), adjust_values.end(), GHPair());
 
@@ -158,7 +160,6 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 
             tree_remover.adjust_split_nbrs_by_indices(adjust_indices, adjust_values, false);
         }
-        tree_remover.prune();
     }
 }
 
@@ -207,19 +208,19 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
 
     PERFORMANCE_CHECKPOINT_WITH_ID(timerObj, "init trees");
     //copy instances from to GPU
-    SyncArray<int> csr_col_idx(dataSet.csr_col_idx.size());
-    SyncArray<float_type> csr_val(dataSet.csr_val.size());
-    SyncArray<int> csr_row_ptr(dataSet.csr_row_ptr.size());
-    csr_col_idx.copy_from(dataSet.csr_col_idx.data(), dataSet.csr_col_idx.size());
-    csr_val.copy_from(dataSet.csr_val.data(), dataSet.csr_val.size());
-    csr_row_ptr.copy_from(dataSet.csr_row_ptr.data(), dataSet.csr_row_ptr.size());
+//    SyncArray<int> csr_col_idx(dataSet.csr_col_idx.size());
+//    SyncArray<float_type> csr_val(dataSet.csr_val.size());
+//    SyncArray<int> csr_row_ptr(dataSet.csr_row_ptr.size());
+//    csr_col_idx.copy_from(dataSet.csr_col_idx.data(), dataSet.csr_col_idx.size());
+//    csr_val.copy_from(dataSet.csr_val.data(), dataSet.csr_val.size());
+//    csr_row_ptr.copy_from(dataSet.csr_row_ptr.data(), dataSet.csr_row_ptr.size());
 
     //do prediction
 //    auto model_host_data = model.data();
     auto predict_data = y_predict.host_data();
-    auto csr_col_idx_data = csr_col_idx.host_data();
-    auto csr_val_data = csr_val.host_data();
-    auto csr_row_ptr_data = csr_row_ptr.host_data();
+    auto csr_col_idx_data = dataSet.csr_col_idx.data();
+    auto csr_val_data = dataSet.csr_val.data();
+    auto csr_row_ptr_data = dataSet.csr_row_ptr.data();
     auto lr = model_param.learning_rate;
     PERFORMANCE_CHECKPOINT_WITH_ID(timerObj, "copy data");
 
@@ -255,8 +256,13 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
             *is_missing = true;
             return 0;
         };
-        int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
-        float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
+
+        auto get_val_dense = [](const int *row_idx, const float_type *row_val, int idx) -> float_type {
+            assert(idx == row_idx[idx]);
+            return row_val[idx];
+        };
+        const int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
+        const float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
         int row_len = csr_row_ptr_data[iid + 1] - csr_row_ptr_data[iid];
         for (int t = 0; t < num_class; t++) {
             auto predict_data_class = predict_data + t * n_instances;
@@ -275,7 +281,8 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
                     }
                     int fid = cur_node.split_feature_id;
                     bool is_missing;
-                    float_type fval = get_val(col_idx, row_val, row_len, fid, &is_missing);
+//                    float_type fval = get_val(col_idx, row_val, row_len, fid, &is_missing);
+                    float_type fval = get_val_dense(col_idx, row_val, fid);
                     last_idx = cur_node.final_id;
                     if (!is_missing)
                         cur_nid = get_next_child(cur_node, fval);

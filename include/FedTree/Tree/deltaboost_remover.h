@@ -16,6 +16,8 @@
 
 #include <memory>
 
+static vector<vector<GHPair>> DEFAULT_GH_PAIRS_VECTOR;
+
 class DeltaBoostRemover {
 public:
     DeltaBoostRemover() = default;
@@ -75,7 +77,7 @@ public:
         LOG(DEBUG) << "[Removing time] Step 0 (in) = " << duration.count();
     }
 
-    void get_info_by_prediction();      // get initial info in each deltatree remover
+    void get_info_by_prediction(const vector<vector<GHPair>> &gh_pairs_per_sample = DEFAULT_GH_PAIRS_VECTOR);      // get initial info in each deltatree remover
 
     std::vector<DeltaTreeRemover> tree_removers;
 

@@ -262,7 +262,7 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
                                                                    return a.first * a_coef < b.first * b_coef;
                                               }));
             if (!n_instances_in_bins_with_flag[split_bin_id].second || n_instances_in_bins_with_flag[split_bin_id].first < max_bin_size) {
-                LOG(DEBUG);
+//                LOG(DEBUG);
                 break;
             }
             float_type mid_value = (split_values[split_bin_id] + split_values[split_bin_id + 1]) / 2;
@@ -306,7 +306,7 @@ void RobustHistCut::get_cut_points_by_feature_range_balanced(DataSet &dataset, i
             n_instances_in_bins_with_flag[split_bin_id] = std::make_pair(static_cast<int>(n_instances_left), left_splittable);
             n_instances_in_bins_with_flag.insert(n_instances_in_bins_with_flag.begin() + split_bin_id + 1,
                                                  std::make_pair(static_cast<int>(n_instances_right), right_splittable));
-            LOG(DEBUG);
+//            LOG(DEBUG);
         }
 
         // filter non-empty bins; remove the last split point (max)

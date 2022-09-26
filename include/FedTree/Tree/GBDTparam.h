@@ -58,6 +58,8 @@ struct DeltaBoostParam : public GBDTParam {
     int hash_sampling_round = 1;  // Round of sampling (by hash). After <hash_sampling_round>, all the instances will be trained once.
                                          // sampling_ratio = 1 / hash_sampling_round
     bool perform_remove = true;
+    int n_quantize_bins = 0;    // 0 means no quantization, >1 means quantization with <n_quantize_bins> bins
+    size_t seed = 0;
 
     DeltaBoostParam() = default;
 
@@ -74,7 +76,9 @@ struct DeltaBoostParam : public GBDTParam {
     delta_gain_eps_feature(deltaboost_param->delta_gain_eps_feature),
     delta_gain_eps_sn(deltaboost_param->delta_gain_eps_sn),
     hash_sampling_round(deltaboost_param->hash_sampling_round),
-    perform_remove(deltaboost_param->perform_remove) {
+    perform_remove(deltaboost_param->perform_remove),
+    n_quantize_bins(deltaboost_param->n_quantize_bins),
+    seed(deltaboost_param->seed) {
         if (deltaboost_param->n_used_trees > 0) {
             this->n_used_trees = deltaboost_param->n_used_trees;
         } else {

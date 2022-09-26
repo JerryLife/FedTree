@@ -16,8 +16,11 @@ public:
 
 //    void init(const GBDTParam &param, int n_instances) override;
     void boost(vector<vector<DeltaTree>>& boosted_model, vector<vector<GHPair>>& gh_pairs_per_sample,
-               vector<vector<vector<int>>>& ins2node_indices_per_tree);
+               vector<vector<vector<int>>>& ins2node_indices_per_tree, const vector<int> &row_hash);
     void boost_without_prediction(vector<vector<DeltaTree>>& boosted_model);
+    static vector<GHPair> quantize_gradients(const vector<GHPair> &gh, int n_bins, const vector<int> &row_hash);
+    static float_type random_round(float_type x, float_type left, float_type right, size_t seed);
+    static float_type random_round(float_type x, size_t seed);
 
     std::unique_ptr<DeltaTreeBuilder> fbuilder;
     DeltaBoostParam param;

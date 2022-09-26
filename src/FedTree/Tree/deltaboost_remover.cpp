@@ -6,7 +6,7 @@
 
 #include "FedTree/Tree/deltaboost_remover.h"
 
-void DeltaBoostRemover::get_info_by_prediction() {
+void DeltaBoostRemover::get_info_by_prediction(const vector<vector<GHPair>> &gh_pairs_per_sample) {
 
     auto& trees = *trees_ptr;
     size_t n_instances = dataSet->n_instances();
@@ -18,17 +18,17 @@ void DeltaBoostRemover::get_info_by_prediction() {
     std::vector<std::vector<float_type>> y_predict(n_instances, std::vector<float_type>(num_class, 0));
 
     //copy instances from to GPU
-    SyncArray<int> csr_col_idx(dataSet->csr_col_idx.size());
-    SyncArray<float_type> csr_val(dataSet->csr_val.size());
-    SyncArray<int> csr_row_ptr(dataSet->csr_row_ptr.size());
-    csr_col_idx.copy_from(dataSet->csr_col_idx.data(), dataSet->csr_col_idx.size());
-    csr_val.copy_from(dataSet->csr_val.data(), dataSet->csr_val.size());
-    csr_row_ptr.copy_from(dataSet->csr_row_ptr.data(), dataSet->csr_row_ptr.size());
+//    SyncArray<int> csr_col_idx(dataSet->csr_col_idx.size());
+//    SyncArray<float_type> csr_val(dataSet->csr_val.size());
+//    SyncArray<int> csr_row_ptr(dataSet->csr_row_ptr.size());
+//    csr_col_idx.copy_from(dataSet->csr_col_idx.data(), dataSet->csr_col_idx.size());
+//    csr_val.copy_from(dataSet->csr_val.data(), dataSet->csr_val.size());
+//    csr_row_ptr.copy_from(dataSet->csr_row_ptr.data(), dataSet->csr_row_ptr.size());
 
     //do prediction
-    auto csr_col_idx_data = csr_col_idx.host_data();
-    auto csr_val_data = csr_val.host_data();
-    auto csr_row_ptr_data = csr_row_ptr.host_data();
+    auto csr_col_idx_data = dataSet->csr_col_idx.data();
+    auto csr_val_data = dataSet->csr_val.data();
+    auto csr_row_ptr_data = dataSet->csr_row_ptr.data();
     auto lr = param.learning_rate;
 
     auto get_val = [](const int *row_idx, const float_type *row_val, int row_len, int idx,
@@ -51,26 +51,36 @@ void DeltaBoostRemover::get_info_by_prediction() {
         return 0;
     };
 
+    auto get_val_dense = [](const int *row_idx, const float_type *row_val, int idx) -> float_type {
+
+        assert(idx == row_idx[idx]);
+        return row_val[idx];
+    };
+
     auto get_next_child = [](const DeltaTree::DeltaNode& node, float_type feaValue) {
         return feaValue < node.split_value ? node.lch_index : node.rch_index;
     };
 
     //use sparse format and binary search
-#pragma omp parallel for default(none) shared(n_instances, csr_col_idx_data, csr_row_ptr_data, csr_val_data, num_class, \
-                                          num_iter, trees, get_val, lr, y_predict, get_next_child)    // remove for debug
+#pragma omp parallel for   // remove for debug
     for (int iid = 0; iid < n_instances; ++iid) {
-        int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
-        float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
+        const int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
+        const float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
         int row_len = csr_row_ptr_data[iid + 1] - csr_row_ptr_data[iid];
         for (int t = 0; t < num_class; t++) {
             float_type sum = 0;
             for (int iter = 0; iter < num_iter; iter++) {
                 SyncArray<float_type> y_arr(1); y_arr.host_data()[0] = dataSet->y[iid];
                 SyncArray<float_type> y_pred_arr(1); y_pred_arr.host_data()[0] = sum;
-                SyncArray<GHPair> gh_pair_arr(1);
-                obj->get_gradient(y_arr, y_pred_arr, gh_pair_arr);
-                tree_removers[iter].gh_pairs[iid] = gh_pair_arr.host_data()[0];
-                assert(gh_pair_arr.host_data()[0].h >= 0);
+                if (gh_pairs_per_sample.empty()) {
+                    // no gh pairs, use the original prediction
+                    SyncArray<GHPair> gh_pair_arr(1);
+                    obj->get_gradient(y_arr, y_pred_arr, gh_pair_arr);
+                    tree_removers[iter].gh_pairs[iid] = gh_pair_arr.host_data()[0];
+                    assert(gh_pair_arr.host_data()[0].h >= 0);
+                } else {
+                    tree_removers[iter].gh_pairs[iid] = gh_pairs_per_sample[iter][iid];
+                }
 
                 const DeltaTree::DeltaNode *end_leaf;
                 const auto &nodes = trees[iter][t].nodes;
@@ -82,10 +92,6 @@ void DeltaBoostRemover::get_info_by_prediction() {
                     bool is_prior = prior_flags.back();
                     prior_flags.pop_back();
                     const auto& node = nodes[node_id];
-                    int fid = node.split_feature_id;
-                    bool is_missing;
-                    float_type fval = get_val(col_idx, row_val, row_len, fid, &is_missing);
-
                     tree_removers[iter].ins2node_indices[iid].push_back(node_id);
 
                     if (node.is_leaf) {
@@ -93,6 +99,12 @@ void DeltaBoostRemover::get_info_by_prediction() {
                             end_leaf = &node;
                         }
                     } else {
+                        // get feature value
+                        int fid = node.split_feature_id;
+                        bool is_missing;
+//                    float_type fval = get_val(col_idx, row_val, row_len, fid, &is_missing);
+                        float_type fval = get_val_dense(col_idx, row_val, fid);
+
                         // potential nodes (if any)
                         if (is_prior){
                             for (int j = 1; j < node.potential_nodes_indices.size(); ++j) {

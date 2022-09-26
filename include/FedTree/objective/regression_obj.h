@@ -120,4 +120,17 @@ struct LogisticLoss<double> {
 };
 
 
+template<>
+struct LogisticLoss<long double> {
+    HOST_DEVICE static GHPair gradient(long double y, long double y_p) {
+        long double p = sigmoid(y_p);
+        return GHPair(p - y, std::max(p * (1 - p), (float_type) 1e-16));
+    }
+
+    HOST_DEVICE static long double predict_transform(long double x) { return 1 / (1 + exp(-x)); }
+
+    HOST_DEVICE static long double sigmoid(long double x) {return 1 / (1 + exp(-x));}
+};
+
+
 #endif //FEDTREE_REGRESSION_OBJ_H

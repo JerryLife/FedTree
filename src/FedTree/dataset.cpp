@@ -1035,20 +1035,26 @@ void DataSet::update_sampling_by_hashing_(int total_sampling_round) {
      * This function updates sampled_datasets to size total_sampling_round
      */
 
-    std::uniform_int_distribution<std::mt19937::result_type> dist(std::mt19937::min(), std::mt19937::max());
-    auto hash_seed = dist(rng);
+//    std::uniform_int_distribution<std::mt19937::result_type> dist(std::mt19937::min(), std::mt19937::max());
+//    auto hash_seed = dist(rng);
+//
+//    // map each instance to a "random" value by hashing
+//    vector<int> row_category(n_instances());
+//#pragma omp parallel for
+//    for (int i = 0; i < this->n_instances(); ++i) {
+//        if (n_features_ > 0) {
+//            void *row_start = csr_val.data() + csr_row_ptr[i];
+//            int row_len = (csr_row_ptr[i+1] - csr_row_ptr[i]) * static_cast<int>(sizeof(float_type));
+//            uint32_t row_hash = 0;
+//            MurmurHash3_x86_32(row_start, row_len, hash_seed, &row_hash);
+//            row_category[i] = static_cast<int>(row_hash % total_sampling_round);
+//        }
+//    }
 
-    // map each instance to a "random" value by hashing
     vector<int> row_category(n_instances());
 #pragma omp parallel for
     for (int i = 0; i < this->n_instances(); ++i) {
-        if (n_features_ > 0) {
-            void *row_start = csr_val.data() + csr_row_ptr[i];
-            int row_len = (csr_row_ptr[i+1] - csr_row_ptr[i]) * static_cast<int>(sizeof(float_type));
-            uint32_t row_hash = 0;
-            MurmurHash3_x86_32(row_start, row_len, hash_seed, &row_hash);
-            row_category[i] = static_cast<int>(row_hash % total_sampling_round);
-        }
+        row_category[i] = static_cast<int>(row_hash[i] % total_sampling_round);
     }
 
     subset_indices.clear();
@@ -1070,4 +1076,28 @@ vector<int>& DataSet::get_subset_indices(int cur_sampling_round) {
 
 void DataSet::set_seed(int seed) {
     rng.seed(seed);
+}
+
+void DataSet::get_row_hash_() {
+    std::uniform_int_distribution<std::mt19937::result_type> dist(std::mt19937::min(), std::mt19937::max());
+    auto hash_seed = dist(rng);
+
+    // map each instance to a "random" value by hashing
+    row_hash.resize(n_instances());
+#pragma omp parallel for
+    for (int i = 0; i < this->n_instances(); ++i) {
+        if (n_features_ > 0) {
+            vector<int> row_round;
+            for (int j = csr_row_ptr[i]; j < csr_row_ptr[i+1]; ++j) {
+                row_round.push_back(static_cast<int>(csr_val[j] * 10000));
+            }
+            void *row_start = row_round.data();
+            int row_len = static_cast<int>(row_round.size() * sizeof(int));
+//            void *row_start = csr_val.data() + csr_row_ptr[i];
+//            int row_len = (csr_row_ptr[i+1] - csr_row_ptr[i]) * static_cast<int>(sizeof(float_type));
+            uint32_t row_hash_i = 0;
+            MurmurHash3_x86_32(row_start, row_len, hash_seed, &row_hash_i);
+            row_hash[i] = static_cast<int>(row_hash_i);
+        }
+    }
 }

@@ -433,9 +433,9 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         });
 
         bool is_robust = true;
-        if (best_idx_score_itr->score < param.delta_gain_eps_feature) {
-            is_robust = false;
-        }
+//        if (best_idx_score_itr->score < param.delta_gain_eps_feature) {
+//            is_robust = false;
+//        }
 
         if (is_robust) {
             // extract best split neighborhood according to best_bid
@@ -618,7 +618,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                             hist_g2[nid0_to_compute * n_bins + feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
                         }
                     }
-                    LOG(DEBUG);
+//                    LOG(DEBUG);
                 }
 
                 //subtract to the histogram of the other node
@@ -688,6 +688,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 //            }
 //            assert(missing_gh_data[pid].h >= 0);
             missing_g2[pid] = nodes_data[nid].sum_g2 - node_g2;
+            // missing value should be zero.
         }
     }
 }
@@ -1286,14 +1287,11 @@ void DeltaTreeBuilder::get_bin_ids() {
     for (int fid = 0; fid < n_column; fid++) {
         for (int i = csc_col_ptr_data[fid]; i < csc_col_ptr_data[fid + 1]; i++) {
             int row = csc_row_idx_data[i];
-            if (row == 239) {
-                LOG(DEBUG);
-            }
             auto bid = bin_id_data[i];
             dense_bin_id_data[row * n_column + fid] = bid;
         }
     }
-    LOG(DEBUG);
+//    LOG(DEBUG);
 }
 
 void DeltaTreeBuilder::update_random_feature_rank_(size_t seed) {
@@ -1339,7 +1337,7 @@ void DeltaTreeBuilder::update_indices_in_split_nbr(vector<DeltaTree::SplitNeighb
 //                         [&](int id){
 //                             return ins2node_indices[id][0] == node_id;
 //            });
-            LOG(DEBUG);
+//            LOG(DEBUG);
 //            split_nbr.marginal_indices[j] = cut.indices_in_hist[split_nbr.fid][bid - feature_offset];
         }
     }
