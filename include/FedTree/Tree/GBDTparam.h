@@ -60,6 +60,7 @@ struct DeltaBoostParam : public GBDTParam {
     bool perform_remove = true;
     int n_quantize_bins = 0;    // 0 means no quantization, >1 means quantization with <n_quantize_bins> bins
     size_t seed = 0;
+    float_type min_gain = 0.0;  // minimum gain allow to split
 
     DeltaBoostParam() = default;
 
@@ -78,7 +79,8 @@ struct DeltaBoostParam : public GBDTParam {
     hash_sampling_round(deltaboost_param->hash_sampling_round),
     perform_remove(deltaboost_param->perform_remove),
     n_quantize_bins(deltaboost_param->n_quantize_bins),
-    seed(deltaboost_param->seed) {
+    seed(deltaboost_param->seed),
+    min_gain(deltaboost_param->min_gain) {
         if (deltaboost_param->n_used_trees > 0) {
             this->n_used_trees = deltaboost_param->n_used_trees;
         } else {

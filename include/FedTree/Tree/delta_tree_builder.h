@@ -20,6 +20,7 @@ public:
 
     vector<DeltaTree> build_delta_approximate(const SyncArray<GHPair> &gradients,
                                               std::vector<std::vector<int>>& ins2node_indices_in_tree,
+                                              const vector<bool>& is_subset_indices_in_tree,
                                               bool update_y_predict = true);
 
     void find_split(int level) override;
@@ -84,7 +85,7 @@ public:
     DeltaCut cut;
 
     vector<int> num_nodes_per_level;    // number of nodes in each level, including potential nodes
-    vector<vector<int>> ins2node_indices;   // each instance may be in multiple nodes
+    vector<vector<int>> ins2node_indices;   // each instance may be in multiple nodes, -1 means not in any node
 
     vector<int> parent_indices;     // ID: the relative index of child in the layer
                                     // Value: the relative index of its parent in the layer
@@ -93,6 +94,11 @@ public:
 
     vector<bool> is_prior;       // ID: node index; Value: whether the node is prior node or not.
     float_type delta_gain_eps;   // delta_gain_eps for this tree
+
+    float_type g_bin_width;      // bin width for gradient
+    float_type h_bin_width;      // bin width for hessian
+
+    int n_all_instances;    // number of all instances in the dataset (without subset)
 };
 
 #endif //FEDTREE_DELTA_TREE_BUILDER_H

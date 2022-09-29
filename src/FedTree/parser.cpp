@@ -78,6 +78,7 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
     deltaboost_param->delta_gain_eps_sn = 0.0;
     deltaboost_param->hash_sampling_round = 1;
     deltaboost_param->perform_remove = true;
+    deltaboost_param->min_gain;
 
     if (argc < 2) {
         printf("Usage: <config>\n");
@@ -195,6 +196,8 @@ void Parser::parse_param(FLParam &fl_param, int argc, char **argv) {
                 deltaboost_param->n_quantize_bins = atoi(val);
             else if (str_name.compare("seed") == 0)
                 deltaboost_param->seed = (size_t) atoi(val);
+            else if (str_name.compare("min_gain") == 0)
+                deltaboost_param->min_gain = atof(val);
             else
                 LOG(WARNING) << "\"" << name << "\" is unknown option!";
         } else {

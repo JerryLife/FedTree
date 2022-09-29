@@ -159,7 +159,7 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
         for (int node_id: updating_node_indices[i]) {
             auto &node = tree_ptr->nodes[node_id];
 
-            node.calc_weight_(param.lambda);     // this lambda should be consistent with the training
+            node.calc_weight_(param.lambda, tree_ptr->g_bin_width, tree_ptr->h_bin_width);     // this lambda should be consistent with the training
 
             if (!node.is_leaf) {
 //                node.gain.gain_value = node.default_right ? -node.gain.cal_gain_value() : node.gain.cal_gain_value();     // calculate original gain value
@@ -486,7 +486,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
                     }
                 }
             }
-            node.calc_weight_(param.lambda);     // this lambda should be consistent with the training
+            node.calc_weight_(param.lambda, tree_ptr->g_bin_width, tree_ptr->h_bin_width);     // this lambda should be consistent with the training
 
             auto end_time_step_2_1 = clock::now();
             duration = end_time_step_2_1 - start_time_step_2_1;

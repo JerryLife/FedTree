@@ -30,8 +30,8 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
     }
     this->param = param;
     this->sp = SyncArray<DeltaSplitPoint>();
-    update_random_feature_rank_(0);
-    update_random_split_nbr_rank_(0);
+    update_random_feature_rank_(param.seed);
+    update_random_split_nbr_rank_(param.seed);
 }
 
 void DeltaTreeBuilder::reset(DataSet &dataset, const DeltaBoostParam &param) {
@@ -39,8 +39,8 @@ void DeltaTreeBuilder::reset(DataSet &dataset, const DeltaBoostParam &param) {
     get_bin_ids();
     this->param = param;
     this->sp = SyncArray<DeltaSplitPoint>();
-    update_random_feature_rank_(0);
-    update_random_split_nbr_rank_(0);
+    update_random_feature_rank_(param.seed);
+    update_random_split_nbr_rank_(param.seed);
 }
 
 
@@ -73,6 +73,7 @@ void DeltaTreeBuilder::broadcast_potential_node_indices(int node_id) {
 
 vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPair> &gradients,
                                                             std::vector<std::vector<int>>& ins2node_indices_in_tree,
+                                                            const vector<bool>& is_subset_indices_in_tree,
                                                             bool update_y_predict) {
     vector<DeltaTree> trees(param.tree_per_rounds);
     TIMED_FUNC(timerObj);
@@ -81,19 +82,33 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
         DeltaTree &tree_k = trees[k];
         float_type gain_coef = 0.;
 
+        tree.g_bin_width = g_bin_width;
+        tree.h_bin_width = h_bin_width;
+
         this->ins2node_id.resize(n_instances);
-        this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_instances));
+        this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_all_instances));
         this->tree.init_CPU(this->gradients, param, gain_coef);
 //        delta_gain_eps = param.delta_gain_eps * gain_coef;
         LOG(INFO) << "delta_gain_eps = " << delta_gain_eps;
         num_nodes_per_level.clear();
         ins2node_indices.clear();
 
-        // initialize ins2node_indices
-        for (int i = 0; i < n_instances; ++i) {
-            vector<int> vec_i = {0};    // all the instances belong to root node 0
-            ins2node_indices.emplace_back(vec_i);
+        if (param.hash_sampling_round > 1) {
+            // initialize ins2node_indices
+            for (int i = 0; i < n_all_instances; ++i) {
+                if (is_subset_indices_in_tree[i]) {
+                    ins2node_indices.push_back({0});
+                } else {
+                    ins2node_indices.push_back({-1});
+                }
+            }
+        } else {
+            // initialize ins2node_indices
+            for (int i = 0; i < n_all_instances; ++i) {
+                ins2node_indices.push_back({0});
+            }
         }
+
 
         // root node 0 must be prior node
         is_prior.clear();
@@ -132,6 +147,8 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
         tree_k.nodes = tree.nodes;
         tree_k.dense_bin_id = dense_bin_id.to_vec();
         tree_k.cut = cut;
+        tree_k.g_bin_width = g_bin_width;
+        tree_k.h_bin_width = h_bin_width;
     }
 
     ins2node_indices_in_tree = ins2node_indices;    // return this value for removal
@@ -433,9 +450,9 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         });
 
         bool is_robust = true;
-//        if (best_idx_score_itr->score < param.delta_gain_eps_feature) {
-//            is_robust = false;
-//        }
+        if (best_idx_score_itr->score < param.min_gain) {
+            is_robust = false;
+        }
 
         if (is_robust) {
             // extract best split neighborhood according to best_bid
@@ -569,7 +586,8 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                 TIMED_SCOPE(timerObj, "data partitioning");
                 for (int i = 0; i < n_instances; ++i) {
                     for (int node_id: ins2node_indices[i]) {
-                        nid_to_iid[node_id].emplace_back(i);
+                        if (node_id != -1)
+                            nid_to_iid[node_id].emplace_back(i);
                     }
                 }
             }
@@ -714,6 +732,8 @@ void DeltaTreeBuilder::update_ins2node_indices() {
         for (int iid = 0; iid < n_instances; iid++) {
             for (int j = 0; j < ins2node_indices[iid].size(); ++j) {
                 int nid = ins2node_indices[iid][j];
+                if (nid == -1)  // this instance does not exist in this node
+                    continue;
                 const auto &node = nodes_data[nid];
                 int split_fid = node.split_feature_id;
                 if (node.splittable() && ((split_fid < n_column) && (split_fid >= 0))) {
@@ -793,11 +813,8 @@ void DeltaTreeBuilder::update_ins2node_id() {
                     nodes_data[node.lch_index].n_instances += 1;
 
                     for (int &potential_nid: ins2node_indices[iid]) {
-                        if (!nodes_data[potential_nid].is_leaf) {
+                        if (potential_nid >= 0 && !nodes_data[potential_nid].is_leaf) {
                             potential_nid = nodes_data[potential_nid].lch_index;
-                        }
-                        if (potential_nid < 0) {
-                            LOG(FATAL);
                         }
                     }
                 } else {
@@ -807,11 +824,8 @@ void DeltaTreeBuilder::update_ins2node_id() {
                     nodes_data[node.rch_index].n_instances += 1;
 
                     for (int &potential_nid: ins2node_indices[iid]) {
-                        if (!nodes_data[potential_nid].is_leaf) {
+                        if (potential_nid >= 0 && !nodes_data[potential_nid].is_leaf) {
                             potential_nid = nodes_data[potential_nid].rch_index;
-                        }
-                        if (potential_nid < 0) {
-                            LOG(FATAL);
                         }
                     }
                 }
@@ -867,8 +881,8 @@ void DeltaTreeBuilder::update_tree() {
             lch.sum_gh_pair = node.sum_gh_pair - rch.sum_gh_pair;
             lch.sum_g2 = node.sum_g2 - rch.sum_g2;
             //  LOG(INFO) << "LCH" << lch.sum_gh_pair;
-            lch.calc_weight_(lambda);
-            rch.calc_weight_(lambda);
+            lch.calc_weight_(lambda, g_bin_width, h_bin_width);
+            rch.calc_weight_(lambda, g_bin_width, h_bin_width);
         } else {
             //set leaf
             if (sp_data[i].nid == -1) continue;
@@ -910,14 +924,14 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
     int n_split = n_nodes_in_level * n_bins;
     const int nid_offset = num_nodes_per_level.empty() ? 0 :
                            std::accumulate(num_nodes_per_level.begin(), num_nodes_per_level.end(), 0);
-    auto compute_gain = []__host__(GHPair parent, GHPair lch, GHPair rch, float_type min_child_weight,
-                                   float_type lambda) -> float_type {
-        if (lch.h >= min_child_weight && rch.h >= min_child_weight)
-            return (lch.g * lch.g) / (lch.h + lambda) + (rch.g * rch.g) / (rch.h + lambda) -
-                   (parent.g * parent.g) / (parent.h + lambda);
-        else
-            return 0;
-    };
+//    auto compute_gain = []__host__(GHPair parent, GHPair lch, GHPair rch, float_type min_child_weight,
+//                                   float_type lambda) -> float_type {
+//        if (lch.h >= min_child_weight && rch.h >= min_child_weight)
+//            return (lch.g * lch.g) / (lch.h + lambda) + (rch.g * rch.g) / (rch.h + lambda) -
+//                   (parent.g * parent.g) / (parent.h + lambda);
+//        else
+//            return 0;
+//    };
     const auto &nodes_data = tree.nodes;
     const GHPair *gh_prefix_sum_data = hist.host_data();
     const auto missing_gh_data = missing_gh.host_data();
@@ -969,7 +983,7 @@ DeltaTreeBuilder::compute_gain_in_a_level(vector<DeltaTree::DeltaGain> &gain, in
     }
 }
 
-
+[[deprecated]]
 void DeltaTreeBuilder::get_potential_split_points(const vector<vector<gain_pair>> &candidate_idx_gain,
                                                   const int n_nodes_in_level,
                                                   const int *hist_fid, SyncArray<GHPair> &missing_gh,
@@ -1328,7 +1342,7 @@ void DeltaTreeBuilder::update_indices_in_split_nbr(vector<DeltaTree::SplitNeighb
             const auto &all_marginal_indices = cut.indices_in_hist[split_nbr.fid][bid - feature_offset];
             // copy all_marginal_indices in this node to split_nbr.marginal_indices[j]
             for (int id: all_marginal_indices) {
-                if (ins2node_indices[id][0] == node_id) {
+                if (ins2node_indices[id][0] == node_id) {   // node_id > 0, thus ins2node_indices[id][0] > 0
                     split_nbr.marginal_indices[j].insert(id);
                 }
             }

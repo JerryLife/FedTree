@@ -278,8 +278,8 @@ struct DeltaTree : public Tree {
 
         [[nodiscard]] float_type cal_gain_value(float_type min_child_weight = 1) const {
             if (lch_h >= min_child_weight && rch_h >= min_child_weight) {
-                return std::max((float_type)0, (lch_g * lch_g) / (lch_h + lambda) + (rch_g * rch_g) / (rch_h + lambda) -
-                                     (self_g * self_g) / (self_h + lambda));
+                return std::max((float_type)0, lch_g / (lch_h + lambda) * lch_g + rch_g / (rch_h + lambda) * rch_g -
+                                     self_g / (self_h + lambda) * self_g);      // prevent overflow
             } else {
                 return 0;
             }
@@ -570,6 +570,11 @@ struct DeltaTree : public Tree {
 
         inline bool is_robust() const { return potential_nodes_indices.size() <= 1; }
 
+        HOST_DEVICE void calc_weight_(float_type lambda, float_type g_bin_width, float_type h_bin_width) {
+            assert(g_bin_width > 0 && h_bin_width > 0);
+            base_weight = -sum_gh_pair.g * g_bin_width / (sum_gh_pair.h * h_bin_width + lambda);
+        }
+
 //        inline bool is_prior() const { return potential_nodes_indices[0] == final_id; }
 
 //        size_t to_chars(char* bytes) {
@@ -668,6 +673,8 @@ struct DeltaTree : public Tree {
         final_depth = other.final_depth;
         dense_bin_id = other.dense_bin_id;
         cut = other.cut;
+        g_bin_width = other.g_bin_width;
+        h_bin_width = other.h_bin_width;
     }
 
     DeltaTree &operator=(const DeltaTree &tree) {
@@ -676,6 +683,8 @@ struct DeltaTree : public Tree {
         final_depth = tree.final_depth;
         dense_bin_id = tree.dense_bin_id;
         cut = tree.cut;
+        g_bin_width = tree.g_bin_width;
+        h_bin_width = tree.h_bin_width;
         return *this;
     }
 
@@ -700,6 +709,8 @@ struct DeltaTree : public Tree {
     vector<int> dense_bin_id;
 //    RobustHistCut cut;
     DeltaCut cut;
+    float_type g_bin_width;
+    float_type h_bin_width;
 
 private:
     friend class boost::serialization::access;

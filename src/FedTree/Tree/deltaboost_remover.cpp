@@ -6,6 +6,7 @@
 
 #include "FedTree/Tree/deltaboost_remover.h"
 
+[[deprecated("Prediction does not work for subsets")]]
 void DeltaBoostRemover::get_info_by_prediction(const vector<vector<GHPair>> &gh_pairs_per_sample) {
 
     auto& trees = *trees_ptr;
@@ -132,4 +133,25 @@ void DeltaBoostRemover::get_info_by_prediction(const vector<vector<GHPair>> &gh_
     }
 
 
+}
+
+void DeltaBoostRemover::get_info(const vector<vector<GHPair>> &gh_pairs_per_sample,
+                                 const vector<vector<vector<int>>> &ins2node_indices_per_tree) {
+    auto& trees = *trees_ptr;
+    size_t num_iter = param.n_trees == -1 ? trees.size() : param.n_used_trees;
+
+    // initialize gh_pairs and ins2node_indices
+    for (int iter = 0; iter < num_iter; iter++) {
+        tree_removers[iter].gh_pairs.resize(n_all_instances);
+        tree_removers[iter].ins2node_indices.resize(n_all_instances);
+    }
+
+#pragma omp parallel for
+    for (int iid = 0; iid < n_all_instances; ++iid) {
+        for (int iter = 0; iter < num_iter; iter++) {
+            tree_removers[iter].gh_pairs[iid] = gh_pairs_per_sample[iter][iid];
+            tree_removers[iter].ins2node_indices[iid] = ins2node_indices_per_tree[iter][iid];
+        }
+    }
+    LOG(DEBUG) << "Getting info done.";
 }

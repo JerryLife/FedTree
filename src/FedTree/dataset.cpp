@@ -1054,7 +1054,7 @@ void DataSet::update_sampling_by_hashing_(int total_sampling_round) {
     vector<int> row_category(n_instances());
 #pragma omp parallel for
     for (int i = 0; i < this->n_instances(); ++i) {
-        row_category[i] = static_cast<int>(row_hash[i] % total_sampling_round);
+        row_category[i] = static_cast<int>(std::abs(row_hash[i]) % total_sampling_round);
     }
 
     subset_indices.clear();

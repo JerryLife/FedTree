@@ -8,10 +8,12 @@
 #include "FedTree/Tree/deltaboost.h"
 
 
-void DeltaBooster::init(DataSet &dataSet, const DeltaBoostParam &delta_param, bool get_cut_points) {
+void DeltaBooster::init(DataSet &dataSet, const DeltaBoostParam &delta_param, int n_all_instances, bool get_cut_points) {
     param = delta_param;
 
+    this->n_all_instances = n_all_instances;
     fbuilder = std::make_unique<DeltaTreeBuilder>();
+    fbuilder->n_all_instances = n_all_instances;
     if(get_cut_points)
         fbuilder->init(dataSet, param);
     else {
@@ -60,7 +62,8 @@ void DeltaBooster::reset(DataSet &dataSet, const DeltaBoostParam &delta_param, b
 
 
 void DeltaBooster::boost(vector<vector<DeltaTree>>& boosted_model, vector<vector<GHPair>>& gh_pairs_per_sample,
-                         vector<vector<vector<int>>>& ins2node_indices_per_tree, const vector<int> &row_hash) {
+                         vector<vector<vector<int>>>& ins2node_indices_per_tree, const vector<int> &row_hash,
+                         const vector<bool>& is_subset_indices_in_tree) {
     TIMED_FUNC(timerObj);
 //    std::unique_lock<std::mutex> lock(mtx);
 
@@ -69,19 +72,39 @@ void DeltaBooster::boost(vector<vector<DeltaTree>>& boosted_model, vector<vector
     obj->get_gradient(y, fbuilder->get_y_predict(), original_gh);
 
     // quantize gradients if needed. todo: optimize these per-instance copy
+    float_type g_bin_width = 0, h_bin_width = 0;
     if (param.n_quantize_bins > 0) {
-        gradients.load_from_vec(quantize_gradients(original_gh.to_vec(), param.n_quantize_bins, row_hash));
+        gradients.load_from_vec(quantize_gradients(original_gh.to_vec(), param.n_quantize_bins, row_hash, g_bin_width, h_bin_width));
     } else {
         gradients.copy_from(original_gh);
     }
 
-    gh_pairs_per_sample.push_back(gradients.to_vec());
+    fbuilder->g_bin_width = g_bin_width;
+    fbuilder->h_bin_width = h_bin_width;
+
+    if (param.hash_sampling_round > 1) {
+        // map subset gradients to global gradients, filled with 0 if not in subset
+        vector<GHPair> all_gradients(n_all_instances, GHPair(0, 0));
+        int j = 0;
+        for (int i = 0; i < all_gradients.size(); ++i) {
+            int tree_idx = (int) boosted_model.size();
+            if (is_subset_indices_in_tree[i]) {
+                all_gradients[i] = gradients.host_data()[j++];
+            }
+        }
+        assert(j == gradients.size());      // all the gradients must be copied
+        gh_pairs_per_sample.push_back(all_gradients);
+        gradients.load_from_vec(all_gradients);     // todo: optimize this copy
+    } else {
+        gh_pairs_per_sample.push_back(gradients.to_vec());
+    }
+
     std::vector<std::vector<int>> ins2node_indices;
 //    if (param.bagging) rowSampler.do_bagging(gradients);
 
     PERFORMANCE_CHECKPOINT(timerObj);
     //build new model/approximate function
-    boosted_model.push_back(fbuilder->build_delta_approximate(gradients, ins2node_indices));
+    boosted_model.push_back(fbuilder->build_delta_approximate(gradients, ins2node_indices, is_subset_indices_in_tree));
     PERFORMANCE_CHECKPOINT(timerObj);
     ins2node_indices_per_tree.push_back(ins2node_indices);
 
@@ -93,7 +116,8 @@ void DeltaBooster::boost(vector<vector<DeltaTree>>& boosted_model, vector<vector
     LOG(INFO) << metric->get_name() << " = " << metric->get_score(fbuilder->get_y_predict());
 }
 
-vector<GHPair> DeltaBooster::quantize_gradients(const vector<GHPair> &gh, int n_bins, const vector<int> &row_hash) {
+vector<GHPair> DeltaBooster::quantize_gradients(const vector<GHPair> &gh, int n_bins, const vector<int> &row_hash,
+                                                float_type &g_bin_width, float_type &h_bin_width) {
     /**
      * Randomly quantize gradients and hessians to neighboring grids.
      */
@@ -107,16 +131,16 @@ vector<GHPair> DeltaBooster::quantize_gradients(const vector<GHPair> &gh, int n_
     }
 
     // calculate bin width
-    float_type bin_width_g = max_abs_g / n_bins;
-    float_type bin_width_h = max_abs_h / (n_bins * 2);      // smaller width according to the NeurIPS-22 paper
+    g_bin_width = max_abs_g / n_bins;
+    h_bin_width = max_abs_h / (n_bins * 2);      // smaller width according to the NeurIPS-22 paper
 
 //    std::mt19937 gen1(seed);
 //    std::mt19937 gen2(seed + 1);
 
     // random round gh to integers (DO NOT run in parallel to ensure random sequence is the same)
     for (int i = 0; i < gh.size(); ++i) {
-        quantized_gh[i].g = random_round(gh[i].g / bin_width_g, row_hash[i]) * bin_width_g;
-        quantized_gh[i].h = random_round(gh[i].h / bin_width_h, row_hash[i] + 1) * bin_width_h;
+        quantized_gh[i].g = random_round(gh[i].g / g_bin_width, row_hash[i]);
+        quantized_gh[i].h = random_round(gh[i].h / h_bin_width, row_hash[i] + 1);
     }
 
     auto sum_gh = std::accumulate(quantized_gh.begin(), quantized_gh.end(), GHPair(0, 0));

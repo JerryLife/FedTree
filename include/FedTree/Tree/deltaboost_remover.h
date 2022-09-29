@@ -79,7 +79,10 @@ public:
 
     void get_info_by_prediction(const vector<vector<GHPair>> &gh_pairs_per_sample = DEFAULT_GH_PAIRS_VECTOR);      // get initial info in each deltatree remover
 
+    void get_info(const vector<vector<GHPair>> &gh_pairs_per_sample, const vector<vector<vector<int>>> &ins2node_indices);      // get initial info in each deltatree remover
+
     std::vector<DeltaTreeRemover> tree_removers;
+    int n_all_instances;
 
 private:
     const DataSet* dataSet = nullptr;
