@@ -189,8 +189,8 @@ if __name__ == '__main__':
     dataset = 'cadata'
     n_trees = 10
     ratio = '1e-03'
-    visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_deleted.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
-    visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+    # visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_deleted.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+    # visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
     visualize(f"../cache/{dataset}_tree{n_trees}_retrain_{ratio}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
 
     # visualize(args.path, model_type=args.model_type, output_dir=args.output_dir)

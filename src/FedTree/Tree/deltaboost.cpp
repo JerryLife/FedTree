@@ -92,7 +92,6 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
     DeltaBoostRemover deltaboost_remover;
     if (param.hash_sampling_round > 1) {
         deltaboost_remover = DeltaBoostRemover(&dataset, &trees, is_subset_indices_in_tree, obj.get(), param);
-        deltaboost_remover.n_all_instances = dataset.n_instances();
     } else {
         typedef std::chrono::high_resolution_clock clock;
         auto start_time = clock::now();
@@ -104,12 +103,21 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
         LOG(DEBUG) << "[Removing time] Step 0 (out) = " << duration.count();
     }
 
+    deltaboost_remover.n_all_instances = dataset.n_instances();
+
 //    deltaboost_remover.get_info_by_prediction(gh_pairs_per_sample);
     deltaboost_remover.get_info(gh_pairs_per_sample, ins2node_indices_per_tree);
+//    size_t num_iter = param.n_trees == -1 ? deltaboost_remover.trees_ptr->size() : param.n_used_trees;
+//    for (int iid = 0; iid < deltaboost_remover.n_all_instances; ++iid) {
+//        for (int iter = 0; iter < num_iter; iter++) {
+//            deltaboost_remover.tree_removers[iter].gh_pairs[iid] = gh_pairs_per_sample[iter][iid];
+//            deltaboost_remover.tree_removers[iter].ins2node_indices[iid] = ins2node_indices_per_tree[iter][iid];
+//        }
+//    }
 
     LOG(INFO) << "Deleting...";
 
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < used_trees.size(); ++i) {
 //        DeltaTree &tree = trees[i][0];
 //        vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];

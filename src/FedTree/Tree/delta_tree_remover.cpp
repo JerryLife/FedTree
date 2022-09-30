@@ -48,7 +48,7 @@ void DeltaTreeRemover::remove_sample_by_id(int id) {
 void DeltaTreeRemover::remove_samples_by_indices(const vector<int>& indices) {
     vector<GHPair> gh_pair_vec(indices.size());
 
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < indices.size(); ++i) {
         gh_pair_vec[i] = -gh_pairs[indices[i]];
     }

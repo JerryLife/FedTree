@@ -66,11 +66,11 @@ class Node:
             return False
 
         if self.is_leaf:
-            return np.isclose(self.base_weight, other.base_weight)
+            return np.isclose(self.base_weight, other.base_weight, atol=1e-4)
         else:
             return self.split_feature_id == other.split_feature_id \
-               and self.default_right == other.default_right \
-               and np.isclose(self.split_value, other.split_value)
+               and np.isclose(self.split_value, other.split_value, atol=1e-4) \
+        # and self.default_right == other.default_right \
 
 
 class Tree:
@@ -139,13 +139,13 @@ class GBDT(Evaluative):
         self.lr = lr
         self.trees = trees
 
-    def predict_score(self, X: np.ndarray, n_used_trees=-1):
+    def predict_score(self, X: np.ndarray, n_used_trees=None):
         """
         :param n_used_trees: number of used trees
         :param X: 2D array
         :return: y: 1D array
         """
-        if n_used_trees == -1:
+        if n_used_trees is None:
             n_used_trees = len(self.trees)
 
         scores = np.zeros(X.shape[0])

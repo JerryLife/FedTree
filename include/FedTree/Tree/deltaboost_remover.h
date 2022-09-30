@@ -84,9 +84,9 @@ public:
     std::vector<DeltaTreeRemover> tree_removers;
     int n_all_instances;
 
+    std::vector<std::vector<DeltaTree>>* trees_ptr = nullptr;
 private:
     const DataSet* dataSet = nullptr;
-    std::vector<std::vector<DeltaTree>>* trees_ptr = nullptr;
     ObjectiveFunction *obj = nullptr;
     DeltaBoostParam param;
 };

@@ -1,7 +1,7 @@
-./test_remove_deltaboost.sh 1 cadata 1e-03 10 ;
-./test_remove_deltaboost.sh 1 cadata 1e-02 10 ;
-./test_remove_deltaboost.sh 1 codrna 1e-03 10 ;
-./test_remove_deltaboost.sh 1 codrna 1e-02 10 ;
+#./test_remove_deltaboost.sh 1 cadata 1e-03 10 ;
+#./test_remove_deltaboost.sh 1 cadata 1e-02 10 ;
+#./test_remove_deltaboost.sh 1 codrna 1e-03 10 ;
+#./test_remove_deltaboost.sh 1 codrna 1e-02 10 ;
 ./test_remove_deltaboost.sh 1 gisette 1e-03 10 ;
 ./test_remove_deltaboost.sh 1 gisette 1e-02 10 ;
 ./test_remove_deltaboost.sh 1 covtype 1e-03 10 ;
