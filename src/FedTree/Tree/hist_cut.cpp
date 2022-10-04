@@ -8,6 +8,7 @@
 #include "thrust/unique.h"
 #include "thrust/execution_policy.h"
 #include <numeric>
+#include <chrono>
 
 
 void HistCut::get_cut_points_by_data_range(DataSet &dataset, int max_num_bins, int n_instances){
@@ -655,6 +656,10 @@ void DeltaCut::generate_bin_trees_(DataSet &dataset, int max_bin_size) {
     /**
      * Generate bin trees for all features
      */
+     // record time of this function
+     std::chrono::high_resolution_clock timer;
+     auto start = timer.now();
+
      size_t n_features = dataset.n_features();
      size_t n_instances = dataset.n_instances();
 
@@ -694,6 +699,11 @@ void DeltaCut::generate_bin_trees_(DataSet &dataset, int max_bin_size) {
         }
         bin_tree.trim_empty_bins_();
     }
+
+    // record time of this function
+    auto end = timer.now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    LOG(INFO) << "generate_bin_trees_ time: " << duration.count() << "s";
 }
 
 void DeltaCut::update_cut_points_(const DataSet *dataset) {

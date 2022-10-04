@@ -33,9 +33,14 @@ void GBDT::train(GBDTParam &param, DataSet &dataset) {
 //    partition.homo_partition(dataset, 3, true, subsets, batch_idxs);
 //
     Booster booster;
-    booster.init(dataset, param);
     std::chrono::high_resolution_clock timer;
-    auto start = timer.now();
+    auto start_init = timer.now();
+    booster.init(dataset, param);
+    auto end_init = timer.now();
+    std::chrono::duration<double> init_time = end_init - start_init;
+    LOG(INFO) << "init time: " << init_time.count() << "s";
+
+    auto start_train = timer.now();
     for (int i = 0; i < param.n_trees; ++i) {
         //one iteration may produce multiple trees, depending on objectives
         booster.boost(trees);
@@ -44,10 +49,9 @@ void GBDT::train(GBDTParam &param, DataSet &dataset) {
 //    float_type score = predict_score(param, dataset);
 //    LOG(INFO) << score;
 
-
-    auto stop = timer.now();
-    std::chrono::duration<float> training_time = stop - start;
-    LOG(INFO) << "training time = " << training_time.count();
+    auto stop_train = timer.now();
+    std::chrono::duration<float> training_time = stop_train - start_train;
+    LOG(INFO) << "training time = " << training_time.count() << "s";
     return;
 }
 
