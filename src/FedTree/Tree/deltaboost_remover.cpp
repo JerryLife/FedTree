@@ -53,7 +53,6 @@ void DeltaBoostRemover::get_info_by_prediction(const vector<vector<GHPair>> &gh_
     };
 
     auto get_val_dense = [](const int *row_idx, const float_type *row_val, int idx) -> float_type {
-
         assert(idx == row_idx[idx]);
         return row_val[idx];
     };
@@ -86,19 +85,19 @@ void DeltaBoostRemover::get_info_by_prediction(const vector<vector<GHPair>> &gh_
                 const DeltaTree::DeltaNode *end_leaf;
                 const auto &nodes = trees[iter][t].nodes;
                 std::vector<int> visiting_node_indices = {0};
-                std::vector<bool> prior_flags = {true};
+//                std::vector<bool> prior_flags = {true};
                 while (!visiting_node_indices.empty()) {        // DFS
                     int node_id = visiting_node_indices.back();
                     visiting_node_indices.pop_back();
-                    bool is_prior = prior_flags.back();
-                    prior_flags.pop_back();
+//                    bool is_prior = prior_flags.back();
+//                    prior_flags.pop_back();
                     const auto& node = nodes[node_id];
                     tree_removers[iter].ins2node_indices[iid].push_back(node_id);
 
                     if (node.is_leaf) {
-                        if (is_prior) {
-                            end_leaf = &node;
-                        }
+//                        if (is_prior) {
+//                            end_leaf = &node;
+//                        }
                     } else {
                         // get feature value
                         int fid = node.split_feature_id;
@@ -106,13 +105,13 @@ void DeltaBoostRemover::get_info_by_prediction(const vector<vector<GHPair>> &gh_
 //                    float_type fval = get_val(col_idx, row_val, row_len, fid, &is_missing);
                         float_type fval = get_val_dense(col_idx, row_val, fid);
 
-                        // potential nodes (if any)
-                        if (is_prior){
-                            for (int j = 1; j < node.potential_nodes_indices.size(); ++j) {
-                                visiting_node_indices.push_back(node.potential_nodes_indices[j]);
-                                prior_flags.push_back(false);
-                            }
-                        }
+//                        // potential nodes (if any)
+//                        if (is_prior){
+//                            for (int j = 1; j < node.potential_nodes_indices.size(); ++j) {
+//                                visiting_node_indices.push_back(node.potential_nodes_indices[j]);
+//                                prior_flags.push_back(false);
+//                            }
+//                        }
 
                         // prior node
                         if (!is_missing) {
@@ -123,7 +122,7 @@ void DeltaBoostRemover::get_info_by_prediction(const vector<vector<GHPair>> &gh_
                         } else {
                             visiting_node_indices.push_back(node.lch_index);
                         }
-                        prior_flags.push_back(is_prior);
+//                        prior_flags.push_back(is_prior);
                     }
                 }
                 sum += lr * end_leaf->base_weight;

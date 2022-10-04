@@ -94,7 +94,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 
     LOG(INFO) << "Preparing for deletion";
 
-    std::vector<std::vector<DeltaTree>> used_trees(trees.begin(), trees.begin() + param.n_used_trees);
+//    std::vector<std::vector<DeltaTree>> used_trees(trees.begin(), trees.begin() + param.n_used_trees);
 
     DeltaBoostRemover deltaboost_remover;
     if (param.hash_sampling_round > 1) {
@@ -125,7 +125,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
     LOG(INFO) << "Deleting...";
 
 #pragma omp parallel for
-    for (int i = 0; i < used_trees.size(); ++i) {
+    for (int i = 0; i < param.n_used_trees; ++i) {
 //        DeltaTree &tree = trees[i][0];
 //        vector<GHPair>& gh_pairs = gh_pairs_per_sample[i];
 //        auto &ins2node_indices = ins2node_indices_per_tree[i];
@@ -237,7 +237,7 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
 //    int NUM_BLOCK = (n_instances - 1) / BLOCK_SIZE + 1;
 
     //use sparse format and binary search
-//#pragma omp parallel for  // remove for debug
+#pragma omp parallel for  // remove for debug
     for (int iid = 0; iid < n_instances; iid++) {
         auto get_next_child = [&](const DeltaTree::DeltaNode& node, float_type feaValue) {
             return feaValue < node.split_value ? node.lch_index : node.rch_index;

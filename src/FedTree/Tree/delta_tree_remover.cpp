@@ -70,16 +70,16 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
      * @param delta_gh_pair: gradient and hessian to be subtracted from the tree
      */
 
-    SyncArray<int> csr_col_idx(dataSet->csr_col_idx.size());
-    SyncArray<float_type> csr_val(dataSet->csr_val.size());
-    SyncArray<int> csr_row_ptr(dataSet->csr_row_ptr.size());
-    csr_col_idx.copy_from(dataSet->csr_col_idx.data(), dataSet->csr_col_idx.size());
-    csr_val.copy_from(dataSet->csr_val.data(), dataSet->csr_val.size());
-    csr_row_ptr.copy_from(dataSet->csr_row_ptr.data(), dataSet->csr_row_ptr.size());
+//    SyncArray<int> csr_col_idx(dataSet->csr_col_idx.size());
+//    SyncArray<float_type> csr_val(dataSet->csr_val.size());
+//    SyncArray<int> csr_row_ptr(dataSet->csr_row_ptr.size());
+//    csr_col_idx.copy_from(dataSet->csr_col_idx.data(), dataSet->csr_col_idx.size());
+//    csr_val.copy_from(dataSet->csr_val.data(), dataSet->csr_val.size());
+//    csr_row_ptr.copy_from(dataSet->csr_row_ptr.data(), dataSet->csr_row_ptr.size());
 
-    const auto csr_col_idx_data = csr_col_idx.host_data();
-    const auto csr_val_data = csr_val.host_data();
-    const auto csr_row_ptr_data = csr_row_ptr.host_data();
+    const auto csr_col_idx_data = dataSet->csr_col_idx.data();
+    const auto csr_val_data = dataSet->csr_val.data();
+    const auto csr_row_ptr_data = dataSet->csr_row_ptr.data();
 
     // update the gain of all nodes according to ins2node_indices
     vector<vector<int>> updating_node_indices(indices.size(), vector<int>(0));
@@ -90,8 +90,8 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
 
     auto get_val = [&](int iid, int fid,
                    bool *is_missing) -> float_type {
-        int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
-        float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
+        const int *col_idx = csr_col_idx_data + csr_row_ptr_data[iid];
+        const float_type *row_val = csr_val_data + csr_row_ptr_data[iid];
         int row_len = csr_row_ptr_data[iid + 1] - csr_row_ptr_data[iid];
 
         //binary search to get feature value
@@ -128,7 +128,7 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
             node.gain.self_h += delta_gh_pairs[i].h;
 
             // update missing_gh
-            bool is_missing;
+            bool is_missing = false;
             float_type split_fval = get_val(indices[i], node.split_feature_id, &is_missing);
             if (is_missing) {
                 #pragma omp atomic
@@ -580,15 +580,15 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             duration = end_time_step_2_3 - start_time_step_2_3;
             LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.3 (calculate marginal indices for the next layer) = " << duration.count();
 
-            GHPair left_acc1 = std::accumulate(next_marginal_shift_left.begin(), next_marginal_shift_left.end(), GHPair(), [](auto &a, auto &b){
-                return a + b.second;
-            });
-            GHPair right_acc1 = std::accumulate(next_marginal_shift_right.begin(), next_marginal_shift_right.end(), GHPair(), [](auto &a, auto &b){
-                return a + b.second;
-            });
-            GHPair base_acc1 = std::accumulate(marginal_shifts_in_node.begin(), marginal_shifts_in_node.end(), GHPair(), [](auto &a, auto &b){
-                return a + b.second;
-            });
+//            GHPair left_acc1 = std::accumulate(next_marginal_shift_left.begin(), next_marginal_shift_left.end(), GHPair(), [](auto &a, auto &b){
+//                return a + b.second;
+//            });
+//            GHPair right_acc1 = std::accumulate(next_marginal_shift_right.begin(), next_marginal_shift_right.end(), GHPair(), [](auto &a, auto &b){
+//                return a + b.second;
+//            });
+//            GHPair base_acc1 = std::accumulate(marginal_shifts_in_node.begin(), marginal_shifts_in_node.end(), GHPair(), [](auto &a, auto &b){
+//                return a + b.second;
+//            });
 
             auto start_time_step_2_4 = clock::now();
             // merge these the marginal gh in this node into the next_marginal_gh_left and next_marginal_gh_right
@@ -630,15 +630,15 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
             duration = end_time_step_2_4 - start_time_step_2_4;
             LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.4 (merge marginal indices) = " << duration.count();
 
-            GHPair left_acc2 = std::accumulate(next_marginal_shift_left.begin(), next_marginal_shift_left.end(), GHPair(), [](auto &a, auto &b){
-                return a + b.second;
-            });
-            GHPair right_acc2 = std::accumulate(next_marginal_shift_right.begin(), next_marginal_shift_right.end(), GHPair(), [](auto &a, auto &b){
-                return a + b.second;
-            });
-            GHPair base_acc2 = std::accumulate(marginal_shifts_in_node.begin(), marginal_shifts_in_node.end(), GHPair(), [](auto &a, auto &b){
-                return a + b.second;
-            });
+//            GHPair left_acc2 = std::accumulate(next_marginal_shift_left.begin(), next_marginal_shift_left.end(), GHPair(), [](auto &a, auto &b){
+//                return a + b.second;
+//            });
+//            GHPair right_acc2 = std::accumulate(next_marginal_shift_right.begin(), next_marginal_shift_right.end(), GHPair(), [](auto &a, auto &b){
+//                return a + b.second;
+//            });
+//            GHPair base_acc2 = std::accumulate(marginal_shifts_in_node.begin(), marginal_shifts_in_node.end(), GHPair(), [](auto &a, auto &b){
+//                return a + b.second;
+//            });
 
             // add indices of left and right children
             assert(node.lch_index > 0 && node.rch_index > 0);

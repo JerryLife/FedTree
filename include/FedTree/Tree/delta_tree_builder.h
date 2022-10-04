@@ -95,8 +95,8 @@ public:
     vector<bool> is_prior;       // ID: node index; Value: whether the node is prior node or not.
     float_type delta_gain_eps;   // delta_gain_eps for this tree
 
-    float_type g_bin_width;      // bin width for gradient
-    float_type h_bin_width;      // bin width for hessian
+    float_type g_bin_width = 1.;      // bin width for gradient
+    float_type h_bin_width = 1.;      // bin width for hessian
 
     int n_all_instances;    // number of all instances in the dataset (without subset)
 };

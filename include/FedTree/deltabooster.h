@@ -26,7 +26,7 @@ public:
 
     std::unique_ptr<DeltaTreeBuilder> fbuilder;
     DeltaBoostParam param;
-    int n_all_instances;
+    int n_all_instances = 0;
 };
 
 #endif //FEDTREE_DELTABOOSTER_H

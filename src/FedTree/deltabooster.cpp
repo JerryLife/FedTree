@@ -72,7 +72,7 @@ void DeltaBooster::boost(vector<vector<DeltaTree>>& boosted_model, vector<vector
     obj->get_gradient(y, fbuilder->get_y_predict(), original_gh);
 
     // quantize gradients if needed. todo: optimize these per-instance copy
-    float_type g_bin_width = 0, h_bin_width = 0;
+    float_type g_bin_width = 1., h_bin_width = 1.;
     if (param.n_quantize_bins > 0) {
         gradients.load_from_vec(quantize_gradients(original_gh.to_vec(), param.n_quantize_bins, row_hash, g_bin_width, h_bin_width));
     } else {
