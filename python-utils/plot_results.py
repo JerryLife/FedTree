@@ -1,37 +1,44 @@
 import os.path
 import re
+import pickle
+import logging
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import ujson as json
-import pickle
+from joblib import Parallel, delayed
 
 from GBDT import GBDT
 from train_test_split import load_data
 
+
 class Record(object):
-    
+    hedgecut_path = "/data/junhui/HedgeCut"
+    DART_path = "/data/junhui/DART"
+
     def __init__(self, raw_data, model_type, slice_num):
         self.raw_data = raw_data
         self.model_type = model_type
         self.slice_num = slice_num
-        
+
     @classmethod
     def load_from_file(cls, dataset, version, model_type, slice_num=None):
-        global DART_path
-        global hedgecut_path
+        # global DART_path
+        # global hedgecut_path
         if model_type == "DART":
-            path = DART_path
+            path = cls.DART_path
         elif model_type == "hedgecut":
-            path = hedgecut_path
+            path = cls.hedgecut_path
         else:
-            throw("model_type must be DART or hedgecut")
-        
+            raise ValueError("model_type must be DART or hedgecut")
+
         if model_type == "DART":
             with open(path + f'/{dataset}/{version}/data', 'rb') as f:
                 record = cls(pickle.load(f), model_type, slice_num)
+                logging.debug("Done loading DART")
                 return record
+
         if model_type == "hedgecut":
             with open(path + f'/{dataset}/{version}/data.json') as f:
                 j = json.load(f)
@@ -40,6 +47,7 @@ class Record(object):
                     for k, v in j.items():
                         j[k] = v[:slice_num]
                 record = cls(j, model_type, slice_num)
+                logging.debug("Done loading hedgecut")
                 return record
 
     '''
@@ -47,24 +55,19 @@ class Record(object):
     model_type: from ['origin', 'forget', 'retrain']
     dataset_type: from ['test', 'forget', 'retrain']
     '''
+
     def read(self, model_type, dataset_type):
         if self.model_type == "DART":
             return self.raw_data[f'{dataset_type}_data_df'].filter(regex=(f'{model_type}.*'))
         if self.model_type == "hedgecut":
             return np.array(self.raw_data[f'vs_{model_type}_{dataset_type}'])
-    
+
     def load_2d_array(self, model_type, dataset_type):
+        logging.debug(f"load_2d_array {model_type} {dataset_type}")
         if self.model_type == "DART":
             df = self.read(model_type, dataset_type)
-            columns = df.columns
-            ret = []
-            if self.slice_num is not None:
-                for i in range(self.slice_num):
-                    ret.append(df[columns[i]].values)
-            else:
-                for column in columns:
-                    ret.append(df[column].values)
-            return np.array(ret)
+            df_slice = df.to_numpy()[:, :self.slice_num]
+            return df_slice
         if self.model_type == "hedgecut":
             return self.read(model_type, dataset_type)
 
@@ -242,316 +245,290 @@ def print_model_diff(datasets, n_trees, remove_ratios):
     print(latex_table)
 
 
-class ModelDiff:
-    def __init__(self, dataset, n_trees, remove_ratio, n_rounds, source="DeltaBoost"):
+class ModelDiffSingle:
+    def __init__(self, dataset, n_trees, remove_ratio, n_rounds, keyword, record: Record = None, n_jobs=1,
+                 deltaboost_path="../cache", deltaboost_predict=False):
+        """
+        :param dataset: dataset name
+        :param n_trees: number of trees
+        :param remove_ratio: remove ratio, 1e-02 or 1e-03
+        :param n_rounds: number of random rounds
+        :param keyword: ['original', 'retrain', 'delete']
+        :param record: None means load model and inference on the data, otherwise load results from record
+        :param n_jobs: number of jobs in parallel
+        """
         self.dataset = dataset
         self.n_trees = n_trees
         self.remove_ratio = remove_ratio
         self.n_rounds = n_rounds
+        self.keyword = keyword
+        self.record = record
+        self.n_jobs = n_jobs
+        self.deltaboost_path = deltaboost_path
+        self.deltaboost_predict = deltaboost_predict
 
-        # load data
-        if source == "DeltaBoost":
-            self.remain_X, self.remain_y = load_data(f"../data/{dataset}.train.remain_{remove_ratio}", data_fmt='csv',
-                                                    output_dense=True)
-            self.delete_X, self.delete_y = load_data(f"../data/{dataset}.train.delete_{remove_ratio}", data_fmt='csv',
-                                                    output_dense=True)
-            self.test_X, self.test_y = load_data(f"../data/{dataset}.test", data_fmt='csv', output_dense=True)
+        if record is None:
+            if deltaboost_predict:
+                # load data from prediction
+                logging.debug("Loading deltaboost data")
+                if keyword in ['remain', 'delete']:
+                    self.X, self.y = load_data(f"../data/{dataset}.train.{keyword}_{remove_ratio}",
+                                               data_fmt='csv',
+                                               output_dense=True)
+                elif keyword == 'test':
+                    self.X, self.y = load_data(f"../data/{dataset}.test", data_fmt='csv', output_dense=True)
+                else:
+                    raise ValueError(f"Invalid keyword: {keyword}")
+                self.original_score = np.zeros((n_rounds, self.X.shape[0]))
+                self.retrain_score = np.zeros((n_rounds, self.X.shape[0]))
+                self.deleted_score = np.zeros((n_rounds, self.X.shape[0]))
+                logging.debug("Done loading deltaboost data")
+            else:
+                # get size from example
+                example_output = np.genfromtxt(
+                    f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_0_deltaboost_score_{keyword}.csv",
+                    delimiter=',')
+                n_instance = example_output.shape[0]
 
-            self.original_score_on_remain = np.zeros((n_rounds, self.remain_X.shape[0]))
-            self.retrain_score_on_remain = np.zeros((n_rounds, self.remain_X.shape[0]))
-            self.deleted_score_on_remain = np.zeros((n_rounds, self.remain_X.shape[0]))
-            self.original_score_on_delete = np.zeros((n_rounds, self.delete_X.shape[0]))
-            self.retrain_score_on_delete = np.zeros((n_rounds, self.delete_X.shape[0]))
-            self.deleted_score_on_delete = np.zeros((n_rounds, self.delete_X.shape[0]))
-            self.original_score_on_test = np.zeros((n_rounds, self.test_X.shape[0]))
-            self.retrain_score_on_test = np.zeros((n_rounds, self.test_X.shape[0]))
-            self.deleted_score_on_test = np.zeros((n_rounds, self.test_X.shape[0]))
+                # directly load output of deltaboost from csv
+                logging.debug("Loading deltaboost output.")
+                self.original_score = np.zeros((n_rounds, n_instance))
+                self.retrain_score = np.zeros((n_rounds, n_instance))
+                self.deleted_score = np.zeros((n_rounds, n_instance))
+                self.X, self.y = None, None
+                for i in range(n_rounds):
+                    self.original_score[i, :] = np.genfromtxt(
+                        f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_{i}_deltaboost_score_{keyword}.csv", delimiter=',')[:, 0]
+                    self.retrain_score[i, :] = np.genfromtxt(
+                        f"{deltaboost_path}/{dataset}_tree{n_trees}_retrain_{self.remove_ratio}_{i}_deltaboost_score_{keyword}.csv", delimiter=',')[:, 0]
+                    self.deleted_score[i, :] = np.genfromtxt(
+                        f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_{i}_deleted_score_{keyword}.csv", delimiter=',')[:, 0]
+                logging.debug("Done loading deltaboost output.")
+        else:
+            # read from Record
+            logging.debug("Loading from record")
+            self.X, self.y = None, None
+            self.original_score = record.load_2d_array('origin', 'test')
+            self.retrain_score = record.load_2d_array('retrain', 'test')
+            self.deleted_score = record.load_2d_array('forget', 'test')
+            logging.debug("Done loading from record")
 
-    @classmethod
-    def load_from_record(cls, record, n_trees, dataset, remove_ratio, n_rounds, source):
-        diff = cls(dataset, n_trees, remove_ratio, n_rounds, source)
-        diff.original_score_on_remain = record.load_2d_array('origin', 'retrain')
-        diff.retrain_score_on_remain = record.load_2d_array('retrain', 'retrain')
-        diff.deleted_score_on_remain = record.load_2d_array('forget', 'retrain')
-        diff.original_score_on_delete = record.load_2d_array('origin', 'forget')
-        diff.retrain_score_on_delete = record.load_2d_array('retrain', 'forget')
-        diff.deleted_score_on_delete = record.load_2d_array('forget', 'forget')
-        diff.original_score_on_test = record.load_2d_array('origin', 'test')
-        diff.retrain_score_on_test = record.load_2d_array('retrain', 'test')
-        diff.deleted_score_on_test = record.load_2d_array('forget', 'test')
-        return diff
+    def predict_i(self, i, n_used_trees=None):
+        if self.X is None or self.y is None:
+            raise ValueError("X and y should not be None")
+
+        model_original_path = os.path.join(self.deltaboost_path,
+                                           f"{self.dataset}_tree{self.n_trees}_original_{self.remove_ratio}_{i}_deltaboost.json")
+        model_retrain_path = os.path.join(self.deltaboost_path,
+                                          f"{self.dataset}_tree{self.n_trees}_retrain_{self.remove_ratio}_{i}_deltaboost.json")
+        model_deleted_path = os.path.join(self.deltaboost_path,
+                                          f"{self.dataset}_tree{self.n_trees}_original_{self.remove_ratio}_{i}_deleted.json")
+
+        # load model
+        with open(model_original_path, 'r') as f1, open(model_retrain_path, 'r') as f2, open(model_deleted_path,
+                                                                                             'r') as f3:
+            js1 = json.load(f1)
+            js2 = json.load(f2)
+            js3 = json.load(f3)
+        gbdt_original = GBDT.load_from_json(js1)
+        gbdt_retrain = GBDT.load_from_json(js2)
+        gbdt_deleted = GBDT.load_from_json(js3)
+
+        # predict
+        original_score = gbdt_original.predict_score(self.X, n_used_trees, self.n_jobs)
+        retrain_score = gbdt_retrain.predict_score(self.X, n_used_trees, self.n_jobs)
+        deleted_score = gbdt_deleted.predict_score(self.X, n_used_trees, self.n_jobs)
+        return original_score, retrain_score, deleted_score
 
     def predict_(self, n_used_trees=None):
-        for i in range(self.n_rounds):
-            # define path of ith model
-            model_path = f"../cache/{self.dataset}_tree{self.n_trees}_original_{self.remove_ratio}_{i}_deltaboost.json"
-            model_remain_path = f"../cache/{self.dataset}_tree{self.n_trees}_retrain_{self.remove_ratio}_{i}_deltaboost.json"
-            model_deleted_path = f"../cache/{self.dataset}_tree{self.n_trees}_original_{self.remove_ratio}_{i}_deleted.json"
+        logging.debug("predicting with deltaboost")
+        # execute predict_i in parallel with joblib.Parallel
+        results = Parallel(n_jobs=1)(delayed(self.predict_i)(i, n_used_trees) for i in range(self.n_rounds))
 
-            # load model
-            with open(model_path, 'r') as f1, open(model_remain_path, 'r') as f2, open(model_deleted_path, 'r') as f3:
-                js1 = json.load(f1)
-                js2 = json.load(f2)
-                js3 = json.load(f3)
-            gbdt_original = GBDT.load_from_json(js1)
-            gbdt_retrain = GBDT.load_from_json(js2)
-            gbdt_deleted = GBDT.load_from_json(js3)
+        # convert results to numpy array
+        self.original_score, self.retrain_score, self.deleted_score = np.array(results).transpose((1, 0, 2))
+        logging.debug("Done")
 
-            # predict and append
-            self.original_score_on_remain[i] = gbdt_original.predict_score(self.remain_X, n_used_trees)
-            self.retrain_score_on_remain[i] = gbdt_retrain.predict_score(self.remain_X, n_used_trees)
-            self.deleted_score_on_remain[i] = gbdt_deleted.predict_score(self.remain_X, n_used_trees)
-            self.original_score_on_delete[i] = gbdt_original.predict_score(self.delete_X, n_used_trees)
-            self.retrain_score_on_delete[i] = gbdt_retrain.predict_score(self.delete_X, n_used_trees)
-            self.deleted_score_on_delete[i] = gbdt_deleted.predict_score(self.delete_X, n_used_trees)
-            self.original_score_on_test[i] = gbdt_original.predict_score(self.test_X, n_used_trees)
-            self.retrain_score_on_test[i] = gbdt_retrain.predict_score(self.test_X, n_used_trees)
-            self.deleted_score_on_test[i] = gbdt_deleted.predict_score(self.test_X, n_used_trees)
+    def get_hellinger_distance(self, n_bins=50, return_std=True):
+        logging.debug("Calculating Hellinger distance")
+        min_value = min(np.min(self.original_score), np.min(self.retrain_score), np.min(self.deleted_score))
+        max_value = max(np.max(self.original_score), np.max(self.retrain_score), np.max(self.deleted_score))
 
-    def get_mean_diff(self, n_used_trees=None, average=True):
-        """
-        Get the mean difference between retrain & delete on remain, delete, test;
-        Get the mean difference between original & delete on remain, delete, test;
-        :return:
-        """
-        # mean by rounds
-        retrain_vs_delete_on_remain = np.mean(self.retrain_score_on_remain - self.deleted_score_on_remain, axis=0)
-        original_vs_retrain_on_remain = np.mean(self.original_score_on_remain - self.retrain_score_on_remain, axis=0)
-        retrain_vs_delete_on_delete = np.mean(self.retrain_score_on_delete - self.deleted_score_on_delete, axis=0)
-        original_vs_retrain_on_delete = np.mean(self.original_score_on_delete - self.retrain_score_on_delete, axis=0)
-        retrain_vs_delete_on_test = np.mean(self.retrain_score_on_test - self.deleted_score_on_test, axis=0)
-        original_vs_retrain_on_test = np.mean(self.original_score_on_test - self.retrain_score_on_test, axis=0)
+        n_instances = self.original_score.shape[1]
 
-        if average:
-            # Average of square of the difference by samples
-            retrain_vs_delete_on_remain_avg = np.sqrt(np.mean(retrain_vs_delete_on_remain ** 2))
-            original_vs_retrain_on_remain_avg = np.sqrt(np.mean(original_vs_retrain_on_remain ** 2))
-            retrain_vs_delete_on_delete_avg = np.sqrt(np.mean(retrain_vs_delete_on_delete ** 2))
-            original_vs_retrain_on_delete_avg = np.sqrt(np.mean(original_vs_retrain_on_delete ** 2))
-            retrain_vs_delete_on_test_avg = np.sqrt(np.mean(retrain_vs_delete_on_test ** 2))
-            original_vs_retrain_on_test_avg = np.sqrt(np.mean(original_vs_retrain_on_test ** 2))
+        def get_hist_i(i):
+            """
+            :param i: instance index
+            :return: normalized histogram counts
+            """
+            original_hist_i = np.histogram(self.original_score[:, i], bins=n_bins,
+                                           range=(min_value, max_value), density=True)[0]
+            retrain_hist_i = np.histogram(self.retrain_score[:, i], bins=n_bins,
+                                          range=(min_value, max_value), density=True)[0]
+            deleted_hist_i = np.histogram(self.deleted_score[:, i], bins=n_bins,
+                                          range=(min_value, max_value), density=True)[0]
+            return original_hist_i, retrain_hist_i, deleted_hist_i
 
-            return retrain_vs_delete_on_remain_avg, original_vs_retrain_on_remain_avg, \
-                   retrain_vs_delete_on_delete_avg, original_vs_retrain_on_delete_avg, \
-                   retrain_vs_delete_on_test_avg, original_vs_retrain_on_test_avg
-        else:
-            return retrain_vs_delete_on_remain, original_vs_retrain_on_remain, \
-                   retrain_vs_delete_on_delete, original_vs_retrain_on_delete, \
-                   retrain_vs_delete_on_test, original_vs_retrain_on_test
-
-    def get_hellinger_distance(self, n_used_trees=None, std_needed=False, n_bins=50):
-        # # get the mean difference (scale)
-        # retrain_vs_delete_on_remain_mean, original_vs_retrain_on_remain_mean, \
-        # retrain_vs_delete_on_delete_mean, original_vs_retrain_on_delete_mean, \
-        # retrain_vs_delete_on_test_mean, original_vs_retrain_on_test_mean = self.get_mean_diff(n_used_trees,
-        #                                                                                       average=False)
-
-        # cluster self.retrain_score_on_delete into histogram
-        min_value = min(np.min(self.retrain_score_on_delete), np.min(self.deleted_score_on_delete),
-                        np.min(self.retrain_score_on_remain), np.min(self.deleted_score_on_remain),
-                        np.min(self.retrain_score_on_test), np.min(self.deleted_score_on_test))
-        max_value = max(np.max(self.retrain_score_on_delete), np.max(self.deleted_score_on_delete),
-                        np.max(self.retrain_score_on_remain), np.max(self.deleted_score_on_remain),
-                        np.max(self.retrain_score_on_test), np.max(self.deleted_score_on_test))
-
-        n_instances_remain = len(self.deleted_score_on_remain[0])
-        original_on_remain_hist = np.zeros((n_instances_remain, n_bins))
-        retrain_on_remain_hist = np.zeros((n_instances_remain, n_bins))
-        delete_on_remain_hist = np.zeros((n_instances_remain, n_bins))
-        for i in range(n_instances_remain):
-            original_on_remain_hist[i, :], _ = np.histogram(self.original_score_on_remain[:, i], bins=n_bins,
-                                                            range=(min_value, max_value), density=True)
-            retrain_on_remain_hist[i, :], _ = np.histogram(self.retrain_score_on_remain[:, i], bins=n_bins,
-                                                           range=(min_value, max_value), density=True)
-            delete_on_remain_hist[i, :], _ = np.histogram(self.deleted_score_on_remain[:, i], bins=n_bins,
-                                                           range=(min_value, max_value), density=True)
-
-        n_instances_delete = len(self.original_score_on_delete[0])
-        original_on_delete_hist = np.zeros((n_instances_delete, n_bins))
-        retrain_on_delete_hist = np.zeros((n_instances_delete, n_bins))
-        delete_on_delete_hist = np.zeros((n_instances_delete, n_bins))
-        for i in range(n_instances_delete):
-            original_on_delete_hist[i, :], _ = np.histogram(self.original_score_on_delete[:, i], bins=n_bins,
-                                                            range=(min_value, max_value), density=True)
-            retrain_on_delete_hist[i, :], _ = np.histogram(self.retrain_score_on_delete[:, i], bins=n_bins,
-                                                           range=(min_value, max_value), density=True)
-            delete_on_delete_hist[i, :], _ = np.histogram(self.deleted_score_on_delete[:, i], bins=n_bins,
-                                                           range=(min_value, max_value), density=True)
-
-        n_instances_test = len(self.original_score_on_test[0])
-        original_on_test_hist = np.zeros((n_instances_test, n_bins))
-        retrain_on_test_hist = np.zeros((n_instances_test, n_bins))
-        delete_on_test_hist = np.zeros((n_instances_test, n_bins))
-        for i in range(n_instances_test):
-            original_on_test_hist[i, :], _ = np.histogram(self.original_score_on_test[:, i], bins=n_bins,
-                                                          range=(min_value, max_value), density=True)
-            retrain_on_test_hist[i, :], _ = np.histogram(self.retrain_score_on_test[:, i], bins=n_bins,
-                                                         range=(min_value, max_value), density=True)
-            delete_on_test_hist[i, :], _ = np.histogram(self.deleted_score_on_test[:, i], bins=n_bins,
-                                                         range=(min_value, max_value), density=True)
+        # Get the hist of all instances in parallel by joblib.Parallel
+        results = Parallel(n_jobs=self.n_jobs)(delayed(get_hist_i)(i) for i in range(n_instances))
+        # convert results to numpy array
+        original_hist, retrain_hist, deleted_hist = np.array(results).transpose((1, 0, 2))
 
         # Hellinger distance
         bin_width = (max_value - min_value) / n_bins
-        retrain_vs_delete_on_remain = 1 - bin_width * np.sum(
-            np.sqrt(retrain_on_remain_hist * delete_on_remain_hist), axis=1)
-        original_vs_retrain_on_remain = 1 - bin_width * np.sum(
-            np.sqrt(original_on_remain_hist * retrain_on_remain_hist), axis=1)
-        retrain_vs_delete_on_delete = 1 - bin_width * np.sum(
-            np.sqrt(retrain_on_delete_hist * delete_on_delete_hist), axis=1)
-        original_vs_retrain_on_delete = 1 - bin_width * np.sum(
-            np.sqrt(original_on_delete_hist * retrain_on_delete_hist), axis=1)
-        retrain_vs_delete_on_test = 1 - bin_width * np.sum(
-            np.sqrt(retrain_on_test_hist * delete_on_test_hist), axis=1)
-        original_vs_retrain_on_test = 1 - bin_width * np.sum(
-            np.sqrt(original_on_test_hist * retrain_on_test_hist), axis=1)
+        retrain_vs_deleted = 1 - bin_width * np.sum(np.sqrt(retrain_hist * deleted_hist), axis=1)
+        original_vs_retrain = 1 - bin_width * np.sum(np.sqrt(original_hist * retrain_hist), axis=1)
 
-        if std_needed:
-            (retrain_vs_delete_on_remain_mean, retrain_vs_delete_on_remain_std) = np.mean(retrain_vs_delete_on_remain), np.std(retrain_vs_delete_on_remain)
+        logging.debug("Done")
 
-            (original_vs_retrain_on_remain_mean, original_vs_retrain_on_remain_std) = np.mean(original_vs_retrain_on_remain), np.std(original_vs_retrain_on_remain)
-
-            (retrain_vs_delete_on_delete_mean, retrain_vs_delete_on_delete_std) = np.mean(retrain_vs_delete_on_delete), np.std(retrain_vs_delete_on_delete)
-
-            (original_vs_retrain_on_delete_mean, original_vs_retrain_on_delete_std) = np.mean(original_vs_retrain_on_delete), np.std(original_vs_retrain_on_delete)
-
-            (retrain_vs_delete_on_test_mean, retrain_vs_delete_on_test_std) = np.mean(retrain_vs_delete_on_test), np.std(retrain_vs_delete_on_test)
-
-            (original_vs_retrain_on_test_mean, original_vs_retrain_on_test_std) = np.mean(original_vs_retrain_on_test), np.std(original_vs_retrain_on_test)
-
-            return (retrain_vs_delete_on_remain_mean, retrain_vs_delete_on_remain_std), \
-                    (original_vs_retrain_on_remain_mean, original_vs_retrain_on_remain_std), \
-                    (retrain_vs_delete_on_delete_mean, retrain_vs_delete_on_delete_std), \
-                    (original_vs_retrain_on_delete_mean, original_vs_retrain_on_delete_std), \
-                    (retrain_vs_delete_on_test_mean, retrain_vs_delete_on_test_std), \
-                    (original_vs_retrain_on_test_mean, original_vs_retrain_on_test_std)
-        # get the average of Hellinger distance
-        retrain_vs_delete_on_remain_mean = np.mean(retrain_vs_delete_on_remain)
-        original_vs_retrain_on_remain_mean = np.mean(original_vs_retrain_on_remain)
-        retrain_vs_delete_on_delete_mean = np.mean(retrain_vs_delete_on_delete)
-        original_vs_retrain_on_delete_mean = np.mean(original_vs_retrain_on_delete)
-        retrain_vs_delete_on_test_mean = np.mean(retrain_vs_delete_on_test)
-        original_vs_retrain_on_test_mean = np.mean(original_vs_retrain_on_test)
-
-        return retrain_vs_delete_on_remain_mean, original_vs_retrain_on_remain_mean, \
-                retrain_vs_delete_on_delete_mean, original_vs_retrain_on_delete_mean, \
-                retrain_vs_delete_on_test_mean, original_vs_retrain_on_test_mean
-
-    def print_mean_diff(self, n_used_trees=None):
-        retrain_vs_delete_on_remain_avg, original_vs_retrain_on_remain_avg, \
-        retrain_vs_delete_on_delete_avg, original_vs_retrain_on_delete_avg, \
-        retrain_vs_delete_on_test_avg, original_vs_retrain_on_test_avg = self.get_mean_diff(n_used_trees)
-        x_labels = [r'$D_f$', r'$D_r$', r'$D_{test}$']
-        df = pd.DataFrame(data={
-            'original vs. retrain': [original_vs_retrain_on_remain_avg, original_vs_retrain_on_delete_avg,
-                                     original_vs_retrain_on_test_avg],
-            'retrain vs. delete': [retrain_vs_delete_on_remain_avg, retrain_vs_delete_on_delete_avg,
-                                   retrain_vs_delete_on_test_avg]
-        }, index=x_labels)
-        df = df.T
-        df['Dataset'] = [f"\\multirow{{2}}{{*}}{{{self.dataset}}}", ""]
-        df.rename(columns=dict(zip(range(len(x_labels)), x_labels)), inplace=True)
-        df.set_index('Dataset', inplace=True)
-        df.style.format(lambda x: f"{x:.6f}")
-        print(df.to_latex(escape=False))
-
-    def get_helliger_distance_df(self, n_used_trees=None, std_needed=False):
-        retrain_vs_delete_on_remain, original_vs_retrain_on_remain, \
-        retrain_vs_delete_on_delete, original_vs_retrain_on_delete, \
-        retrain_vs_delete_on_test, original_vs_retrain_on_test = self.get_hellinger_distance(n_used_trees, std_needed)
-        x_labels = [r'$D_f$', r'$D_r$', r'$D_{test}$']
-        df = pd.DataFrame(data={
-            'original vs. retrain': [original_vs_retrain_on_remain, original_vs_retrain_on_delete,
-                                     original_vs_retrain_on_test],
-            'retrain vs. delete': [retrain_vs_delete_on_remain, retrain_vs_delete_on_delete,
-                                   retrain_vs_delete_on_test]
-        }, index=x_labels)
-        columns = df.columns
-        df = df.T
-        df['Dataset'] = [f"\\multirow{{2}}{{*}}{{{self.dataset}}}", ""]
-        df.rename(columns=dict(zip(range(len(x_labels)), x_labels)), inplace=True)
-        df.set_index('Dataset', inplace=True)
-        df.style.format(lambda x: f"{x[0]:.6f}")
-        df.insert(0, 'Helliger distance', columns)
-        return df
-
-    def print_helliger_distance(self, n_used_trees=None):
-        retrain_vs_delete_on_remain_avg, original_vs_retrain_on_remain_avg, \
-        retrain_vs_delete_on_delete_avg, original_vs_retrain_on_delete_avg, \
-        retrain_vs_delete_on_test_avg, original_vs_retrain_on_test_avg = self.get_hellinger_distance(n_used_trees)
-        x_labels = [r'$D_f$', r'$D_r$', r'$D_{test}$']
-        df = pd.DataFrame(data={
-            'original vs. retrain': [original_vs_retrain_on_remain_avg, original_vs_retrain_on_delete_avg,
-                                     original_vs_retrain_on_test_avg],
-            'retrain vs. delete': [retrain_vs_delete_on_remain_avg, retrain_vs_delete_on_delete_avg,
-                                   retrain_vs_delete_on_test_avg]
-        }, index=x_labels)
-        df = df.T
-        df['Dataset'] = [f"\\multirow{{2}}{{*}}{{{self.dataset}}}", ""]
-        df.rename(columns=dict(zip(range(len(x_labels)), x_labels)), inplace=True)
-        df.set_index('Dataset', inplace=True)
-        df.style.format(lambda x: f"{x:.6f}")
-        print(df.to_latex(escape=False))
+        if return_std:
+            return (np.mean(original_vs_retrain), np.std(original_vs_retrain)),\
+                   (np.mean(retrain_vs_deleted), np.std(retrain_vs_deleted))
+        else:
+            return np.mean(original_vs_retrain), np.mean(retrain_vs_deleted)
 
 
-# if __name__ == '__main__':
-#     datasets = ['codrna', 'cadata', 'covtype', 'gisette', 'msd']
-#     # datasets = ['cadata']
-#     remove_ratios = ['1e-03', '1e-02']
-#     # remove_ratios = ['0.001', '0.01']
-#     # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)
-#     # plot_score_before_after_removal("../out/remove_test/tree30", datasets, remove_ratios)
-#     # plot_score_before_after_removal("../out/remove_test/tree10", datasets, remove_ratios)
-#     # plot_score_before_after_removal("../out/remove_test/tree1", datasets, remove_ratios)
-#     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=50)
-#     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=30)
-#     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=10)
-#     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=1)
-#     # print_model_diff(datasets, 1, remove_ratios)
-#     # print_model_diff(datasets, 10, remove_ratios)
-#     # print_model_diff(datasets, 30, remove_ratios)
-#     # print_model_diff(datasets, 50, remove_ratios)
+class ModelDiff:
+    def __init__(self, datasets, remove_ratios, n_trees, n_rounds, n_used_trees=None, keyword='test', n_jobs=1,
+                 hedgecut_path=None, dart_path=None, deltaboost_path="../cache/", deltaboost_predict=False):
+        """
+        Manage model diff of three methods: DeltaBoost, HedgeCut, DaRE
+        :param datasets: list of dataset names, e.g. cadata
+        :param remove_ratios: list of remove ratios, e.g. 1e-02
+        :param n_trees: number of trees
+        :param n_rounds: number of rounds
+        :param n_used_trees: number of used trees, if None, use all trees
+        :param n_jobs: number of jobs for parallel computing
+        """
+        self.datasets = datasets
+        self.remove_ratios = remove_ratios
+        self.n_trees = n_trees
+        self.n_rounds = n_rounds
+        self.n_used_trees = n_used_trees
+        self.n_jobs = n_jobs
+        self.keyword = keyword
+        self.hedgecut_path = hedgecut_path
+        self.dart_path = dart_path
+        self.deltaboost_path = deltaboost_path
+        self.deltaboost_predict = deltaboost_predict
 
-#     model_diff1 = ModelDiff('cadata', 1, '1e-03', 10)
-#     model_diff1.predict_(1)
-#     df1 = model_diff1.get_helliger_distance_df(1)
-#     model_diff2 = ModelDiff('cadata', 1, '1e-02', 10)
-#     model_diff2.predict_(1)
-#     df2 = model_diff2.get_helliger_distance_df(1)
-#     df_combine = pd.concat([df1, df2.drop(columns=df2.columns[0])], axis=1)
-#     print(df_combine.to_latex(escape=False))
+        self.table_data = np.zeros([len(datasets) * 2, len(remove_ratios) * 3], dtype='S32')
 
-#     model_diff1 = ModelDiff('codrna', 1, '1e-03', 10)
-#     model_diff1.predict_(1)
-#     df1 = model_diff1.get_helliger_distance_df(1)
-#     model_diff2 = ModelDiff('codrna', 1, '1e-02', 10)
-#     model_diff2.predict_(1)
-#     df2 = model_diff2.get_helliger_distance_df(1)
-#     df_combine = pd.concat([df1, df2.drop(columns=df2.columns[0])], axis=1)
-#     print(df_combine.to_latex(escape=False))
-binary_datas = [
-    'codrna',
-    'covtype',
-    'gisette',
-]
+        if hedgecut_path is not None:
+            Record.hedgecut_path = hedgecut_path
+        if dart_path is not None:
+            Record.dart_path = dart_path
 
-DART_path = '/home/junhui/dare_rf/test/models'
-hedgecut_path = '/home/junhui/new/hedgecut/data'
+    def get_raw_data_(self, n_bins=50):
+        """
+        Get raw data of three methods and stored in self.table_data
+        :return:
+        """
+        for i, dataset in enumerate(self.datasets):
+            for j, remove_ratio in enumerate(self.remove_ratios):
+                if dataset in ['codrna', 'gisette', 'covtype', 'higgs']:
+                    logging.info(f"{dataset} {remove_ratio} starts getting raw data.")
+                    # load hedgecut from record
+                    ratio2version = {'1e-03': '0.1%', '1e-02': '1%'}
+                    logging.debug(f"Loading hedgecut record")
+                    record_hedgecut = Record.load_from_file(dataset, ratio2version[remove_ratio], 'hedgecut', self.n_rounds)
+                    logging.debug(f"Done loading, calculating Hellinger distance")
+                    model_diff_hedgecut = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
+                                                          self.keyword, n_jobs=self.n_jobs, record=record_hedgecut)
+                    ovr_hedgecut_data, rvd_hedgecut_data = model_diff_hedgecut.get_hellinger_distance(return_std=True, n_bins=n_bins)
+                    ovr_hedgecut: str = f"{ovr_hedgecut_data[0]:.4f}\\textpm {ovr_hedgecut_data[1]:.4f}"
+                    rvd_hedgecut: str = f"{rvd_hedgecut_data[0]:.4f}\\textpm {rvd_hedgecut_data[1]:.4f}"
+                    logging.info(f"{dataset} {remove_ratio} hedgecut done.")
 
-slice_num = 10
-external_data_source = "hedgecut"
-std_needed = False
+                    # load dart from record
+                    logging.debug(f"Loading dart record")
+                    record_dart = Record.load_from_file(dataset, ratio2version[remove_ratio], 'DART', self.n_rounds)
+                    logging.debug(f"Done loading, calculating Hellinger distance")
+                    model_diff_dart = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
+                                                      self.keyword, n_jobs=self.n_jobs, record=record_dart)
+                    ovr_dart_data, rvd_dart_data = model_diff_dart.get_hellinger_distance(return_std=True, n_bins=n_bins)
+                    ovr_dart: str = f"{ovr_dart_data[0]:.4f}\\textpm {ovr_dart_data[1]:.4f}"
+                    rvd_dart: str = f"{rvd_dart_data[0]:.4f}\\textpm {rvd_dart_data[1]:.4f}"
+                    logging.info(f"{dataset} {remove_ratio} dart done.")
+                else:
+                    ovr_hedgecut = rvd_hedgecut = ovr_dart = rvd_dart = '-'
+                    logging.info(f"{dataset} {remove_ratio} HedgeCut and DART skipped.")
 
-for dataset in binary_datas:
-    print(dataset)
+                # load deltaboost by inference or outputs
+                model_diff_deltaboost = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
+                                                        self.keyword, n_jobs=self.n_jobs,
+                                                        deltaboost_path=self.deltaboost_path,
+                                                        deltaboost_predict=self.deltaboost_predict)
+                if self.deltaboost_predict:
+                    model_diff_deltaboost.predict_(self.n_used_trees)
+                ovr_deltaboost_data, rvd_deltaboost_data = model_diff_deltaboost.get_hellinger_distance(return_std=True,
+                                                                                                        n_bins=n_bins)
+                ovr_deltaboost: str = f"{ovr_deltaboost_data[0]:.4f}\\textpm {ovr_deltaboost_data[1]:.4f}"
+                rvd_deltaboost: str = f"{rvd_deltaboost_data[0]:.4f}\\textpm {rvd_deltaboost_data[1]:.4f}"
 
-    # last argument: slice number, default is None
-    record1 = Record.load_from_file(dataset, '0.1%', external_data_source, slice_num)
-    model_diff1 = ModelDiff.load_from_record(record1, 1, dataset, "0.1%", slice_num, external_data_source)
-    df1 = model_diff1.get_helliger_distance_df(1, std_needed=std_needed)
+                # store data
+                self.table_data[2 * i, 3 * j] = ovr_dart
+                self.table_data[2 * i + 1, 3 * j] = rvd_dart
+                self.table_data[2 * i, 3 * j + 1] = ovr_hedgecut
+                self.table_data[2 * i + 1, 3 * j + 1] = rvd_hedgecut
+                self.table_data[2 * i, 3 * j + 2] = ovr_deltaboost
+                self.table_data[2 * i + 1, 3 * j + 2] = rvd_deltaboost
 
-    record2 = Record.load_from_file(dataset, '1%', external_data_source, slice_num)
-    model_diff2 = ModelDiff.load_from_record(record2, 1, dataset, "1%", slice_num, external_data_source)
-    df2 = model_diff2.get_helliger_distance_df(1, std_needed=std_needed)
+                logging.info(f"{dataset}, {remove_ratio} done.")
 
-    df_combine = pd.concat([df1, df2.drop(columns=df2.columns[0])], axis=1)
-    print(df_combine.to_latex(escape=False))
+    def print_latex(self):
+        dataset_str = ['\\multirow{2}{*}{%s}' % dataset for dataset in self.datasets]
+        table_with_title = np.concatenate([
+            np.array(list(zip(dataset_str, np.array([''] * len(dataset_str))))).reshape(-1, 1),
+            np.array([r"$H^2(M_r,M;\mathbf{D}_{test})$", r"$H^2(M_r,M_d;\mathbf{D}_{test})$"] * len(datasets)).reshape(-1, 1),
+            self.table_data], axis=1)
+        table_df = pd.DataFrame(table_with_title)
+        table_latex = table_df.to_latex(index=False, header=False, escape=False)
+
+        # insert \midrule every two rows
+        lines = table_latex.splitlines()
+        i = len(self.datasets)
+        while i < len(lines):
+            lines.insert(i, r'\midrule')
+            i += len(self.datasets) + 1
+
+        print('\n'.join(lines))
+
+
+if __name__ == '__main__':
+    logging.basicConfig(
+        format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+        datefmt='%Y-%m-%d:%H:%M:%S',
+        level=logging.DEBUG)
+
+    # datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
+    datasets = ['cadata', 'codrna']
+    remove_ratios = ['1e-03', '1e-02']
+    # remove_ratios = ['0.001', '0.01']
+    # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)
+    # plot_score_before_after_removal("../out/remove_test/tree30", datasets, remove_ratios)
+    # plot_score_before_after_removal("../out/remove_test/tree10", datasets, remove_ratios)
+    # plot_score_before_after_removal("../out/remove_test/tree1", datasets, remove_ratios)
+    # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=50)
+    # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=30)
+    # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=10)
+    # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=1)
+    # print_model_diff(datasets, 1, remove_ratios)
+    # print_model_diff(datasets, 10, remove_ratios)
+    # print_model_diff(datasets, 30, remove_ratios)
+    # print_model_diff(datasets, 50, remove_ratios)
+
+    # for dataset in datasets:
+    #     model_diff1 = ModelDiff(f"{dataset}", 1, '1e-03', 100)
+    #     model_diff1.predict_(1)
+    #     df1 = model_diff1.get_helliger_distance_df(1)
+    #     model_diff2 = ModelDiff(f"{dataset}", 1, '1e-02', 100)
+    #     model_diff2.predict_(1)
+    #     df2 = model_diff2.get_helliger_distance_df(1)
+    #     df_combine = pd.concat([df1, df2.drop(columns=df2.columns[0])], axis=1)
+    #     print(df_combine.to_latex(escape=False))
+
+    model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=10, n_jobs=1)
+                           # deltaboost_path="/data/zhaomin/DeltaBoost/cache")
+    model_diff.get_raw_data_(n_bins=20)
+    model_diff.print_latex()

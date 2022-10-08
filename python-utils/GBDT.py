@@ -2,6 +2,7 @@ from typing import List
 import abc
 
 import numpy as np
+from joblib import Parallel, delayed
 
 
 class Evaluative(abc.ABC):
@@ -139,21 +140,30 @@ class GBDT(Evaluative):
         self.lr = lr
         self.trees = trees
 
-    def predict_score(self, X: np.ndarray, n_used_trees=None):
+    def predict_score(self, X: np.ndarray, n_used_trees=None, n_jobs=1):
         """
         :param n_used_trees: number of used trees
         :param X: 2D array
+        :param n_jobs: number of jobs for parallel computing
         :return: y: 1D array
         """
         if n_used_trees is None:
             n_used_trees = len(self.trees)
 
-        scores = np.zeros(X.shape[0])
-        for i, x in enumerate(X):
+        # scores = np.zeros(X.shape[0])
+        def predict_single(x):
             score = 0
             for tree in self.trees[:n_used_trees]:
                 score += tree.predict(x) * self.lr
-            scores[i] = score
+            return score
+
+        scores = Parallel(n_jobs=n_jobs)(delayed(predict_single)(x) for x in X)
+
+        # for i, x in enumerate(X):
+        #     score = 0
+        #     for tree in self.trees[:n_used_trees]:
+        #         score += tree.predict(x) * self.lr
+        #     scores[i] = score
         return scores
 
     def predict(self, X: np.ndarray, task='bin-cls'):
