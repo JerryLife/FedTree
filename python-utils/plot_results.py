@@ -390,7 +390,8 @@ class ModelDiffSingle:
 
 class ModelDiff:
     def __init__(self, datasets, remove_ratios, n_trees, n_rounds, n_used_trees=None, keyword='test', n_jobs=1,
-                 hedgecut_path=None, dart_path=None, deltaboost_path="../cache/", deltaboost_predict=False):
+                 hedgecut_path=None, dart_path=None, deltaboost_path="../cache/", deltaboost_predict=False,
+                 table_cache_path=None, update_hedgecut=None, update_dart=None, update_deltaboost=None):
         """
         Manage model diff of three methods: DeltaBoost, HedgeCut, DaRE
         :param datasets: list of dataset names, e.g. cadata
@@ -399,6 +400,14 @@ class ModelDiff:
         :param n_rounds: number of rounds
         :param n_used_trees: number of used trees, if None, use all trees
         :param n_jobs: number of jobs for parallel computing
+        :param hedgecut_path: path of hedgecut model, if None, use default path
+        :param dart_path: path of dart model, if None, use default path
+        :param deltaboost_path: path of deltaboost model, if None, use default path
+        :param deltaboost_predict: whether to predict deltaboost model
+        :param table_cache_path: path of table cache, if None, load from scratch
+        :param update_hedgecut: whether to update hedgecut data
+        :param update_dart: whether to update dart data
+        :param update_deltaboost: whether to update deltaboost data
         """
         self.datasets = datasets
         self.remove_ratios = remove_ratios
@@ -412,59 +421,87 @@ class ModelDiff:
         self.deltaboost_path = deltaboost_path
         self.deltaboost_predict = deltaboost_predict
 
-        self.table_data = np.zeros([len(datasets) * 2, len(remove_ratios) * 3], dtype='S32')
+        self.table_cache_path = table_cache_path
+        if table_cache_path is None:
+            self.update_dart = self.update_hedgecut = self.update_deltaboost = True     # default to update all
+        else:
+            self.update_dart = self.update_hedgecut = self.update_deltaboost = False    # default to load from cache
+        # overwrite update settings if manually specified
+        self.update_hedgecut = update_hedgecut if update_hedgecut is not None else self.update_hedgecut
+        self.update_dart = update_dart if update_dart is not None else self.update_dart
+        self.update_deltaboost = update_deltaboost if update_deltaboost is not None else self.update_deltaboost
+
+        if table_cache_path is None:
+            self.table_data = np.zeros([len(datasets) * 2, len(remove_ratios) * 3], dtype='S32')
+        else:
+            self.table_data = np.genfromtxt(table_cache_path, dtype='S32', delimiter=',')
 
         if hedgecut_path is not None:
             Record.hedgecut_path = hedgecut_path
         if dart_path is not None:
             Record.dart_path = dart_path
 
-    def get_raw_data_(self, n_bins=50):
+    def get_raw_data_(self, n_bins=50, save_path=None):
         """
         Get raw data of three methods and stored in self.table_data
         :return:
         """
+        ratio2version = {'1e-03': '0.1%', '1e-02': '1%'}
         for i, dataset in enumerate(self.datasets):
             for j, remove_ratio in enumerate(self.remove_ratios):
                 if dataset in ['codrna', 'gisette', 'covtype', 'higgs']:
-                    logging.info(f"{dataset} {remove_ratio} starts getting raw data.")
-                    # load hedgecut from record
-                    ratio2version = {'1e-03': '0.1%', '1e-02': '1%'}
-                    logging.debug(f"Loading hedgecut record")
-                    record_hedgecut = Record.load_from_file(dataset, ratio2version[remove_ratio], 'hedgecut', self.n_rounds)
-                    logging.debug(f"Done loading, calculating Hellinger distance")
-                    model_diff_hedgecut = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
-                                                          self.keyword, n_jobs=self.n_jobs, record=record_hedgecut)
-                    ovr_hedgecut_data, rvd_hedgecut_data = model_diff_hedgecut.get_hellinger_distance(return_std=True, n_bins=n_bins)
-                    ovr_hedgecut: str = f"{ovr_hedgecut_data[0]:.4f}\\textpm {ovr_hedgecut_data[1]:.4f}"
-                    rvd_hedgecut: str = f"{rvd_hedgecut_data[0]:.4f}\\textpm {rvd_hedgecut_data[1]:.4f}"
-                    logging.info(f"{dataset} {remove_ratio} hedgecut done.")
+                    if self.update_dart:
+                        # load dart from record
+                        logging.debug(f"Loading dart record")
+                        record_dart = Record.load_from_file(dataset, ratio2version[remove_ratio], 'DART', self.n_rounds)
+                        logging.debug(f"Done loading, calculating Hellinger distance")
+                        model_diff_dart = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
+                                                          self.keyword, n_jobs=self.n_jobs, record=record_dart)
+                        ovr_dart_data, rvd_dart_data = model_diff_dart.get_hellinger_distance(return_std=True, n_bins=n_bins)
+                        ovr_dart: str = f"{ovr_dart_data[0]:.4f}\\textpm {ovr_dart_data[1]:.4f}"
+                        rvd_dart: str = f"{rvd_dart_data[0]:.4f}\\textpm {rvd_dart_data[1]:.4f}"
+                        logging.info(f"{dataset} {remove_ratio} dart done.")
+                    else:
+                        logging.debug(f"Loading dart results from cache")
+                        ovr_dart = self.table_data[i * 2, j * 3]
+                        rvd_dart = self.table_data[i * 2 + 1, j * 3]
 
-                    # load dart from record
-                    logging.debug(f"Loading dart record")
-                    record_dart = Record.load_from_file(dataset, ratio2version[remove_ratio], 'DART', self.n_rounds)
-                    logging.debug(f"Done loading, calculating Hellinger distance")
-                    model_diff_dart = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
-                                                      self.keyword, n_jobs=self.n_jobs, record=record_dart)
-                    ovr_dart_data, rvd_dart_data = model_diff_dart.get_hellinger_distance(return_std=True, n_bins=n_bins)
-                    ovr_dart: str = f"{ovr_dart_data[0]:.4f}\\textpm {ovr_dart_data[1]:.4f}"
-                    rvd_dart: str = f"{rvd_dart_data[0]:.4f}\\textpm {rvd_dart_data[1]:.4f}"
-                    logging.info(f"{dataset} {remove_ratio} dart done.")
+                    if self.update_hedgecut:
+                        logging.info(f"{dataset} {remove_ratio} starts getting raw data.")
+                        # load hedgecut from record
+                        logging.debug(f"Loading hedgecut record")
+                        record_hedgecut = Record.load_from_file(dataset, ratio2version[remove_ratio], 'hedgecut', self.n_rounds)
+                        logging.debug(f"Done loading, calculating Hellinger distance")
+                        model_diff_hedgecut = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
+                                                              self.keyword, n_jobs=self.n_jobs, record=record_hedgecut)
+                        ovr_hedgecut_data, rvd_hedgecut_data = model_diff_hedgecut.get_hellinger_distance(return_std=True, n_bins=n_bins)
+                        ovr_hedgecut: str = f"{ovr_hedgecut_data[0]:.4f}\\textpm {ovr_hedgecut_data[1]:.4f}"
+                        rvd_hedgecut: str = f"{rvd_hedgecut_data[0]:.4f}\\textpm {rvd_hedgecut_data[1]:.4f}"
+                        logging.info(f"{dataset} {remove_ratio} hedgecut done.")
+                    else:
+                        logging.debug(f"Loading hedgecut results from cache")
+                        ovr_hedgecut = self.table_data[i * 2, j * 3 + 1]
+                        rvd_hedgecut = self.table_data[i * 2 + 1, j * 3 + 1]
                 else:
                     ovr_hedgecut = rvd_hedgecut = ovr_dart = rvd_dart = '-'
                     logging.info(f"{dataset} {remove_ratio} HedgeCut and DART skipped.")
 
-                # load deltaboost by inference or outputs
-                model_diff_deltaboost = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
-                                                        self.keyword, n_jobs=self.n_jobs,
-                                                        deltaboost_path=self.deltaboost_path,
-                                                        deltaboost_predict=self.deltaboost_predict)
-                if self.deltaboost_predict:
-                    model_diff_deltaboost.predict_(self.n_used_trees)
-                ovr_deltaboost_data, rvd_deltaboost_data = model_diff_deltaboost.get_hellinger_distance(return_std=True,
-                                                                                                        n_bins=n_bins)
-                ovr_deltaboost: str = f"{ovr_deltaboost_data[0]:.4f}\\textpm {ovr_deltaboost_data[1]:.4f}"
-                rvd_deltaboost: str = f"{rvd_deltaboost_data[0]:.4f}\\textpm {rvd_deltaboost_data[1]:.4f}"
+                if self.update_deltaboost:
+                    # load deltaboost by inference or outputs
+                    model_diff_deltaboost = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
+                                                            self.keyword, n_jobs=self.n_jobs,
+                                                            deltaboost_path=self.deltaboost_path,
+                                                            deltaboost_predict=self.deltaboost_predict)
+                    if self.deltaboost_predict:
+                        model_diff_deltaboost.predict_(self.n_used_trees)
+                    ovr_deltaboost_data, rvd_deltaboost_data = model_diff_deltaboost.get_hellinger_distance(return_std=True,
+                                                                                                            n_bins=n_bins)
+                    ovr_deltaboost: str = f"{ovr_deltaboost_data[0]:.4f}\\textpm {ovr_deltaboost_data[1]:.4f}"
+                    rvd_deltaboost: str = f"{rvd_deltaboost_data[0]:.4f}\\textpm {rvd_deltaboost_data[1]:.4f}"
+                else:
+                    logging.debug(f"Loading deltaboost results from cache")
+                    ovr_deltaboost = self.table_data[i * 2, j * 3 + 2]
+                    rvd_deltaboost = self.table_data[i * 2 + 1, j * 3 + 2]
 
                 # store data
                 self.table_data[2 * i, 3 * j] = ovr_dart
@@ -476,11 +513,15 @@ class ModelDiff:
 
                 logging.info(f"{dataset}, {remove_ratio} done.")
 
+        if save_path is not None:
+            np.savetxt(save_path, self.table_data, fmt='%s', delimiter=',')
+            logging.info(f"Table saved to {save_path}")
+
     def print_latex(self):
         dataset_str = ['\\multirow{2}{*}{%s}' % dataset for dataset in self.datasets]
         table_with_title = np.concatenate([
             np.array(list(zip(dataset_str, np.array([''] * len(dataset_str))))).reshape(-1, 1),
-            np.array([r"$H^2(M_r,M;\mathbf{D}_{test})$", r"$H^2(M_r,M_d;\mathbf{D}_{test})$"] * len(datasets)).reshape(-1, 1),
+            np.array([r"$H^2(M_r,M;\mathbf{D}_{test})$", r"$H^2(M_r,M_d;\mathbf{D}_{test})$"] * len(self.datasets)).reshape(-1, 1),
             self.table_data], axis=1)
         table_df = pd.DataFrame(table_with_title)
         table_latex = table_df.to_latex(index=False, header=False, escape=False)
@@ -501,8 +542,8 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d:%H:%M:%S',
         level=logging.DEBUG)
 
-    # datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
-    datasets = ['cadata', 'codrna']
+    datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
+    # datasets = ['cadata']
     remove_ratios = ['1e-03', '1e-02']
     # remove_ratios = ['0.001', '0.01']
     # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)
@@ -528,7 +569,8 @@ if __name__ == '__main__':
     #     df_combine = pd.concat([df1, df2.drop(columns=df2.columns[0])], axis=1)
     #     print(df_combine.to_latex(escape=False))
 
-    model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=10, n_jobs=1)
+    model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=100, n_jobs=1)
+                           # table_cache_path="out/table_data_full.csv", update_deltaboost=True)
                            # deltaboost_path="/data/zhaomin/DeltaBoost/cache")
-    model_diff.get_raw_data_(n_bins=20)
+    model_diff.get_raw_data_(n_bins=20, save_path="out/table_data_full.csv")
     model_diff.print_latex()
