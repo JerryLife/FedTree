@@ -618,8 +618,8 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d:%H:%M:%S',
         level=logging.DEBUG)
 
-    # datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
-    datasets = ['gisette']
+    datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
+    # datasets = ['cadata']
     remove_ratios = ['1e-03', '1e-02']
     # remove_ratios = ['0.001', '0.01']
     # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)
@@ -645,8 +645,8 @@ if __name__ == '__main__':
     #     df_combine = pd.concat([df1, df2.drop(columns=df2.columns[0])], axis=1)
     #     print(df_combine.to_latex(escape=False))
 
-    model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=100, n_jobs=1)
-                           # table_cache_path="out/table_data_full.csv", update_deltaboost=True)
+    model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=100, n_jobs=1,
+                           table_cache_path="out/table_data_full.csv", update_deltaboost=False)
                            # deltaboost_path="/data/zhaomin/DeltaBoost/cache")
-    model_diff.get_raw_data_(n_bins=20, save_path="out/table_data_full.csv")
+    model_diff.get_raw_data_(n_bins=20)
     model_diff.print_latex()
