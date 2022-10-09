@@ -16,11 +16,13 @@ from train_test_split import load_data
 class Record(object):
     hedgecut_path = "/data/junhui/HedgeCut"
     DART_path = "/data/junhui/DART"
+    hedgecut_labels_path = "/data/junhui/HedgeCut/labels"
 
-    def __init__(self, raw_data, model_type, slice_num):
+    def __init__(self, raw_data, model_type, slice_num, dataset):
         self.raw_data = raw_data
         self.model_type = model_type
         self.slice_num = slice_num
+        self.dataset = dataset
 
     @classmethod
     def load_from_file(cls, dataset, version, model_type, slice_num=None):
@@ -35,7 +37,7 @@ class Record(object):
 
         if model_type == "DART":
             with open(path + f'/{dataset}/{version}/data', 'rb') as f:
-                record = cls(pickle.load(f), model_type, slice_num)
+                record = cls(pickle.load(f), model_type, slice_num, dataset)
                 logging.debug("Done loading DART")
                 return record
 
@@ -46,10 +48,16 @@ class Record(object):
                 if slice_num is not None:
                     for k, v in j.items():
                         j[k] = v[:slice_num]
-                record = cls(j, model_type, slice_num)
+                record = cls(j, model_type, slice_num, dataset)
                 logging.debug("Done loading hedgecut")
                 return record
 
+    def get_real_labels(self, dataset_type):
+        if self.model_type == "hedgecut":
+            return pd.read_csv(f'{self.hedgecut_labels_path}/{self.dataset}/test.csv', sep = '\t')['label']
+        if self.model_type == "DART":
+            return self.raw_data[f'{dataset_type}_data_df'][['real']]
+    
     '''
     read data as dataframe to calculate the matrix
     model_type: from ['origin', 'forget', 'retrain']
@@ -70,6 +78,33 @@ class Record(object):
             return df_slice
         if self.model_type == "hedgecut":
             return self.read(model_type, dataset_type)
+    def get_real_labels(self, dataset_type):
+        if self.model_type == "hedgecut":
+            return pd.read_csv(f'{self.hedgecut_labels_path}/{self.dataset}/test.csv', sep = '\t')['label']
+        if self.model_type == "DART":
+            return self.raw_data[f'{dataset_type}_data_df'][['real']]
+
+    def get_accuracy(self, models, dataset):
+        if self.model_type == "hedgecut":
+            labels = self.get_real_labels(dataset)
+            ret = []
+            for model in models:
+                arr = self.raw_data[f'vs_{model}_{dataset}']
+                df = pd.concat([pd.Series(i) for i in arr], axis=1).applymap(lambda x: 1.0 if x>0.5 else 0.0)
+                acc = (df.sub(labels, axis=0).abs().sum() / (len(df))).values
+                ret.append((np.mean(acc), np.std(acc)))
+            return ret
+        if self.model_type == "DART":
+            def get_real_labels(self, dataset):
+                return self.raw_data[f'{dataset}_data_df'][['real']]
+            labels = self.get_real_labels(dataset)['real']
+            ret = []
+            for model in models:
+                df = self.read(model, dataset)
+                x = df.applymap(lambda x: 0.0 if x >= 0.5 else 1.0)
+                acc = (x.sub(labels, axis=0).abs().sum() / (len(df))).values
+                ret.append((np.mean(acc), np.std(acc)))
+            return ret
 
 
 def get_scores_from_file(file_path, out_fmt='str') -> tuple[str, list]:
@@ -386,6 +421,12 @@ class ModelDiffSingle:
                    (np.mean(retrain_vs_deleted), np.std(retrain_vs_deleted))
         else:
             return np.mean(original_vs_retrain), np.mean(retrain_vs_deleted)
+    
+    def get_accuracy(self):
+        logging.debug("Loading Accuracy")
+        ret = self.record.get_accuracy(['origin', 'forget', 'retrain'], 'test')
+        logging.debug("Done")
+        return ret
 
 
 class ModelDiff:
@@ -435,6 +476,7 @@ class ModelDiff:
             self.table_data = np.zeros([len(datasets) * 2, len(remove_ratios) * 3], dtype='S32')
         else:
             self.table_data = np.genfromtxt(table_cache_path, dtype='S32', delimiter=',')
+        self.accuracy_table = np.zeros([len(datasets) *3, len(remove_ratios) * 3], dtype='S32')
 
         if hedgecut_path is not None:
             Record.hedgecut_path = hedgecut_path
@@ -460,7 +502,12 @@ class ModelDiff:
                         ovr_dart_data, rvd_dart_data = model_diff_dart.get_hellinger_distance(return_std=True, n_bins=n_bins)
                         ovr_dart: str = f"{ovr_dart_data[0]:.4f}\\textpm {ovr_dart_data[1]:.4f}"
                         rvd_dart: str = f"{rvd_dart_data[0]:.4f}\\textpm {rvd_dart_data[1]:.4f}"
+                        accs_dart = model_diff_dart.get_accuracy()
+                        acc_dart_origin = f"{accs_dart[0][0]:.4f}\\textpm {accs_dart[0][1]:.4f}"
+                        acc_dart_forget = f"{accs_dart[1][0]:.4f}\\textpm {accs_dart[1][1]:.4f}"
+                        acc_dart_retrain = f"{accs_dart[2][0]:.4f}\\textpm {accs_dart[2][1]:.4f}"
                         logging.info(f"{dataset} {remove_ratio} dart done.")
+                        
                     else:
                         logging.debug(f"Loading dart results from cache")
                         ovr_dart = self.table_data[i * 2, j * 3]
@@ -477,6 +524,10 @@ class ModelDiff:
                         ovr_hedgecut_data, rvd_hedgecut_data = model_diff_hedgecut.get_hellinger_distance(return_std=True, n_bins=n_bins)
                         ovr_hedgecut: str = f"{ovr_hedgecut_data[0]:.4f}\\textpm {ovr_hedgecut_data[1]:.4f}"
                         rvd_hedgecut: str = f"{rvd_hedgecut_data[0]:.4f}\\textpm {rvd_hedgecut_data[1]:.4f}"
+                        accs_hedgecut = model_diff_hedgecut.get_accuracy()
+                        acc_hedgecut_origin = f"{accs_hedgecut[0][0]:.4f}\\textpm {accs_hedgecut[0][1]:.4f}"
+                        acc_hedgecut_forget = f"{accs_hedgecut[1][0]:.4f}\\textpm {accs_hedgecut[1][1]:.4f}"
+                        acc_hedgecut_retrain = f"{accs_hedgecut[2][0]:.4f}\\textpm {accs_hedgecut[2][1]:.4f}"
                         logging.info(f"{dataset} {remove_ratio} hedgecut done.")
                     else:
                         logging.debug(f"Loading hedgecut results from cache")
@@ -511,6 +562,13 @@ class ModelDiff:
                 self.table_data[2 * i, 3 * j + 2] = ovr_deltaboost
                 self.table_data[2 * i + 1, 3 * j + 2] = rvd_deltaboost
 
+                self.accuracy_table[3 * i, 3 * j] = acc_dart_origin
+                self.accuracy_table[3 * i + 1, 3 * j] = acc_dart_forget
+                self.accuracy_table[3 * i + 2, 3 * j] = acc_dart_retrain
+                self.accuracy_table[3 * i, 3 * j + 1] = acc_hedgecut_origin
+                self.accuracy_table[3 * i + 1, 3 * j + 1] = acc_hedgecut_forget
+                self.accuracy_table[3 * i + 2, 3 * j + 1] = acc_hedgecut_retrain
+
                 logging.info(f"{dataset}, {remove_ratio} done.")
 
         if save_path is not None:
@@ -528,10 +586,29 @@ class ModelDiff:
 
         # insert \midrule every two rows
         lines = table_latex.splitlines()
-        i = 2 + 2    # first two lines are header
-        while i < len(lines) - 2:
-            lines.insert(i, '\midrule')
-            i += 3
+        i = len(self.datasets)
+        while i < len(lines):
+            lines.insert(i, r'\midrule')
+            i += len(self.datasets) + 1
+
+        print('\n'.join(lines))
+
+        # print accuracy latex table
+        dataset_str = ['\\multirow{3}{*}{%s}' % dataset for dataset in self.datasets]
+        table_with_title = np.concatenate([
+            np.array(list(zip(dataset_str, np.array([''] * len(dataset_str)), np.array([''] * len(dataset_str))))).reshape(-1, 1),
+            np.array([r"$M", r"$M_{d}$", r"$M_{r}$"] * len(self.datasets)).reshape(-1, 1),
+            self.accuracy_table], axis=1)
+        table_df = pd.DataFrame(table_with_title)
+        table_latex = table_df.to_latex(index=False, header=False, escape=False)
+
+        # insert \midrule every two rows
+        lines = table_latex.splitlines()
+        i = len(self.datasets) +
+        while i < len(lines):
+            lines.insert(i, r'\midrule')
+            i += len(self.datasets) + 1
+
         print('\n'.join(lines))
 
 
@@ -541,8 +618,8 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d:%H:%M:%S',
         level=logging.DEBUG)
 
-    datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
-    # datasets = ['cadata']
+    # datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
+    datasets = ['gisette']
     remove_ratios = ['1e-03', '1e-02']
     # remove_ratios = ['0.001', '0.01']
     # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)
@@ -568,8 +645,8 @@ if __name__ == '__main__':
     #     df_combine = pd.concat([df1, df2.drop(columns=df2.columns[0])], axis=1)
     #     print(df_combine.to_latex(escape=False))
 
-    model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=100, n_jobs=1,
-                           table_cache_path="out/table_data_full.csv", update_deltaboost=False)
+    model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=100, n_jobs=1)
+                           # table_cache_path="out/table_data_full.csv", update_deltaboost=True)
                            # deltaboost_path="/data/zhaomin/DeltaBoost/cache")
-    model_diff.get_raw_data_(n_bins=20)
+    model_diff.get_raw_data_(n_bins=20, save_path="out/table_data_full.csv")
     model_diff.print_latex()
