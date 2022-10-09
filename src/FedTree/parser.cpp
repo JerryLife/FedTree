@@ -426,6 +426,19 @@ void Parser::save_model_to_json(const string &model_path, GBDTParam &model_param
     LOG(INFO) << "saved to " << model_path;
 }
 
+void Parser::save_scores_to_csv(const string &score_path, const vector<float_type> &scores,
+                                const vector<float_type> &labels) {
+    ofstream out_score_file(score_path);
+    CHECK_EQ(out_score_file.is_open(), true);
+    assert(scores.size() == labels.size());
+    for (int i = 0; i < scores.size() - 1; ++i) {
+        out_score_file << scores[i] << "," << labels[i] << endl;
+    }
+    out_score_file << scores[scores.size() - 1] << "," << labels[labels.size() - 1];
+    out_score_file.close();
+    LOG(INFO) << "saved to " << score_path;
+}
+
 
 
 

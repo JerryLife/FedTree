@@ -30,6 +30,8 @@ public:
 
     float_type predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet, int num_trees=-1);
 
+    float_type predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet, vector<float_type> &raw_predict, int num_trees=-1);
+
     void predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, SyncArray<float_type> &y_predict,
                                  int num_trees=-1);
 

@@ -50,7 +50,7 @@ int main(int argc, char** argv){
 */
 
     omp_set_dynamic(0);
-    omp_set_num_threads(72);
+    omp_set_num_threads(64);
 
 //centralized training test
     FLParam fl_param;
@@ -261,8 +261,13 @@ int main(int argc, char** argv){
 
 
             LOG(INFO) << "On test dataset";
-            deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
+            vector<float_type> test_scores;
+            deltaboost->predict_score(fl_param.deltaboost_param, test_dataset, test_scores,
                                       fl_param.deltaboost_param.n_used_trees);
+            string test_score_path = string_format("cache/%s_deltaboost_score_test.csv",
+                                                   fl_param.deltaboost_param.save_model_name.c_str());
+            parser.save_scores_to_csv(test_score_path, test_scores, test_dataset.y);
+
             if (test_on_delete) {
                 LOG(INFO) << "On deleted dataset";
                 deltaboost->predict_score(fl_param.deltaboost_param, delete_dataset,
@@ -291,6 +296,10 @@ int main(int argc, char** argv){
                 LOG(INFO) << "On test dataset";
                 deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
                                           fl_param.deltaboost_param.n_used_trees);
+                string deleted_test_score_path = string_format("cache/%s_deleted_score_test.csv",
+                                                       fl_param.deltaboost_param.save_model_name.c_str());
+                parser.save_scores_to_csv(deleted_test_score_path, test_scores, test_dataset.y);
+
                 if (test_on_delete) {
                     LOG(INFO) << "On deleted dataset";
                     deltaboost->predict_score(fl_param.deltaboost_param, delete_dataset,

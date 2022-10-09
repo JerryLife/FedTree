@@ -6,19 +6,25 @@ file(GLOB SRC util/*.c* DP/*.c* FL/*.c* Tree/*.c* Encryption/*.c* objective/*.c*
 list(REMOVE_ITEM SRC "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
 
 
+set(COMMON_INCLUDES ../include)
+include_directories(${COMMON_INCLUDES})
+include_directories(/usr/local/include/)
+include_directories(/usr/include/openssl)
+
+
 #set(DBoost_NO_SYSTEM_PATHS TRUE)
 #set(Boost_NO_BOOST_CMAKE TRUE)
 #set(BOOST_ROOT /home/zhaomin/software/boost)    # required on 3090
 #set(Boost_LIBRARIES /home/zhaomin/software/boost/lib)
 #set(Boost_INCLUDE_DIR /home/zhaomin/software/boost/include)
-set(Boost_INCLUDE_DIR /usr/local/include/boost/)
+set(Boost_INCLUDE_DIR /usr/local/include)
 set(Boost_LIBRARIES /usr/local/lib)
 find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 #find_package(TBB REQUIRED PATHS ${TBB_RELEASE})
 
-find_package(OpenSSL REQUIRED)
 
+find_package(OpenSSL REQUIRED)
 
 find_library(NTL_LIB ntl)
 if(NOT NTL_LIB)

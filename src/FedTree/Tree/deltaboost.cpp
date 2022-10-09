@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "openmp-use-default-none"
 //
 // Created by HUSTW on 7/31/2021.
 //
@@ -122,7 +124,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 //        }
 //    }
 
-    LOG(INFO) << "Deleting...";
+    LOG(INFO) << "Deleting " << param.n_used_trees << "trees";
 
 #pragma omp parallel for
     for (int i = 0; i < param.n_used_trees; ++i) {
@@ -198,6 +200,30 @@ float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const D
     float_type score = metric->get_score(y_predict);
 
 //    LOG(INFO) << metric->get_name().c_str() << " = " << score;
+    LOG(INFO) << "Test: " << metric->get_name() << " = " << score;
+    return score;
+}
+
+float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet, vector<float_type> &raw_predict, int num_trees) {
+    /**
+     * @brief predict scores and return raw predictions in raw_predict
+     */
+    SyncArray<float_type> y_predict;
+    predict_raw(model_param, dataSet, y_predict, num_trees);
+    LOG(DEBUG) << "y_predict:" << y_predict;
+    //convert the aggregated values to labels, probabilities or ranking scores.
+    std::unique_ptr<ObjectiveFunction> obj;
+    obj.reset(ObjectiveFunction::create(model_param.objective));
+    obj->configure(model_param, dataSet);
+
+    //compute metric
+    std::unique_ptr<Metric> metric;
+    metric.reset(Metric::create(obj->default_metric_name()));
+    metric->configure(model_param, dataSet);
+    float_type score = metric->get_score(y_predict);
+
+    raw_predict = y_predict.to_vec();
+
     LOG(INFO) << "Test: " << metric->get_name() << " = " << score;
     return score;
 }
@@ -303,3 +329,5 @@ vector<float_type> DeltaBoost::predict_raw(const DeltaBoostParam &model_param, c
     return y_predict.to_vec();
 }
 
+
+#pragma clang diagnostic pop

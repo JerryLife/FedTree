@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 cmake_policy(SET CMP0042 NEW)
 project(FedTree CXX)
 
-include_directories(/Library/WinNTL-11_5_1/include)
+#include_directories(/Library/WinNTL-11_5_1/include)
 
 if(MSVC)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
@@ -61,11 +61,13 @@ add_definitions("-DELPP_NO_LOG_TO_FILE")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O3")
 
-add_executable(test_um playground.cpp)
+add_executable(test_um predict.cpp)
 # includes
 set(COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
 set(DATASET_DIR ${PROJECT_SOURCE_DIR}/data/)
 configure_file(include/FedTree/config.h.in config.h)
+
+message("COMMON_INCLUDES: ${COMMON_INCLUDES}")
 
 include_directories(${COMMON_INCLUDES})
 include_directories(/usr/local/include/)
@@ -80,6 +82,8 @@ if (BUILD_TESTS)
     message("Building tests")
     add_subdirectory(src/test)
 endif ()
+
+
 
 # configuration file
 

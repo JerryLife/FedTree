@@ -149,5 +149,21 @@ void DeltaBoostRemover::get_info(const vector<vector<GHPair>> &gh_pairs_per_samp
             tree_removers[iter].ins2node_indices[iid] = ins2node_indices_per_tree[iter][iid];
         }
     }
+
+    auto &trees = *trees_ptr;
+    // the original ins2node_indices only contains the leaf node, recursively add the parent nodes to ins2node_indices
+#pragma omp parallel for
+    for (int iid = 0; iid < n_all_instances; ++iid) {
+        for (int iter = 0; iter < num_iter; iter++) {
+            auto &ins2node_indices = tree_removers[iter].ins2node_indices[iid];
+            assert(ins2node_indices.size() == 1);
+            int node_id = ins2node_indices[0];
+            while (node_id != 0) {
+                node_id = trees[iter][0].nodes[node_id].parent_index;
+                ins2node_indices.push_back(node_id);
+            }
+        }
+    }
+
     LOG(DEBUG) << "Getting info done.";
 }
