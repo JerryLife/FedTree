@@ -44,15 +44,38 @@ class Record(object):
                 return record
 
         if model_type == "hedgecut":
-            with open(path + f'/{dataset}/{version}/data.json') as f:
-                j = json.load(f)
-                j = json.loads(j)
-                if slice_num is not None:
-                    for k, v in j.items():
-                        j[k] = v[:slice_num]
-                record = cls(j, model_type, slice_num, dataset)
-                logging.debug("Done loading hedgecut")
+            if dataset == 'susy':
+                slice_num_ = 100 if slice_num is None else slice_num
+                ret = {
+                    'vs_origin_test': [],
+                    'vs_origin_forget': [],
+                    'vs_origin_retrain': [],
+                    'vs_retrain_test': [],
+                    'vs_retrain_forget': [],
+                    'vs_retrain_retrain': [],
+                    'vs_forget_test': [],
+                    'vs_forget_forget': [],
+                    'vs_forget_retrain': []
+                }
+                for i in range(slice_num_):
+                    with open(path + f'/{dataset}/{version}/{i}.json') as f:
+                        j = json.load(f)
+                        j = json.loads(j)
+                        for k, v in j.items():
+                            ret[k].append(v[0])
+                        record = cls(ret, model_type, slice_num)
+                        logging.debug("Done loading hedgecut")
                 return record
+            else:
+                with open(path + f'/{dataset}/{version}/data.json') as f:
+                    j = json.load(f)
+                    j = json.loads(j)
+                    if slice_num is not None:
+                        for k, v in j.items():
+                            j[k] = v[:slice_num]
+                    record = cls(j, model_type, slice_num)
+                    logging.debug("Done loading hedgecut")
+                    return record
 
     def get_real_labels(self, dataset_type):
         if self.model_type == "hedgecut":
@@ -76,15 +99,6 @@ class Record(object):
         logging.debug(f"load_2d_array {model_type} {dataset_type}")
         if self.model_type == "DART":
             df = self.read(model_type, dataset_type)
-            # columns = df.columns
-            # ret = []
-            # if self.slice_num is not None:
-            #     for i in range(self.slice_num):
-            #         ret.append(df[columns[i]].values)
-            # else:
-            #     for column in columns:
-            #         ret.append(df[column].values)
-            # return np.array(ret)
             df_slice = df.to_numpy()[:, :self.slice_num].T
             return df_slice
         if self.model_type == "hedgecut":
@@ -460,6 +474,9 @@ class ModelDiff:
         :param deltaboost_path: path of deltaboost model, if None, use default path
         :param deltaboost_predict: whether to predict deltaboost model
         :param table_cache_path: path of table cache, if None, load from scratch
+        :param update_hedgecut: whether to update hedgecut data
+        :param update_dart: whether to update dart data
+        :param update_deltaboost: whether to update deltaboost data
         """
         self.datasets = datasets
         self.remove_ratios = remove_ratios
