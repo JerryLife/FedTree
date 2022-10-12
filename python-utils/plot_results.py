@@ -40,15 +40,38 @@ class Record(object):
                 return record
 
         if model_type == "hedgecut":
-            with open(path + f'/{dataset}/{version}/data.json') as f:
-                j = json.load(f)
-                j = json.loads(j)
-                if slice_num is not None:
-                    for k, v in j.items():
-                        j[k] = v[:slice_num]
-                record = cls(j, model_type, slice_num)
-                logging.debug("Done loading hedgecut")
+            if dataset == 'susy':
+                slice_num_ = 100 if slice_num is None else slice_num
+                ret = {
+                    'vs_origin_test': [],
+                    'vs_origin_forget': [],
+                    'vs_origin_retrain': [],
+                    'vs_retrain_test': [],
+                    'vs_retrain_forget': [],
+                    'vs_retrain_retrain': [],
+                    'vs_forget_test': [],
+                    'vs_forget_forget': [],
+                    'vs_forget_retrain': []
+                }
+                for i in range(slice_num_):
+                    with open(path + f'/{dataset}/{version}/{i}.json') as f:
+                        j = json.load(f)
+                        j = json.loads(j)
+                        for k, v in j.items():
+                            ret[k].append(v[0])
+                        record = cls(ret, model_type, slice_num)
+                        logging.debug("Done loading hedgecut")
                 return record
+            else:
+                with open(path + f'/{dataset}/{version}/data.json') as f:
+                    j = json.load(f)
+                    j = json.loads(j)
+                    if slice_num is not None:
+                        for k, v in j.items():
+                            j[k] = v[:slice_num]
+                    record = cls(j, model_type, slice_num)
+                    logging.debug("Done loading hedgecut")
+                    return record
 
     '''
     read data as dataframe to calculate the matrix
