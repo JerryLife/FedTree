@@ -294,11 +294,12 @@ int main(int argc, char** argv){
 
                 LOG(INFO) << "Predict after removals";
                 LOG(INFO) << "On test dataset";
-                deltaboost->predict_score(fl_param.deltaboost_param, test_dataset,
+                vector<float_type> deleted_test_scores;
+                deltaboost->predict_score(fl_param.deltaboost_param, test_dataset, deleted_test_scores,
                                           fl_param.deltaboost_param.n_used_trees);
                 string deleted_test_score_path = string_format("cache/%s_deleted_score_test.csv",
                                                        fl_param.deltaboost_param.save_model_name.c_str());
-                parser.save_scores_to_csv(deleted_test_score_path, test_scores, test_dataset.y);
+                parser.save_scores_to_csv(deleted_test_score_path, deleted_test_scores, test_dataset.y);
 
                 if (test_on_delete) {
                     LOG(INFO) << "On deleted dataset";

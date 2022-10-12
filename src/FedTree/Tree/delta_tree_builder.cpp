@@ -89,7 +89,7 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
         this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_all_instances));
         this->tree.init_CPU(this->gradients, param, gain_coef);
 //        delta_gain_eps = param.delta_gain_eps * gain_coef;
-        LOG(INFO) << "delta_gain_eps = " << delta_gain_eps;
+//        LOG(INFO) << "delta_gain_eps = " << delta_gain_eps;
         num_nodes_per_level.clear();
         ins2node_indices.clear();
 

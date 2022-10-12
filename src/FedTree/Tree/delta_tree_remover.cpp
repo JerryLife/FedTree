@@ -48,7 +48,7 @@ void DeltaTreeRemover::remove_sample_by_id(int id) {
 void DeltaTreeRemover::remove_samples_by_indices(const vector<int>& indices) {
     vector<GHPair> gh_pair_vec(indices.size());
 
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < indices.size(); ++i) {
         gh_pair_vec[i] = -gh_pairs[indices[i]];
     }
@@ -83,7 +83,7 @@ void DeltaTreeRemover::adjust_gradients_by_indices(const vector<int>& indices, c
 
     // update the gain of all nodes according to ins2node_indices
     vector<vector<int>> updating_node_indices(indices.size(), vector<int>(0));
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < indices.size(); ++i) {
         updating_node_indices[i] = ins2node_indices[indices[i]];
     }
@@ -460,6 +460,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
                 node.gain.self_h += shift_it->second.h;
 
                 // update left or right gh of split_nbr based on feature_val
+#pragma omp parallel for
                 for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
 #pragma omp atomic
                     node.split_nbr.gain[k].self_g += shift_it->second.g;
@@ -490,7 +491,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 
             auto end_time_step_2_1 = clock::now();
             duration = end_time_step_2_1 - start_time_step_2_1;
-            LOG(DEBUG) << "[Removing time] Level " << depth << " Step 2.1 (adjust gh according to marginal) = " << duration.count();
+            LOG(DEBUG) << "[Removing time] Level " << depth << " Size " << marginal_shifts_in_node.size() << " Step 2.1 (adjust gh according to marginal) = " << duration.count();
 
             if (node.is_leaf) continue;
 

@@ -2,12 +2,14 @@ import os.path
 import re
 import pickle
 import logging
+import warnings
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import ujson as json
 from joblib import Parallel, delayed
+from tqdm import tqdm
 
 from GBDT import GBDT
 from train_test_split import load_data
@@ -54,10 +56,10 @@ class Record(object):
 
     def get_real_labels(self, dataset_type):
         if self.model_type == "hedgecut":
-            return pd.read_csv(f'{self.hedgecut_labels_path}/{self.dataset}/test.csv', sep = '\t')['label']
+            return pd.read_csv(f'{self.hedgecut_labels_path}/{self.dataset}/test.csv', sep='\t')['label']
         if self.model_type == "DART":
             return self.raw_data[f'{dataset_type}_data_df'][['real']]
-    
+
     '''
     read data as dataframe to calculate the matrix
     model_type: from ['origin', 'forget', 'retrain']
@@ -74,15 +76,19 @@ class Record(object):
         logging.debug(f"load_2d_array {model_type} {dataset_type}")
         if self.model_type == "DART":
             df = self.read(model_type, dataset_type)
-            df_slice = df.to_numpy()[:, :self.slice_num]
+            # columns = df.columns
+            # ret = []
+            # if self.slice_num is not None:
+            #     for i in range(self.slice_num):
+            #         ret.append(df[columns[i]].values)
+            # else:
+            #     for column in columns:
+            #         ret.append(df[column].values)
+            # return np.array(ret)
+            df_slice = df.to_numpy()[:, :self.slice_num].T
             return df_slice
         if self.model_type == "hedgecut":
             return self.read(model_type, dataset_type)
-    def get_real_labels(self, dataset_type):
-        if self.model_type == "hedgecut":
-            return pd.read_csv(f'{self.hedgecut_labels_path}/{self.dataset}/test.csv', sep = '\t')['label']
-        if self.model_type == "DART":
-            return self.raw_data[f'{dataset_type}_data_df'][['real']]
 
     def get_accuracy(self, models, dataset):
         if self.model_type == "hedgecut":
@@ -90,13 +96,14 @@ class Record(object):
             ret = []
             for model in models:
                 arr = self.raw_data[f'vs_{model}_{dataset}']
-                df = pd.concat([pd.Series(i) for i in arr], axis=1).applymap(lambda x: 1.0 if x>0.5 else 0.0)
+                df = pd.concat([pd.Series(i) for i in arr], axis=1).applymap(lambda x: 1.0 if x > 0.5 else 0.0)
                 acc = (df.sub(labels, axis=0).abs().sum() / (len(df))).values
                 ret.append((np.mean(acc), np.std(acc)))
             return ret
         if self.model_type == "DART":
             def get_real_labels(self, dataset):
                 return self.raw_data[f'{dataset}_data_df'][['real']]
+
             labels = self.get_real_labels(dataset)['real']
             ret = []
             for model in models:
@@ -331,13 +338,16 @@ class ModelDiffSingle:
                 self.retrain_score = np.zeros((n_rounds, n_instance))
                 self.deleted_score = np.zeros((n_rounds, n_instance))
                 self.X, self.y = None, None
-                for i in range(n_rounds):
+                for i in tqdm(range(n_rounds)):
                     self.original_score[i, :] = np.genfromtxt(
-                        f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_{i}_deltaboost_score_{keyword}.csv", delimiter=',')[:, 0]
+                        f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_{i}_deltaboost_score_{keyword}.csv",
+                        delimiter=',')[:, 0]
                     self.retrain_score[i, :] = np.genfromtxt(
-                        f"{deltaboost_path}/{dataset}_tree{n_trees}_retrain_{self.remove_ratio}_{i}_deltaboost_score_{keyword}.csv", delimiter=',')[:, 0]
+                        f"{deltaboost_path}/{dataset}_tree{n_trees}_retrain_{self.remove_ratio}_{i}_deltaboost_score_{keyword}.csv",
+                        delimiter=',')[:, 0]
                     self.deleted_score[i, :] = np.genfromtxt(
-                        f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_{i}_deleted_score_{keyword}.csv", delimiter=',')[:, 0]
+                        f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_{i}_deleted_score_{keyword}.csv",
+                        delimiter=',')[:, 0]
                 logging.debug("Done loading deltaboost output.")
         else:
             # read from Record
@@ -389,7 +399,11 @@ class ModelDiffSingle:
         min_value = min(np.min(self.original_score), np.min(self.retrain_score), np.min(self.deleted_score))
         max_value = max(np.max(self.original_score), np.max(self.retrain_score), np.max(self.deleted_score))
 
+        n_rounds = self.original_score.shape[0]
         n_instances = self.original_score.shape[1]
+
+        if n_rounds > 1000:
+            warnings.warn("n_rounds is larger than 1000, it may take a long time to calculate Hellinger distance")
 
         def get_hist_i(i):
             """
@@ -417,11 +431,11 @@ class ModelDiffSingle:
         logging.debug("Done")
 
         if return_std:
-            return (np.mean(original_vs_retrain), np.std(original_vs_retrain)),\
+            return (np.mean(original_vs_retrain), np.std(original_vs_retrain)), \
                    (np.mean(retrain_vs_deleted), np.std(retrain_vs_deleted))
         else:
             return np.mean(original_vs_retrain), np.mean(retrain_vs_deleted)
-    
+
     def get_accuracy(self):
         logging.debug("Loading Accuracy")
         ret = self.record.get_accuracy(['origin', 'forget', 'retrain'], 'test')
@@ -431,8 +445,8 @@ class ModelDiffSingle:
 
 class ModelDiff:
     def __init__(self, datasets, remove_ratios, n_trees, n_rounds, n_used_trees=None, keyword='test', n_jobs=1,
-                 hedgecut_path=None, dart_path=None, deltaboost_path="../cache/", deltaboost_predict=False,
-                 table_cache_path=None, update_hedgecut=None, update_dart=None, update_deltaboost=None):
+                 hedgecut_path=None, dart_path=None, deltaboost_path="../cache/", deltaboost_out_path=None,
+                 deltaboost_predict=False, forget_table_cache_path=None, accuracy_table_cache_path=None):
         """
         Manage model diff of three methods: DeltaBoost, HedgeCut, DaRE
         :param datasets: list of dataset names, e.g. cadata
@@ -446,9 +460,6 @@ class ModelDiff:
         :param deltaboost_path: path of deltaboost model, if None, use default path
         :param deltaboost_predict: whether to predict deltaboost model
         :param table_cache_path: path of table cache, if None, load from scratch
-        :param update_hedgecut: whether to update hedgecut data
-        :param update_dart: whether to update dart data
-        :param update_deltaboost: whether to update deltaboost data
         """
         self.datasets = datasets
         self.remove_ratios = remove_ratios
@@ -460,74 +471,92 @@ class ModelDiff:
         self.hedgecut_path = hedgecut_path
         self.dart_path = dart_path
         self.deltaboost_path = deltaboost_path
+        self.deltaboost_out_path = deltaboost_out_path
         self.deltaboost_predict = deltaboost_predict
 
-        self.table_cache_path = table_cache_path
-        if table_cache_path is None:
-            self.update_dart = self.update_hedgecut = self.update_deltaboost = True     # default to update all
+        if forget_table_cache_path is None or os.path.isfile(forget_table_cache_path):
+            self.forget_table_cache_path = forget_table_cache_path
         else:
-            self.update_dart = self.update_hedgecut = self.update_deltaboost = False    # default to load from cache
-        # overwrite update settings if manually specified
-        self.update_hedgecut = update_hedgecut if update_hedgecut is not None else self.update_hedgecut
-        self.update_dart = update_dart if update_dart is not None else self.update_dart
-        self.update_deltaboost = update_deltaboost if update_deltaboost is not None else self.update_deltaboost
+            self.forget_table_cache_path = None
+            warnings.warn("Forget table cache path not found, calculate from scratch")
+        if accuracy_table_cache_path is None or os.path.isfile(accuracy_table_cache_path):
+            self.accuracy_table_cache_path = accuracy_table_cache_path
+        else:
+            self.accuracy_table_cache_path = None
+            warnings.warn("Accuracy table cache path not found, calculate from scratch")
 
-        if table_cache_path is None:
-            self.table_data = np.zeros([len(datasets) * 2, len(remove_ratios) * 3], dtype='S32')
+        if forget_table_cache_path is None:
+            self.table_data = np.zeros([len(datasets) * 2, len(remove_ratios) * 3], dtype='U32')
         else:
-            self.table_data = np.genfromtxt(table_cache_path, dtype='S32', delimiter=',')
-        self.accuracy_table = np.zeros([len(datasets) *3, len(remove_ratios) * 3], dtype='S32')
+            self.table_data = np.genfromtxt(forget_table_cache_path, dtype='U32', delimiter=',')
+
+        if accuracy_table_cache_path is None:
+            self.accuracy_table = np.zeros([len(datasets) * 3, len(remove_ratios) * 3], dtype='U32')
+        else:
+            self.accuracy_table = np.genfromtxt(accuracy_table_cache_path, dtype='U32', delimiter=',')
 
         if hedgecut_path is not None:
             Record.hedgecut_path = hedgecut_path
         if dart_path is not None:
             Record.dart_path = dart_path
 
-    def get_raw_data_(self, n_bins=50, save_path=None):
+    def get_raw_data_forget_(self, n_bins=50, save_path=None, update_hedgecut=None, update_dart=None, update_deltaboost=None,
+                             update_datasets=None):
         """
         Get raw data of three methods and stored in self.table_data
+        :param n_bins: number of bins for histogram
+        :param save_path: path to save forget table
+        :param update_hedgecut: whether to update hedgecut model
+        :param update_dart: whether to update dart model
+        :param update_deltaboost: whether to update deltaboost model
+        :param update_datasets: the list of datasets to update
         :return:
         """
+        # initialize parameters
+        if self.forget_table_cache_path is None:
+            _update_dart = _update_hedgecut = _update_deltaboost = True     # default update all
+        else:
+            _update_dart = _update_hedgecut = _update_deltaboost = False    # default to load from cache
+        # overwrite parameters if specified
+        _update_dart = _update_dart if update_dart is None else update_dart
+        _update_hedgecut = _update_hedgecut if update_hedgecut is None else update_hedgecut
+        _update_deltaboost = _update_deltaboost if update_deltaboost is None else update_deltaboost
+
         ratio2version = {'1e-03': '0.1%', '1e-02': '1%'}
         for i, dataset in enumerate(self.datasets):
             for j, remove_ratio in enumerate(self.remove_ratios):
                 if dataset in ['codrna', 'gisette', 'covtype', 'higgs']:
-                    if self.update_dart:
+                    if _update_dart and (update_datasets is None or dataset in update_datasets):
                         # load dart from record
                         logging.debug(f"Loading dart record")
                         record_dart = Record.load_from_file(dataset, ratio2version[remove_ratio], 'DART', self.n_rounds)
                         logging.debug(f"Done loading, calculating Hellinger distance")
                         model_diff_dart = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
                                                           self.keyword, n_jobs=self.n_jobs, record=record_dart)
-                        ovr_dart_data, rvd_dart_data = model_diff_dart.get_hellinger_distance(return_std=True, n_bins=n_bins)
+                        ovr_dart_data, rvd_dart_data = model_diff_dart.get_hellinger_distance(return_std=True,
+                                                                                              n_bins=n_bins)
                         ovr_dart: str = f"{ovr_dart_data[0]:.4f}\\textpm {ovr_dart_data[1]:.4f}"
                         rvd_dart: str = f"{rvd_dart_data[0]:.4f}\\textpm {rvd_dart_data[1]:.4f}"
-                        accs_dart = model_diff_dart.get_accuracy()
-                        acc_dart_origin = f"{accs_dart[0][0]:.4f}\\textpm {accs_dart[0][1]:.4f}"
-                        acc_dart_forget = f"{accs_dart[1][0]:.4f}\\textpm {accs_dart[1][1]:.4f}"
-                        acc_dart_retrain = f"{accs_dart[2][0]:.4f}\\textpm {accs_dart[2][1]:.4f}"
                         logging.info(f"{dataset} {remove_ratio} dart done.")
-                        
+
                     else:
                         logging.debug(f"Loading dart results from cache")
                         ovr_dart = self.table_data[i * 2, j * 3]
                         rvd_dart = self.table_data[i * 2 + 1, j * 3]
 
-                    if self.update_hedgecut:
+                    if _update_hedgecut and (update_datasets is None or dataset in update_datasets):
                         logging.info(f"{dataset} {remove_ratio} starts getting raw data.")
                         # load hedgecut from record
                         logging.debug(f"Loading hedgecut record")
-                        record_hedgecut = Record.load_from_file(dataset, ratio2version[remove_ratio], 'hedgecut', self.n_rounds)
+                        record_hedgecut = Record.load_from_file(dataset, ratio2version[remove_ratio], 'hedgecut',
+                                                                self.n_rounds)
                         logging.debug(f"Done loading, calculating Hellinger distance")
                         model_diff_hedgecut = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
                                                               self.keyword, n_jobs=self.n_jobs, record=record_hedgecut)
-                        ovr_hedgecut_data, rvd_hedgecut_data = model_diff_hedgecut.get_hellinger_distance(return_std=True, n_bins=n_bins)
+                        ovr_hedgecut_data, rvd_hedgecut_data = model_diff_hedgecut.get_hellinger_distance(
+                            return_std=True, n_bins=n_bins)
                         ovr_hedgecut: str = f"{ovr_hedgecut_data[0]:.4f}\\textpm {ovr_hedgecut_data[1]:.4f}"
                         rvd_hedgecut: str = f"{rvd_hedgecut_data[0]:.4f}\\textpm {rvd_hedgecut_data[1]:.4f}"
-                        accs_hedgecut = model_diff_hedgecut.get_accuracy()
-                        acc_hedgecut_origin = f"{accs_hedgecut[0][0]:.4f}\\textpm {accs_hedgecut[0][1]:.4f}"
-                        acc_hedgecut_forget = f"{accs_hedgecut[1][0]:.4f}\\textpm {accs_hedgecut[1][1]:.4f}"
-                        acc_hedgecut_retrain = f"{accs_hedgecut[2][0]:.4f}\\textpm {accs_hedgecut[2][1]:.4f}"
                         logging.info(f"{dataset} {remove_ratio} hedgecut done.")
                     else:
                         logging.debug(f"Loading hedgecut results from cache")
@@ -537,7 +566,7 @@ class ModelDiff:
                     ovr_hedgecut = rvd_hedgecut = ovr_dart = rvd_dart = '-'
                     logging.info(f"{dataset} {remove_ratio} HedgeCut and DART skipped.")
 
-                if self.update_deltaboost:
+                if _update_deltaboost and (update_datasets is None or dataset in update_datasets):
                     # load deltaboost by inference or outputs
                     model_diff_deltaboost = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
                                                             self.keyword, n_jobs=self.n_jobs,
@@ -545,8 +574,9 @@ class ModelDiff:
                                                             deltaboost_predict=self.deltaboost_predict)
                     if self.deltaboost_predict:
                         model_diff_deltaboost.predict_(self.n_used_trees)
-                    ovr_deltaboost_data, rvd_deltaboost_data = model_diff_deltaboost.get_hellinger_distance(return_std=True,
-                                                                                                            n_bins=n_bins)
+                    ovr_deltaboost_data, rvd_deltaboost_data = model_diff_deltaboost.get_hellinger_distance(
+                        return_std=True,
+                        n_bins=n_bins)
                     ovr_deltaboost: str = f"{ovr_deltaboost_data[0]:.4f}\\textpm {ovr_deltaboost_data[1]:.4f}"
                     rvd_deltaboost: str = f"{rvd_deltaboost_data[0]:.4f}\\textpm {rvd_deltaboost_data[1]:.4f}"
                 else:
@@ -562,53 +592,154 @@ class ModelDiff:
                 self.table_data[2 * i, 3 * j + 2] = ovr_deltaboost
                 self.table_data[2 * i + 1, 3 * j + 2] = rvd_deltaboost
 
-                self.accuracy_table[3 * i, 3 * j] = acc_dart_origin
-                self.accuracy_table[3 * i + 1, 3 * j] = acc_dart_forget
-                self.accuracy_table[3 * i + 2, 3 * j] = acc_dart_retrain
-                self.accuracy_table[3 * i, 3 * j + 1] = acc_hedgecut_origin
-                self.accuracy_table[3 * i + 1, 3 * j + 1] = acc_hedgecut_forget
-                self.accuracy_table[3 * i + 2, 3 * j + 1] = acc_hedgecut_retrain
-
                 logging.info(f"{dataset}, {remove_ratio} done.")
 
         if save_path is not None:
             np.savetxt(save_path, self.table_data, fmt='%s', delimiter=',')
             logging.info(f"Table saved to {save_path}")
 
-    def print_latex(self):
+    def get_raw_data_accuracy_(self, save_path=None, update_hedgecut=None, update_dart=None, update_deltaboost=None,
+                               update_datasets=None):
+        """
+        Get raw accuracy data of three methods and stored in self.table_data
+        :return:
+        """
+        # initialize parameters
+        if self.accuracy_table_cache_path is None:
+            _update_dart = _update_hedgecut = _update_deltaboost = True  # default update all
+        else:
+            _update_dart = _update_hedgecut = _update_deltaboost = False  # default to load from cache
+        # overwrite parameters if specified
+        _update_dart = _update_dart if update_dart is None else update_dart
+        _update_hedgecut = _update_hedgecut if update_hedgecut is None else update_hedgecut
+        _update_deltaboost = _update_deltaboost if update_deltaboost is None else update_deltaboost
+
+        ratio2version = {'1e-03': '0.1%', '1e-02': '1%'}
+        for i, dataset in enumerate(self.datasets):
+            for j, remove_ratio in enumerate(self.remove_ratios):
+                if dataset in ['codrna', 'gisette', 'covtype', 'higgs']:
+                    if _update_dart and (update_datasets is None or dataset in update_datasets):
+                        # load dart from record
+                        logging.debug(f"Loading dart record")
+                        record_dart = Record.load_from_file(dataset, ratio2version[remove_ratio], 'DART', self.n_rounds)
+                        logging.debug(f"Done loading, calculating Hellinger distance")
+                        model_diff_dart = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
+                                                          self.keyword, n_jobs=self.n_jobs, record=record_dart)
+                        accs_dart = model_diff_dart.get_accuracy()
+                        acc_dart_origin = f"{accs_dart[0][0]:.4f}\\textpm {accs_dart[0][1]:.4f}"
+                        acc_dart_forget = f"{accs_dart[1][0]:.4f}\\textpm {accs_dart[1][1]:.4f}"
+                        acc_dart_retrain = f"{accs_dart[2][0]:.4f}\\textpm {accs_dart[2][1]:.4f}"
+                        logging.info(f"{dataset} {remove_ratio} dart done.")
+
+                    else:
+                        logging.debug(f"Loading dart results from cache")
+                        acc_dart_origin = self.accuracy_table[i * 3, j * 3]
+                        acc_dart_forget = self.accuracy_table[i * 3 + 1, j * 3]
+                        acc_dart_retrain = self.accuracy_table[i * 3 + 2, j * 3]
+
+                    if _update_hedgecut and (update_datasets is None or dataset in update_datasets):
+                        logging.info(f"{dataset} {remove_ratio} starts getting raw data.")
+                        # load hedgecut from record
+                        logging.debug(f"Loading hedgecut record")
+                        record_hedgecut = Record.load_from_file(dataset, ratio2version[remove_ratio], 'hedgecut',
+                                                                self.n_rounds)
+                        logging.debug(f"Done loading, calculating Hellinger distance")
+                        model_diff_hedgecut = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
+                                                              self.keyword, n_jobs=self.n_jobs, record=record_hedgecut)
+                        accs_hedgecut = model_diff_hedgecut.get_accuracy()
+                        acc_hedgecut_origin = f"{accs_hedgecut[0][0]:.4f}\\textpm {accs_hedgecut[0][1]:.4f}"
+                        acc_hedgecut_forget = f"{accs_hedgecut[1][0]:.4f}\\textpm {accs_hedgecut[1][1]:.4f}"
+                        acc_hedgecut_retrain = f"{accs_hedgecut[2][0]:.4f}\\textpm {accs_hedgecut[2][1]:.4f}"
+                        logging.info(f"{dataset} {remove_ratio} hedgecut done.")
+                    else:
+                        logging.debug(f"Loading hedgecut results from cache")
+                        acc_hedgecut_origin = self.accuracy_table[i * 3, j * 3 + 1]
+                        acc_hedgecut_forget = self.accuracy_table[i * 3 + 1, j * 3 + 1]
+                        acc_hedgecut_retrain = self.accuracy_table[i * 3 + 2, j * 3 + 1]
+                else:
+                    acc_dart_origin = acc_dart_forget = acc_dart_retrain = '-'
+                    acc_hedgecut_origin = acc_hedgecut_forget = acc_hedgecut_retrain = '-'
+                    logging.info(f"{dataset} {remove_ratio} HedgeCut and DART skipped.")
+
+                if _update_deltaboost and (update_datasets is None or dataset in update_datasets):
+                    logging.debug(f"Loading deltaboost data from output")
+                    deltaboost_original_scores = np.zeros(self.n_rounds)
+                    deltaboost_deleted_scores = np.zeros(self.n_rounds)
+                    deltaboost_retrain_scores = np.zeros(self.n_rounds)
+                    keyword2id = {'delete': 0, 'remain': 1, 'test': 2}
+                    for t in range(self.n_rounds):
+                        original_out_path = os.path.join(self.deltaboost_out_path, f"{dataset}_deltaboost_{remove_ratio}_{t}.out")
+                        retrain_out_path = os.path.join(self.deltaboost_out_path, f"{dataset}_deltaboost_{remove_ratio}_retrain_{t}.out")
+                        _, raw_original_scores = get_scores_from_file(original_out_path, out_fmt='float')
+                        _, raw_retrain_scores = get_scores_from_file(retrain_out_path, out_fmt='float')
+
+                        deltaboost_original_scores[t] = raw_original_scores[keyword2id[self.keyword]]
+                        deltaboost_deleted_scores[t] = raw_original_scores[keyword2id[self.keyword] + 3]
+                        deltaboost_retrain_scores[t] = raw_retrain_scores[keyword2id[self.keyword]]
+
+                    acc_deltaboost_origin = f"{np.mean(deltaboost_original_scores):.4f}\\textpm {np.std(deltaboost_original_scores):.4f}"
+                    acc_deltaboost_forget = f"{np.mean(deltaboost_deleted_scores):.4f}\\textpm {np.std(deltaboost_deleted_scores):.4f}"
+                    acc_deltaboost_retrain = f"{np.mean(deltaboost_retrain_scores):.4f}\\textpm {np.std(deltaboost_retrain_scores):.4f}"
+                    logging.info(f"Done.")
+                else:
+                    logging.debug(f"Loading deltaboost results from cache")
+                    acc_deltaboost_origin = self.accuracy_table[i * 3, j * 3 + 2]
+                    acc_deltaboost_forget = self.accuracy_table[i * 3 + 1, j * 3 + 2]
+                    acc_deltaboost_retrain = self.accuracy_table[i * 3 + 2, j * 3 + 2]
+
+                self.accuracy_table[3 * i, 3 * j] = acc_dart_origin
+                self.accuracy_table[3 * i + 1, 3 * j] = acc_dart_forget
+                self.accuracy_table[3 * i + 2, 3 * j] = acc_dart_retrain
+                self.accuracy_table[3 * i, 3 * j + 1] = acc_hedgecut_origin
+                self.accuracy_table[3 * i + 1, 3 * j + 1] = acc_hedgecut_forget
+                self.accuracy_table[3 * i + 2, 3 * j + 1] = acc_hedgecut_retrain
+                self.accuracy_table[3 * i, 3 * j + 2] = acc_deltaboost_origin
+                self.accuracy_table[3 * i + 1, 3 * j + 2] = acc_deltaboost_forget
+                self.accuracy_table[3 * i + 2, 3 * j + 2] = acc_deltaboost_retrain
+
+                logging.info(f"{dataset}, {remove_ratio} done.")
+
+        if save_path is not None:
+            np.savetxt(save_path, self.accuracy_table, fmt='%s', delimiter=',')
+            logging.info(f"Table saved to {save_path}")
+
+    def print_latex_forget(self):
         dataset_str = ['\\multirow{2}{*}{%s}' % dataset for dataset in self.datasets]
         table_with_title = np.concatenate([
             np.array(list(zip(dataset_str, np.array([''] * len(dataset_str))))).reshape(-1, 1),
-            np.array([r"$H^2(M_r,M;\mathbf{D}_{test})$", r"$H^2(M_r,M_d;\mathbf{D}_{test})$"] * len(self.datasets)).reshape(-1, 1),
-            self.table_data], axis=1)
+            np.array(
+                [r"$H^2(M_r,M;\mathbf{D}_{test})$", r"$H^2(M_r,M_d;\mathbf{D}_{test})$"] * len(self.datasets)).reshape(
+                -1, 1),
+            self.table_data.astype('U32')], axis=1)
         table_df = pd.DataFrame(table_with_title)
         table_latex = table_df.to_latex(index=False, header=False, escape=False)
 
         # insert \midrule every two rows
         lines = table_latex.splitlines()
-        i = len(self.datasets)
-        while i < len(lines):
-            lines.insert(i, r'\midrule')
-            i += len(self.datasets) + 1
-
+        i = 2 + 2  # first two lines are header
+        while i < len(lines) - 2:
+            lines.insert(i, '\midrule')
+            i += 3
         print('\n'.join(lines))
 
+    def print_latex_accuracy(self):
         # print accuracy latex table
         dataset_str = ['\\multirow{3}{*}{%s}' % dataset for dataset in self.datasets]
         table_with_title = np.concatenate([
-            np.array(list(zip(dataset_str, np.array([''] * len(dataset_str)), np.array([''] * len(dataset_str))))).reshape(-1, 1),
-            np.array([r"$M", r"$M_{d}$", r"$M_{r}$"] * len(self.datasets)).reshape(-1, 1),
+            np.array(
+                list(zip(dataset_str, np.array([''] * len(dataset_str)), np.array([''] * len(dataset_str))))).reshape(
+                -1, 1),
+            np.array([r"$M$", r"$M_{d}$", r"$M_{r}$"] * len(self.datasets)).reshape(-1, 1),
             self.accuracy_table], axis=1)
         table_df = pd.DataFrame(table_with_title)
         table_latex = table_df.to_latex(index=False, header=False, escape=False)
 
-        # insert \midrule every two rows
+        # insert \midrule every three rows
         lines = table_latex.splitlines()
-        i = len(self.datasets) +
-        while i < len(lines):
-            lines.insert(i, r'\midrule')
-            i += len(self.datasets) + 1
-
+        i = 2 + 3  # first two lines are header
+        while i < len(lines) - 2:
+            lines.insert(i, '\midrule')
+            i += 4
         print('\n'.join(lines))
 
 
@@ -618,8 +749,8 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d:%H:%M:%S',
         level=logging.DEBUG)
 
-    datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
-    # datasets = ['cadata']
+    # datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
+    datasets = ['susy']
     remove_ratios = ['1e-03', '1e-02']
     # remove_ratios = ['0.001', '0.01']
     # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)
@@ -646,7 +777,25 @@ if __name__ == '__main__':
     #     print(df_combine.to_latex(escape=False))
 
     model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=100, n_jobs=1,
-                           table_cache_path="out/table_data_full.csv", update_deltaboost=False)
-                           # deltaboost_path="/data/zhaomin/DeltaBoost/cache")
-    model_diff.get_raw_data_(n_bins=20)
-    model_diff.print_latex()
+                           # forget_table_cache_path="out/forget_table.csv",
+                           forget_table_cache_path=None,
+                           # accuracy_table_cache_path="out/accuracy_table.csv",
+                           accuracy_table_cache_path=None,
+                           # deltaboost_out_path="../out/remove_test/tree1/",
+                           deltaboost_out_path=None
+                           )
+                            # deltaboost_path="/data/zhaomin/DeltaBoost/cache")
+    model_diff.get_raw_data_forget_(n_bins=50,
+                                    update_deltaboost=True,
+                                    update_datasets=['susy'],
+                                    save_path="out/forget_table_susy.csv",
+                                    )
+    model_diff.print_latex_forget()
+
+    model_diff.get_raw_data_accuracy_(update_deltaboost=False,
+                                      update_dart=False,
+                                      update_hedgecut=True,
+                                      update_datasets=['susy'],
+                                      save_path="out/accuracy_table_susy.csv",
+                                      )
+    model_diff.print_latex_accuracy()

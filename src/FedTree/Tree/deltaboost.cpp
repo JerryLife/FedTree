@@ -124,7 +124,7 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 //        }
 //    }
 
-    LOG(INFO) << "Deleting " << param.n_used_trees << "trees";
+    LOG(INFO) << "Deleting " << param.n_used_trees << " trees";
 
 #pragma omp parallel for
     for (int i = 0; i < param.n_used_trees; ++i) {

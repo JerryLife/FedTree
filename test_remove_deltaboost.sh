@@ -19,7 +19,11 @@ for i in $(seq 0 $(($n_rounds-1))); do
   taskset -c $cpus ./main conf/"$subdir"/"$dataset"_"$ratio".conf data=./data/"$dataset".train remove_ratio="$ratio" n_trees="$n_trees" \
     remain_data=./data/"$dataset".train.remain_"$ratio" delete_data=./data/"$dataset".train.delete_"$ratio" \
     save_model_name="$dataset"_tree"$n_trees"_original_"$ratio"_"$i" seed="$i" > \
-    $outdir/"$dataset"_deltaboost_"$ratio"_"$i".out
+    $outdir/"$dataset"_deltaboost_"$ratio"_"$i".out &
+  # wait for every 5 processes
+  if [ $(($i % 1)) -eq 0 ]; then
+    wait
+  fi
 done
 wait
 
@@ -27,7 +31,11 @@ for i in $(seq 0 "$(($n_rounds-1))"); do
   taskset -c $cpus ./main conf/"$subdir"/"$dataset"_"$ratio".conf data=./data/"$dataset".train.remain_"$ratio" remove_ratio="$ratio" n_trees="$n_trees" perform_remove=false \
     remain_data=./data/"$dataset".train.remain_"$ratio" delete_data=./data/"$dataset".train.delete_"$ratio" \
     save_model_name="$dataset"_tree"$n_trees"_retrain_"$ratio"_"$i" seed="$i"   > \
-    $outdir/"$dataset"_deltaboost_"$ratio"_retrain_"$i".out
+    $outdir/"$dataset"_deltaboost_"$ratio"_retrain_"$i".out &
+  # wait for every 5 processes
+  if [ $(($i % 1)) -eq 0 ]; then
+    wait
+  fi
 done
 wait
 
