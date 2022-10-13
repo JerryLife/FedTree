@@ -56,8 +56,8 @@ private:
 
         deltaBoost.trees = json::value_to<std::vector<std::vector<DeltaTree>>>(v.at("trees"));
         deltaBoost.gh_pairs_per_sample = json::value_to<std::vector<std::vector<GHPair>>>(v.at("gh_pairs_per_sample"));
-        deltaBoost.ins2node_indices_per_tree = json::value_to<std::vector<std::vector<std::vector<int>>>>(
-                v.at("ins2node_indices_per_tree"));
+//        deltaBoost.ins2node_indices_per_tree = json::value_to<std::vector<std::vector<std::vector<int>>>>(
+//                v.at("ins2node_indices_per_tree"));
 
         return deltaBoost;
     }
@@ -67,7 +67,7 @@ private:
         v = json::object {
                 {"trees", json::value_from(deltaBoost.trees)},
                 {"gh_pairs_per_sample", json::value_from(deltaBoost.gh_pairs_per_sample)},
-                {"ins2node_indices_per_tree", json::value_from(deltaBoost.gh_pairs_per_sample)}
+//                {"ins2node_indices_per_tree", json::value_from(deltaBoost.ins2node_indices_per_tree)}
         };
     }
 

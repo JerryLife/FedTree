@@ -324,7 +324,7 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
 
 // update the gain of all nodes according to ins2node_indices
     vector<vector<int>> updating_node_indices(adjusted_indices.size(), vector<int>(0));
-#pragma omp parallel for
+//#pragma omp parallel for      // SIGSEGV when using parallel
     for (int i = 0; i < adjusted_indices.size(); ++i) {
         updating_node_indices[i] = ins2node_indices[adjusted_indices[i]];
     }
@@ -460,7 +460,6 @@ void DeltaTreeRemover::adjust_split_nbrs_by_indices(const vector<int>& adjusted_
                 node.gain.self_h += shift_it->second.h;
 
                 // update left or right gh of split_nbr based on feature_val
-#pragma omp parallel for
                 for (int k = 0; k < node.split_nbr.split_bids.size(); ++k) {
 #pragma omp atomic
                     node.split_nbr.gain[k].self_g += shift_it->second.g;

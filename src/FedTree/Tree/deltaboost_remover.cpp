@@ -158,6 +158,7 @@ void DeltaBoostRemover::get_info(const vector<vector<GHPair>> &gh_pairs_per_samp
             auto &ins2node_indices = tree_removers[iter].ins2node_indices[iid];
             assert(ins2node_indices.size() == 1);
             int node_id = ins2node_indices[0];
+            if (node_id == -1) continue;
             while (node_id != 0) {
                 node_id = trees[iter][0].nodes[node_id].parent_index;
                 ins2node_indices.push_back(node_id);
