@@ -945,27 +945,30 @@ void DataSet::get_subset(vector<int> &idx, DataSet& subset){
 //        subset.csc_to_csr();
 //    }
 //    else {
-        subset.csr_val.clear();
-        subset.csr_col_idx.clear();
-        subset.csr_row_ptr.clear();
-        subset.csr_row_ptr.push_back(0);
-        subset.n_features_ = n_features();
-        subset.y.clear();
-        for (int i = 0; i < idx.size(); i++) {
-            int n_val = 0;
-            if (n_features_ != 0) {
-                for (int j = csr_row_ptr[idx[i]]; j < csr_row_ptr[idx[i] + 1]; j++) {
-                    float_type val = csr_val[j];
-                    int cid = csr_col_idx[j];
-                    subset.csr_val.push_back(val);
-                    subset.csr_col_idx.push_back(cid);
-                    n_val++;
-                }
-                subset.csr_row_ptr.push_back(n_val + subset.csr_row_ptr.back());
+    subset.csr_val.clear();
+    subset.csr_col_idx.clear();
+    subset.csr_row_ptr.clear();
+    subset.csr_row_ptr.push_back(0);
+    subset.n_features_ = n_features();
+    subset.original_indices = vector<int>();
+    subset.y.clear();
+    for (int i = 0; i < idx.size(); i++) {
+        int n_val = 0;
+        if (n_features_ != 0) {
+            for (int j = csr_row_ptr[idx[i]]; j < csr_row_ptr[idx[i] + 1]; j++) {
+                float_type val = csr_val[j];
+                int cid = csr_col_idx[j];
+                subset.csr_val.push_back(val);
+                subset.csr_col_idx.push_back(cid);
+                n_val++;
             }
-            if(y.size())
-                subset.y.push_back(y[idx[i]]);
+            subset.csr_row_ptr.push_back(n_val + subset.csr_row_ptr.back());
+            subset.original_indices.push_back(idx[i]);
         }
+        if(y.size())
+            subset.y.push_back(y[idx[i]]);
+    }
+    assert(subset.original_indices.size() == idx.size());
 
 //    }
     subset.n_features_ = n_features_;
@@ -1062,6 +1065,18 @@ void DataSet::update_sampling_by_hashing_(int total_sampling_round) {
     for (int i = 0; i < n_instances(); ++i) {
         subset_indices[row_category[i]].push_back(i);
     }
+
+//    vector<vector<int>> sampled_indices(4);
+//    for (int i = 0; i < n_instances(); ++i) {
+//        if (i < 29977) {
+//            sampled_indices[0].push_back(i);
+//            sampled_indices[1].push_back(i);
+//        } else {
+//            sampled_indices[2].push_back(i);
+//            sampled_indices[3].push_back(i);
+//        }
+//    }
+//    subset_indices = sampled_indices;
 
     sampled_datasets.clear();
     sampled_datasets.resize(total_sampling_round);

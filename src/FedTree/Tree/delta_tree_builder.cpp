@@ -12,7 +12,7 @@
 #include <random>
 #include <unordered_set>
 
-void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
+void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param, bool skip_get_bin_ids) {
     TreeBuilder::init(dataset, param); // NOLINT(bugprone-parent-virtual-call)
     if (dataset.n_features() > 0) {
 //        RobustHistCut ref_cut;
@@ -26,7 +26,8 @@ void DeltaTreeBuilder::init(DataSet &dataset, const DeltaBoostParam &param) {
 
         cut.generate_bin_trees_(sorted_dataset, param.max_bin_size);
         cut.update_cut_points_(&sorted_dataset);
-        get_bin_ids();
+        if (!skip_get_bin_ids)
+            get_bin_ids();
     }
     this->param = param;
     this->sp = SyncArray<DeltaSplitPoint>();
@@ -85,9 +86,11 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
         tree.g_bin_width = g_bin_width;
         tree.h_bin_width = h_bin_width;
 
-        this->ins2node_id.resize(n_instances);
+//        this->ins2node_id.resize(n_instances);
+        this->gradients.resize(n_all_instances);
         this->gradients.set_host_data(const_cast<GHPair *>(gradients.host_data() + k * n_all_instances));
         this->tree.init_CPU(this->gradients, param, gain_coef);
+        this->tree.nodes[0].n_instances = n_instances;
 //        delta_gain_eps = param.delta_gain_eps * gain_coef;
 //        LOG(INFO) << "delta_gain_eps = " << delta_gain_eps;
         num_nodes_per_level.clear();
@@ -551,7 +554,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 //            vector<int> indices;
 //            GHPair sum_gh5;
             vector<GHPair> gh_vec(cut.cut_col_ptr[1], GHPair());
-            for (int i = 0; i < n_instances * n_column; i++) {
+            for (int i = 0; i < n_all_instances * n_column; i++) {
                 int iid = i / n_column;
                 int fid = i % n_column;
                 auto bid = dense_bin_id_data[iid * n_column + fid];
@@ -566,14 +569,14 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 //                    } else {
 //                        assert(fid != 0);
 //                    }
-//
+
                     hist_data[feature_offset + bid] += gh_data[iid];
                     hist_g2[feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
                 }
             }
 //            GHPair sum_gh4 = std::accumulate(gh_vec.begin(), gh_vec.end(), GHPair());
-//
-//            LOG(INFO);
+            GHPair sum_gh1 = std::accumulate(hist_data, hist_data + cut.cut_col_ptr[1], GHPair());
+            LOG(DEBUG);
         } else {
             auto t_dp_begin = timer.now();
             // sort the indices of instance s.t. each node can be split by node_ptr
@@ -584,7 +587,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
             vector<vector<int>> nid_to_iid(tree.nodes.size(), vector<int>());
             {
                 TIMED_SCOPE(timerObj, "data partitioning");
-                for (int i = 0; i < n_instances; ++i) {
+                for (int i = 0; i < n_all_instances; ++i) {
                     for (int node_id: ins2node_indices[i]) {
                         if (node_id != -1)
                             nid_to_iid[node_id].emplace_back(i);
@@ -629,6 +632,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                         int iid = nid_to_iid[nid0][j / n_column];
                         int fid = j % n_column;
                         int bid = dense_bin_id_data[iid * n_column + fid];
+                        assert(iid >= 0);
 
                         if (bid != -1) {
                             int feature_offset = cut_col_ptr_data[fid];
@@ -715,7 +719,7 @@ void DeltaTreeBuilder::update_ins2node_indices() {
     // update indices_in_node simultaneously
     TIMED_FUNC(timerObj);
 
-    auto nid_data = ins2node_id.host_data();
+//    auto nid_data = ins2node_id.host_data();
     SyncArray<bool> has_splittable(1);
 //    auto &columns = shards.columns;
     //set new node id for each instance
@@ -729,7 +733,7 @@ void DeltaTreeBuilder::update_ins2node_indices() {
         auto dense_bin_id_data = dense_bin_id.host_data();
 //        int max_num_bin = param.max_num_bin;
 #pragma omp parallel for
-        for (int iid = 0; iid < n_instances; iid++) {
+        for (int iid = 0; iid < n_all_instances; iid++) {
             for (int j = 0; j < ins2node_indices[iid].size(); ++j) {
                 int nid = ins2node_indices[iid][j];
                 if (nid == -1)  // this instance does not exist in this node
@@ -749,18 +753,18 @@ void DeltaTreeBuilder::update_ins2node_indices() {
                     if (to_left) {
                         //goes to left child
                         ins2node_indices[iid][j] = node.lch_index;
-                        if (is_prior[nid]) {
-                            nid_data[iid] = node.lch_index;
-                        }
+//                        if (is_prior[nid]) {
+//                            nid_data[iid] = node.lch_index;
+//                        }
 
                     #pragma omp atomic
                         nodes_data[node.lch_index].n_instances += 1;
                     } else {
                         //right child
                         ins2node_indices[iid][j] = node.rch_index;
-                        if (is_prior[nid]) {
-                            nid_data[iid] = node.rch_index;
-                        }
+//                        if (is_prior[nid]) {
+//                            nid_data[iid] = node.rch_index;
+//                        }
                     #pragma omp atomic
                         nodes_data[node.rch_index].n_instances += 1;
                     }
@@ -769,11 +773,13 @@ void DeltaTreeBuilder::update_ins2node_indices() {
         }
     }
     has_split = has_splittable.host_data()[0];
-    LOG(DEBUG) << "new tree_id = " << ins2node_id;
+//    LOG(DEBUG) << "new tree_id = " << ins2node_id;
 
 }
 
 
+
+[[deprecated]]
 void DeltaTreeBuilder::update_ins2node_id() {
     // update indices_in_node simultaneously
     TIMED_FUNC(timerObj);
@@ -901,16 +907,42 @@ void DeltaTreeBuilder::update_tree() {
 
 void DeltaTreeBuilder::predict_in_training(int k) {
     auto y_predict_data = y_predict.host_data() + k * n_instances;
-    auto nid_data = ins2node_id.host_data();
+//    auto nid_data = ins2node_id.host_data();
+    vector<float_type> y_predict_vec = vector<float_type>(n_all_instances, 0);
     const auto &nodes_data = tree.nodes;
     auto lr = param.learning_rate;
 #pragma omp parallel for
-    for(int i = 0; i < n_instances; i++){
-        int nid = nid_data[i];
-        while (nid != -1 && (nodes_data[nid].is_pruned)) nid = nodes_data[nid].parent_index;
-        y_predict_data[i] += lr * nodes_data[nid].base_weight;
+    for(int i = 0; i < n_all_instances; i++){
+        int nid = ins2node_indices[i][0];
+        if (nid == -1)
+            continue;
+        while (nid != -1 && nodes_data[nid].is_pruned) nid = nodes_data[nid].parent_index;
+        y_predict_vec[i] += lr * nodes_data[nid].base_weight;
     }
-    LOG(DEBUG) << y_predict;
+
+    int j = 0;
+    for (int i = 0; i < n_all_instances; i++) {
+        if (ins2node_indices[i][0] != -1) {
+            y_predict_data[j++] += y_predict_vec[i];
+        }
+    }
+    assert(j == n_instances);
+
+////    LOG(DEBUG) << y_predict;
+//    auto y_predict_data = y_predict.host_data() + k * n_instances;
+////    auto nid_data = ins2node_id.host_data();
+//
+//    const auto *nodes_data = tree.nodes.data();
+//    auto lr = param.learning_rate;
+////#pragma omp parallel for
+//    for(int i = 0; i < n_instances; i++){
+////        int nid = nid_data[i];
+//        int nid = ins2node_indices[i][0];
+//        assert(nid != -1);
+//        while (nid != -1 && (nodes_data[nid].is_pruned)) nid = nodes_data[nid].parent_index;
+//        y_predict_data[i] += lr * nodes_data[nid].base_weight;
+//    }
+//    LOG(DEBUG) << y_predict;
 }
 
 
@@ -1289,20 +1321,25 @@ void DeltaTreeBuilder::get_bin_ids() {
     }
 
 //    auto max_num_bin = param.max_num_bin;
-    dense_bin_id.resize(n_instances * n_column);
+    dense_bin_id.resize(n_all_instances * n_column);
     auto dense_bin_id_data = dense_bin_id.host_data();
     auto csc_row_idx_data = sorted_dataset.csc_row_idx.data();
     // default bid for missing values
 #pragma omp parallel for
-    for (int i = 0; i < n_instances * n_column; i++) {
+    for (int i = 0; i < n_all_instances * n_column; i++) {
         dense_bin_id_data[i] = -1;
     }
 #pragma omp parallel for
     for (int fid = 0; fid < n_column; fid++) {
         for (int i = csc_col_ptr_data[fid]; i < csc_col_ptr_data[fid + 1]; i++) {
             int row = csc_row_idx_data[i];
+            int original_row = -1;
+            if (!sorted_dataset.original_indices.empty())
+                original_row = sorted_dataset.original_indices[row];    // it is a subset of the original dataset
+            else
+                original_row = row;
             auto bid = bin_id_data[i];
-            dense_bin_id_data[row * n_column + fid] = bid;
+            dense_bin_id_data[original_row * n_column + fid] = bid;
         }
     }
 //    LOG(DEBUG);

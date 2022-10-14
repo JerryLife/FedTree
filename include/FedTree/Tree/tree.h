@@ -571,6 +571,7 @@ struct DeltaTree : public Tree {
         inline bool is_robust() const { return potential_nodes_indices.size() <= 1; }
 
         HOST_DEVICE void calc_weight_(float_type lambda, float_type g_bin_width, float_type h_bin_width) {
+            assert(g_bin_width > 0 && h_bin_width > 0);
             base_weight = -sum_gh_pair.g * g_bin_width / (sum_gh_pair.h * h_bin_width + lambda);
         }
 

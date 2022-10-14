@@ -12,7 +12,7 @@ typedef std::pair<int, DeltaTree::DeltaGain> gain_pair;
 
 class DeltaTreeBuilder: public HistTreeBuilder {
 public:
-    void init(DataSet &dataset, const DeltaBoostParam &param);
+    void init(DataSet &dataset, const DeltaBoostParam &param, bool skip_get_bin_ids = false);
 
     void init_nocutpoints(DataSet &dataset, const DeltaBoostParam &param);
 

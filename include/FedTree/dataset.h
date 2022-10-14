@@ -68,6 +68,7 @@ class DataSet{
     vector<DataSet> sampled_datasets;
     vector<vector<int>> subset_indices;
     vector<int> row_hash;
+    vector<int> original_indices;   // if this dataset is a subset, this is the original indices of the dataset, otherwise it is empty
 
     std::mt19937 rng;
 

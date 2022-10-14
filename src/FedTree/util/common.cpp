@@ -53,3 +53,9 @@ void clean_indices_(vector<int>& indices) {
         return i == -1;
     }), indices.end());
 };
+
+void clean_indices_(vector<float_type>& indices) {
+    indices.erase(std::remove_if(indices.begin(), indices.end(), [](int i) {
+        return i < 0;
+    }), indices.end());
+};

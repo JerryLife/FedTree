@@ -12,7 +12,8 @@
 class DeltaBooster : public Booster {
 public:
     void reset(DataSet &dataSet, const DeltaBoostParam &param, bool get_cut_points = true);
-    void init(DataSet &dataSet, const DeltaBoostParam &delta_param, int n_all_instances, bool get_cut_points = true);
+    void init(DataSet &dataSet, const DeltaBoostParam &delta_param, int n_all_instances, bool get_cut_points = true,
+              bool skip_get_bin_ids = false);
 
 //    void init(const GBDTParam &param, int n_instances) override;
     void boost(vector<vector<DeltaTree>>& boosted_model, vector<vector<GHPair>>& gh_pairs_per_sample,

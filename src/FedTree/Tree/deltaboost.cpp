@@ -41,6 +41,10 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
     DeltaBooster booster;
     // record time of init
     auto start_init = timer.now();
+//    if (param.hash_sampling_round > 1)
+//        booster.init(dataset, param, dataset.n_instances(), true, true);
+//    else
+//        booster.init(dataset, param, dataset.n_instances(), true, false);
     booster.init(dataset, param, dataset.n_instances());
     auto end_init = timer.now();
     std::chrono::duration<float> init_time = end_init - start_init;
@@ -54,20 +58,31 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
         // subsampling by hashing
         if (param.hash_sampling_round > 1) {
             if (i % param.hash_sampling_round == 0) {
+                dataset.set_seed((int)param.seed + i);
+                dataset.get_row_hash_();
                 dataset.update_sampling_by_hashing_(param.hash_sampling_round);
             }
             auto &sub_dataset = dataset.get_sampled_dataset(i % param.hash_sampling_round);
+//            auto &sub_dataset = dataset.get_sampled_dataset(0);
+
             booster.reset(sub_dataset, param);
+
             if (i > 0) {
                 predict_raw(param, sub_dataset, booster.fbuilder->y_predict);
             }
 
             auto subset_indices = dataset.get_subset_indices(i % param.hash_sampling_round);
+//            auto subset_indices = dataset.get_subset_indices(0);
             is_subset_indices_in_tree.emplace_back(indices_to_hash_table(subset_indices, dataset.n_instances()));
+        } else {
+            is_subset_indices_in_tree.emplace_back(vector<bool>());
         }
 
         //one iteration may produce multiple trees, depending on objectives
         booster.boost(trees, gh_pairs_per_sample, ins2node_indices_per_tree, dataset.row_hash, is_subset_indices_in_tree[i]);
+
+//        SyncArray<float_type> y_predict_tmp;
+//        predict_raw(param, booster.fbuilder->sorted_dataset, y_predict_tmp);
         int valid_size = 0;
         for (const auto &node: trees[trees.size() - 1][0].nodes) {
             if (node.is_valid) ++valid_size;
@@ -315,7 +330,7 @@ void DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &
 
     auto end_predict = clock.now();
     std::chrono::duration<double> diff = end_predict - start;
-    LOG(INFO) << "predict time: " << diff.count() << "s";
+    LOG(DEBUG) << "predict time: " << diff.count() << "s";
 }
 
 vector<float_type> DeltaBoost::predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, int num_trees) {

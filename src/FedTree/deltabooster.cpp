@@ -8,17 +8,21 @@
 #include "FedTree/Tree/deltaboost.h"
 
 
-void DeltaBooster::init(DataSet &dataSet, const DeltaBoostParam &delta_param, int n_all_instances, bool get_cut_points) {
+void DeltaBooster::init(DataSet &dataSet, const DeltaBoostParam &delta_param, int n_all_instances, bool get_cut_points,
+                        bool skip_get_bin_ids) {
     param = delta_param;
 
     this->n_all_instances = n_all_instances;
     fbuilder = std::make_unique<DeltaTreeBuilder>();
     fbuilder->n_all_instances = n_all_instances;
+
     if(get_cut_points)
-        fbuilder->init(dataSet, param);
+        fbuilder->init(dataSet, param, skip_get_bin_ids);
     else {
         fbuilder->init_nocutpoints(dataSet, param);
     }
+
+
     obj.reset(ObjectiveFunction::create(param.objective));
     obj->configure(param, dataSet);
     if (param.metric == "default")
@@ -40,7 +44,7 @@ void DeltaBooster::reset(DataSet &dataSet, const DeltaBoostParam &delta_param, b
 
 //    fbuilder = std::make_unique<DeltaTreeBuilder>();
     if(get_cut_points)
-        fbuilder->reset(dataSet, param);
+        fbuilder->reset(dataSet, param);    // avoid updating cut, cuz cut should fit the global dataset
     else {
         LOG(FATAL) << "Not supported yet";
         fbuilder->init_nocutpoints(dataSet, param);
@@ -71,14 +75,27 @@ void DeltaBooster::boost(vector<vector<DeltaTree>>& boosted_model, vector<vector
     SyncArray<GHPair> original_gh(gradients.size());
     obj->get_gradient(y, fbuilder->get_y_predict(), original_gh);
 
+    // get row_hash in tree
+    vector<int> row_hash_in_tree;
+    if (is_subset_indices_in_tree.empty()) {
+        row_hash_in_tree = row_hash;
+    } else {
+        for (int i = 0; i < row_hash.size(); ++i) {
+            if (is_subset_indices_in_tree[i]) {
+                row_hash_in_tree.push_back(row_hash[i]);
+            }
+        }
+    }
+
     // quantize gradients if needed. todo: optimize these per-instance copy
     float_type g_bin_width = 1., h_bin_width = 1.;
     if (param.n_quantize_bins > 0) {
-        gradients.load_from_vec(quantize_gradients(original_gh.to_vec(), param.n_quantize_bins, row_hash, g_bin_width, h_bin_width));
+        gradients.load_from_vec(quantize_gradients(original_gh.to_vec(), param.n_quantize_bins, row_hash_in_tree, g_bin_width, h_bin_width));
     } else {
         gradients.copy_from(original_gh);
     }
 
+    assert(g_bin_width > 0 && h_bin_width > 0);
     fbuilder->g_bin_width = g_bin_width;
     fbuilder->h_bin_width = h_bin_width;
 
@@ -121,6 +138,7 @@ vector<GHPair> DeltaBooster::quantize_gradients(const vector<GHPair> &gh, int n_
     /**
      * Randomly quantize gradients and hessians to neighboring grids.
      */
+    assert(gh.size() == row_hash.size());
     vector<GHPair> quantized_gh(gh.size());
 
     // get max absolute value of gh.g and gh.h
@@ -133,6 +151,7 @@ vector<GHPair> DeltaBooster::quantize_gradients(const vector<GHPair> &gh, int n_
     // calculate bin width
     g_bin_width = max_abs_g / n_bins;
     h_bin_width = max_abs_h / (n_bins * 2);      // smaller width according to the NeurIPS-22 paper
+    assert(g_bin_width > 0 && h_bin_width > 0);
 
 //    std::mt19937 gen1(seed);
 //    std::mt19937 gen2(seed + 1);
