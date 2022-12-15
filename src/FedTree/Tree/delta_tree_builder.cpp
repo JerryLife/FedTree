@@ -76,10 +76,10 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
                                                             std::vector<std::vector<int>>& ins2node_indices_in_tree,
                                                             const vector<bool>& is_subset_indices_in_tree,
                                                             bool update_y_predict) {
-    vector<DeltaTree> trees(param.tree_per_rounds);
+    vector<DeltaTree> trees(param.tree_per_round);
     TIMED_FUNC(timerObj);
 
-    for (int k = 0; k < param.tree_per_rounds; ++k) {
+    for (int k = 0; k < param.tree_per_round; ++k) {
         DeltaTree &tree_k = trees[k];
         float_type gain_coef = 0.;
 
@@ -651,11 +651,11 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                     auto parent_hist_data = last_hist.host_data() + parent_indices[nid0_to_substract] * n_bins;
                     auto hist_g2_computed = hist_g2.data() + nid0_to_compute * n_bins;
                     auto hist_g2_to_compute = hist_g2.data() + nid0_to_substract * n_bins;
-                    auto parent_hist_g2 = last_hist_g2.data() + parent_indices[nid0_to_substract] * n_bins;
+//                    auto parent_hist_g2 = last_hist_g2.data() + parent_indices[nid0_to_substract] * n_bins;
 #pragma omp parallel for
                     for (int j = 0; j < n_bins; j++) {
                         hist_data_to_compute[j] = parent_hist_data[j] - hist_data_computed[j];
-                        hist_g2_to_compute[j] = parent_hist_g2[j] - hist_g2_computed[j];
+//                        hist_g2_to_compute[j] = parent_hist_g2[j] - hist_g2_computed[j];
                     }
                 }
                 auto t_copy_end = timer.now();
@@ -665,13 +665,13 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
             }  // end for each node
         }
         last_hist.resize(n_nodes_in_level * n_bins);
-        last_hist_g2.resize(n_nodes_in_level * n_bins);
+//        last_hist_g2.resize(n_nodes_in_level * n_bins);
         auto last_hist_data = last_hist.host_data();
         const auto hist_data = hist.host_data();
 #pragma omp parallel for
         for (int i = 0; i < n_nodes_in_level * n_bins; i++) {
             last_hist_data[i] = hist_data[i];
-            last_hist_g2[i] = hist_g2[i];
+//            last_hist_g2[i] = hist_g2[i];
         }
     }
 

@@ -21,7 +21,14 @@ void Partition::homo_partition(const DataSet &dataset, const int n_parties, cons
             subsets[i].n_features_ = dataset.n_features();
         }
         if (!is_horizontal) {
-            subsets[i].y = dataset.y;
+            if(i == 0) {
+                subsets[i].has_label = true;
+                subsets[i].y = dataset.y;
+            }
+            else {
+                subsets[i].has_label = false;
+                subsets[i].y.resize(dataset.y.size());
+            }
         }
         if(dataset.is_classification) {
             subsets[i].label = dataset.label;
@@ -35,27 +42,24 @@ void Partition::homo_partition(const DataSet &dataset, const int n_parties, cons
     }
 
     std::default_random_engine e(seed);
-    std::shuffle(idxs.begin(), idxs.end(), e);
+    //for vertical FL, the features are not shuffled so that the feature id of the test dataset is consistent with the training dataset.
+    if(is_horizontal)
+        std::shuffle(idxs.begin(), idxs.end(), e);
 //    std::random_shuffle(idxs.begin(), idxs.end());
 
 //    std::map<int, vector<int>> batch_idxs;
 
     int stride = n / n_parties;
-    for (int i = 0; i < n_parties; i++) {
+    for (int i = 0; i < n_parties - 1; i++) {
         batch_idxs[i] = vector<int>(idxs.begin() + i * stride, idxs.begin() + (i + 1) * stride);
         thrust::sort(thrust::host, batch_idxs[i].begin(), batch_idxs[i].begin() + batch_idxs[i].size());
     }
     //LOG(INFO)<<"batch_idxs:"<<batch_idxs;
 
-    if (stride * n_parties < n) {
-        for (int i = stride * n_parties; i < n; i++) {
-            batch_idxs[n_parties - 1].push_back(idxs[i]);
-        }
+    for (int i = stride * (n_parties - 1); i < n; i++) {
+        batch_idxs[n_parties - 1].push_back(idxs[i]);
     }
     thrust::sort(thrust::host, batch_idxs[n_parties - 1].begin(), batch_idxs[n_parties - 1].begin() + batch_idxs[n_parties - 1].size());
-//    for (int i = 0; i < n % n_parties; i++) {
-//        batch_idxs[i].push_back(idxs[n_parties * stride + i]);
-//    }
 
     vector<int> part2party(n);
     for (int i = 0; i < n_parties; i++) {
@@ -99,10 +103,7 @@ void Partition::homo_partition(const DataSet &dataset, const int n_parties, cons
         }
 
         assert(dataset.has_csc);
-        // TODO: check the reason why dataset is a const param
-//        if(!dataset.has_csc) {
-//            dataset.csr_to_csc();
-//        }
+
         for (int i = 0; i < dataset.csc_col_ptr.size() - 1; i++) {
             int csc_col_sub = 0;
             int party_id = part2party[i];
@@ -128,8 +129,7 @@ void Partition::homo_partition(const DataSet &dataset, const int n_parties, cons
 
 //Todo add hetero partition according to the labels
 void Partition::hetero_partition(const DataSet &dataset, const int n_parties, const bool is_horizontal,
-                                 vector<DataSet> &subsets,
-                                 vector<float> alpha) {
+                                 vector<DataSet> &subsets, vector<float> alpha, int seed) {
     int n;
     if (is_horizontal)
         n = dataset.n_instances();
@@ -155,11 +155,12 @@ void Partition::hetero_partition(const DataSet &dataset, const int n_parties, co
     else
         assert(alpha.size() == n_parties);
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    dirichlet_distribution<std::mt19937> d(alpha);
+//    std::random_device rd;
+//    std::mt19937 gen(rd());
+    std::default_random_engine e(seed);
+    dirichlet_distribution<std::default_random_engine> d(alpha);
     vector<float> dirichlet_samples;
-    for (float x : d(gen)) dirichlet_samples.push_back(x);
+    for (float x : d(e)) dirichlet_samples.push_back(x);
     std::transform(dirichlet_samples.begin(), dirichlet_samples.end(), dirichlet_samples.begin(),
                    [&n](float &c) { return c * n; });
     std::partial_sum(dirichlet_samples.begin(), dirichlet_samples.end(), dirichlet_samples.begin());
@@ -525,10 +526,7 @@ void Partition::train_test_split(DataSet &dataset, DataSet &train_dataset, DataS
     int n_train = n_instances * train_portion;
     int n_test = n_instances - n_train;
     vector<int> idxs(n_instances);
-    std::cout << "n_instances:" << n_instances << std::endl;
-    std::cout << "dataset.csr_row_ptr.size:" << dataset.csr_row_ptr.size() << std::endl;
     CHECK_EQ(dataset.csr_row_ptr.size() - 1, n_instances);
-    LOG(INFO) << "1";
     thrust::sequence(thrust::host, idxs.data(), idxs.data() + n_instances, 0);
     int seed = 42;
     std::mt19937 gen(seed);
@@ -538,7 +536,6 @@ void Partition::train_test_split(DataSet &dataset, DataSet &train_dataset, DataS
     for (int i = n_train; i < n_instances; i++) {
         idx2train[idxs[i]] = false;
     }
-    LOG(INFO) << "2";
     train_dataset.csr_row_ptr.push_back(0);
     test_dataset.csr_row_ptr.push_back(0);
     train_dataset.n_features_ = dataset.n_features_;
@@ -558,7 +555,6 @@ void Partition::train_test_split(DataSet &dataset, DataSet &train_dataset, DataS
     }
     CHECK_EQ(train_idx, n_train);
     CHECK_EQ(test_idx, n_test);
-    LOG(INFO) << "3";
 
     for (int i = 0; i < dataset.csr_row_ptr.size() - 1; i++) {
 //        int train_csr_row_sub = 0;

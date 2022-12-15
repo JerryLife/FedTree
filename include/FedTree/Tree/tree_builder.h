@@ -30,25 +30,25 @@ public:
     void build_init(const SyncArray<GHPair> &gradients, int k) override;
 
     void init(DataSet &dataset, const GBDTParam &param) override;
-    virtual void init_nosortdataset(DataSet &dataset, const GBDTParam &param);
+    void init_nosortdataset(DataSet &dataset, const GBDTParam &param);
 
-    virtual void update_tree();
+    void update_tree();
 
     void update_tree_in_a_node(int node_id);
 
     Tree get_tree() override {
-        return this->tree;
+        return this->trees;
     }
 
     void set_tree(Tree tree) override {
-       tree = Tree(tree);
+       trees = Tree(tree);
     }
 
     void set_y_predict(int k) override;
 
     virtual void update_tree_by_sp_values();
 
-    virtual void predict_in_training(int k);
+    void predict_in_training(int k);
 
 //    virtual void split_point_all_reduce(int depth);
     // Refer to ThunderGBM hist_tree_builder.cu find_split
@@ -78,11 +78,12 @@ public:
     SyncArray<GHPair> gradients;
 
     int n_instances;
-    Tree tree;
+    Tree trees;
     SyncArray<int> ins2node_id;
     SyncArray<SplitPoint> sp;
     bool has_split;
 
+protected:
 //    vector<Shard> shards;
 //    DataSet* dataset;
     DataSet sorted_dataset;

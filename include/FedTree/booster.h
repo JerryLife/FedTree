@@ -47,7 +47,7 @@ public:
     SyncArray<GHPair> gradients;
 
     std::unique_ptr<Metric> metric;
-protected:
+
     int n_devices;
     std::unique_ptr<ObjectiveFunction> obj;
     SyncArray<float_type> y;

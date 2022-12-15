@@ -51,9 +51,9 @@ public:
 
     void update_ins2node_indices();
 
-    void update_tree() override;
+    void update_tree();
 
-    void predict_in_training(int k) override;
+    void predict_in_training(int k);
 
     void get_potential_split_points(const vector<vector<gain_pair>> &candidate_idx_gain,
                                     const int n_nodes_in_level,

@@ -194,7 +194,7 @@ void HistCut::get_cut_points_fast(DataSet &dataset, int max_num_bins, int n_inst
  * @param f_range Min and max values for each feature.
  * @param max_num_bins Number of cut points for each feature.
  */
-void HistCut::get_cut_points_by_feature_range(vector<vector<float>> f_range, int max_num_bins) {
+void HistCut::get_cut_points_by_feature_range(vector<vector<float_type>> f_range, int max_num_bins) {
     int n_features = f_range.size();
 
     cut_points_val.resize(n_features * max_num_bins);
