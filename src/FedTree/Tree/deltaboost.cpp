@@ -87,7 +87,7 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
         for (const auto &node: trees[trees.size() - 1][0].nodes) {
             if (node.is_valid) ++valid_size;
         }
-        LOG(INFO) << "Tree " << i << ", Number of nodes:" << valid_size;
+        LOG(DEBUG) << "Tree " << i << ", Number of nodes:" << valid_size;
     }
 
 //    float_type score = predict_score(param, dataset);

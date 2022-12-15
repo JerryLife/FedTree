@@ -61,7 +61,6 @@ add_definitions("-DELPP_NO_LOG_TO_FILE")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O3")
 
-add_executable(test_um predict.cpp)
 # includes
 set(COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
 set(DATASET_DIR ${PROJECT_SOURCE_DIR}/data/)
