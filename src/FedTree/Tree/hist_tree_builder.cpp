@@ -629,7 +629,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                 }
             }
         } else {
-            start_time = timer::now();
+
             auto t_dp_begin = timer::now();
             SyncArray<int> node_idx(n_instances);
             SyncArray<int> node_ptr(n_nodes_in_level + 1);
@@ -728,9 +728,13 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
         last_hist.resize(n_nodes_in_level * n_bins);
         auto last_hist_data = last_hist.host_data();
         auto hist_data = hist.host_data();
+
+        start_time = timer::now();
+#pragma omp parallel for
         for (int i = 0; i < n_nodes_in_level * n_bins; i++) {
             last_hist_data[i] = hist_data[i];
         }
+
         end_time = timer::now();
         std::chrono::duration<double> compute_histogram_inner_time_para = end_time - start_time;
         LOG(DEBUG) << "compute_histogram_inner_time: " << compute_histogram_inner_time_para.count();
