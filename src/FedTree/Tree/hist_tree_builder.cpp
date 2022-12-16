@@ -588,6 +588,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
     int n_split = n_nodes_in_level * n_bins;
 
     LOG(TRACE) << "start finding split";
+    start_time = timer::now();
 
     {
         TIMED_SCOPE(timerObj, "build hist");
@@ -635,6 +636,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
             SyncArray<int> node_ptr(n_nodes_in_level + 1);
             {
                 TIMED_SCOPE(timerObj, "data partitioning");
+
                 SyncArray<int> nid4sort(n_instances);
                 nid4sort.copy_from(ins2node_id);
                 sequence(thrust::host, node_idx.host_data(), node_idx.host_end(), 0);
@@ -647,6 +649,8 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
 
                 thrust::upper_bound(thrust::host, nid4sort.host_data(), nid4sort.host_end(), counting_iter,
                                     counting_iter + n_nodes_in_level, node_ptr.host_data() + 1);
+
+
             }
             auto t_dp_end = timer::now();
             std::chrono::duration<double> dp_used_time = t_dp_end - t_dp_begin;
@@ -660,6 +664,8 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
             auto dense_bin_id_data = dense_bin_id.host_data();
             auto max_num_bin = param.max_num_bin;
 
+
+#pragma omp parallel for
             for (int i = 0; i < n_nodes_in_level / 2; ++i) {
 
                 int nid0_to_compute = i * 2;
@@ -725,20 +731,26 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                 this->total_copy_time += cp_used_time.count();
             }  // end for each node
         }
+
+
+
         last_hist.resize(n_nodes_in_level * n_bins);
         auto last_hist_data = last_hist.host_data();
         auto hist_data = hist.host_data();
 
-        start_time = timer::now();
+
+
 #pragma omp parallel for
         for (int i = 0; i < n_nodes_in_level * n_bins; i++) {
             last_hist_data[i] = hist_data[i];
         }
 
-        end_time = timer::now();
-        std::chrono::duration<double> compute_histogram_inner_time_para = end_time - start_time;
-        LOG(DEBUG) << "compute_histogram_inner_time: " << compute_histogram_inner_time_para.count();
+
     }
+
+    end_time = timer::now();
+    std::chrono::duration<double> compute_histogram_inner_time_para = end_time - start_time;
+    LOG(DEBUG) << "compute_histogram_inner_time: " << compute_histogram_inner_time_para.count();
 
     this->build_n_hist++;
     if (n_column > 1){
@@ -782,16 +794,19 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
     auto hist_data = hist.host_data();
     #pragma omp parallel for
     for (int pid = 0; pid < n_partition; pid++) {
-        int nid0 = pid / n_column;
-        int nid = nid0 + nid_offset;
-        //            todo: check, ThunderGBM uses return;
-        if (!nodes_data[nid].splittable()) continue;
-        int fid = pid % n_column;
-        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
-            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
-            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
-        }
+//        int nid0 = pid / n_column;
+//        int nid = nid0 + nid_offset;
+//        //            todo: check, ThunderGBM uses return;
+//        if (!nodes_data[nid].splittable()) continue;
+//        int fid = pid % n_column;
+//        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
+//            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
+//            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
+//        }
+        missing_gh_data[pid] = GHPair(0, 0);
     }
+
+
 
 }
 
