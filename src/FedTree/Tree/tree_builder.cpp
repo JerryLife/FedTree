@@ -74,6 +74,12 @@ vector<Tree> TreeBuilder::build_approximate(const SyncArray<GHPair> &gradients, 
     TIMED_FUNC(timerObj);
     //Todo: add column sampling
 
+    // initiate timer
+    typedef std::chrono::high_resolution_clock timer;
+    auto start_time = timer::now();
+    auto end_time = timer::now();
+    std::chrono::duration<float> duration = end_time - start_time;
+
     for (int k = 0; k < param.tree_per_round; ++k) {
         Tree &tree = trees[k];
 
@@ -82,11 +88,25 @@ vector<Tree> TreeBuilder::build_approximate(const SyncArray<GHPair> &gradients, 
         this->trees.init_CPU(this->gradients, param);
 
         for (int level = 0; level < param.depth; ++level) {
+            // evaluate time
+            start_time = timer::now();
             find_split(level);
+            end_time = timer::now();
+            duration = end_time - start_time;
+            LOG(DEBUG) << "find_split time: " << duration.count() << "s" << std::endl;
             {
                 TIMED_SCOPE(timerObj, "apply sp");
+                start_time = timer::now();
                 update_tree();
+                end_time = timer::now();
+                duration = end_time - start_time;
+                LOG(DEBUG) << "update_tree time: " << duration.count() << "s" << std::endl;
+
+                start_time = timer::now();
                 update_ins2node_id();
+                end_time = timer::now();
+                duration = end_time - start_time;
+                LOG(DEBUG) << "update_ins2node_id time: " << duration.count() << "s" << std::endl;
                 {
                     LOG(TRACE) << "gathering ins2node id";
                     //get final result of the reset instance id to node id

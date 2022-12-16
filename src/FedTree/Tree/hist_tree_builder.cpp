@@ -138,7 +138,7 @@ void HistTreeBuilder::get_bin_ids() {
 
 void HistTreeBuilder::find_split(int level) {
     TIMED_FUNC(timerObj);
-    std::chrono::high_resolution_clock timer;
+//    std::chrono::high_resolution_clock timer;
     int n_nodes_in_level = 1 << level;
 //    int nid_offset = static_cast<int>(pow(2, level) - 1);
     int n_column = sorted_dataset.n_features();
@@ -146,6 +146,7 @@ void HistTreeBuilder::find_split(int level) {
     int n_bins = cut.cut_points_val.size();
     int n_max_nodes = 2 << param.depth;
     int n_max_splits = n_max_nodes * n_bins;
+    LOG(DEBUG) << "n_max_splits: " << n_max_splits << ", n_max_nodes: " << n_max_nodes << ", n_bins: " << n_bins;
 
     auto cut_fid_data = cut.cut_fid.host_data();
 
@@ -164,18 +165,41 @@ void HistTreeBuilder::find_split(int level) {
     SyncArray<GHPair> missing_gh(n_partition);
     LOG(TRACE) << "start finding split";
 
-    auto t_build_start = timer.now();
+//    auto t_build_start = timer.now();
+
+    // initiate common timer
+    typedef std::chrono::high_resolution_clock timer;
+    auto start_time = timer::now();
+    auto end_time = timer::now();
+    std::chrono::duration<float> duration = end_time - start_time;
 
     SyncArray<GHPair> hist(n_max_splits);
     SyncArray<float_type> gain(n_max_splits);
+
+    start_time = timer::now();
     compute_histogram_in_a_level(level, n_max_splits, n_bins, n_nodes_in_level, hist_fid_data, missing_gh, hist);
-    // LOG(INFO) << "hist:"<<"\n"<<hist;
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "compute_histogram_in_a_level time: " << duration.count() << "s";
+
+    start_time = timer::now();
     compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist);
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "compute_gain_in_a_level time: " << duration.count() << "s";
+
+    start_time = timer::now();
     SyncArray<int_float> best_idx_gain(n_nodes_in_level);
     get_best_gain_in_a_level(gain, best_idx_gain, n_nodes_in_level, n_bins);
-    // LOG(INFO) << "best_idx_gain:"<<"\n"<< best_idx_gain;
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "get_best_gain_in_a_level time: " << duration.count() << "s";
+
+    start_time = timer::now();
     get_split_points(best_idx_gain, n_nodes_in_level, hist_fid_data, missing_gh, hist);
-    // LOG(INFO) << "sp:"<<"\n"<<this->sp;
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "get_split_points time: " << duration.count() << "s";
 }
 
 
@@ -378,7 +402,7 @@ void HistTreeBuilder::find_split_by_predefined_features(int level) {
     this->build_n_hist++;
     inclusive_scan_by_key(thrust::host, hist_fid_data, hist_fid_data + n_split,
                           hist.host_data(), hist.host_data());
-    LOG(DEBUG) << hist;
+//    LOG(DEBUG) << hist;
 
     //    int n_partition = n_column * n_nodes_in_level;
     // missing gh for each node. If there is no bin inside a node, then the corresponding missing gh is not assigned.
@@ -395,7 +419,7 @@ void HistTreeBuilder::find_split_by_predefined_features(int level) {
             missing_gh_data[nid0] = nodes_data[nid].sum_gh_pair - node_gh;
         }
     }
-    LOG(DEBUG) << missing_gh;
+//    LOG(DEBUG) << missing_gh;
     auto compute_gain = []__host__(GHPair father, GHPair lch, GHPair rch, float_type min_child_weight,
                                    float_type lambda) -> float_type {
         if (lch.h >= min_child_weight && rch.h >= min_child_weight)
@@ -541,7 +565,13 @@ void HistTreeBuilder::find_split_by_predefined_features(int level) {
 void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, int n_bins, int n_nodes_in_level,
                                                    int *hist_fid, SyncArray<GHPair> &missing_gh,
                                                    SyncArray<GHPair> &hist) {
-    std::chrono::high_resolution_clock timer;
+    // initiate timer
+    typedef std::chrono::high_resolution_clock timer;
+    auto start_time = timer::now();
+    auto end_time = timer::now();
+    std::chrono::duration<float> duration = end_time - start_time;
+
+
 
     SyncArray<int> &nid = ins2node_id;
     SyncArray<GHPair> &gh_pair = gradients;
@@ -572,6 +602,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
 
             #pragma omp parallel for
             for(int fid = 0; fid < n_column; fid++){
+                #pragma omp parallel for
                 for(int iid = 0; iid < n_instances; iid++) {
                     unsigned char bid = dense_bin_id_data[iid * n_column + fid];
                     if (bid != max_num_bin) {
@@ -580,20 +611,26 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                         GHPair &dest = hist_data[feature_offset + bid];
                         if (!src.encrypted && !dest.encrypted){
                             if (src.h != 0){
+#pragma omp atomic
                                 dest.h += src.h;
                             }
                             if (src.g != 0){
+#pragma omp atomic
                                 dest.g += src.g;
                             }
                         }
                         else {
-                            dest = dest + src;
+#pragma omp atomic
+                            dest.g += src.g;
+#pragma omp atomic
+                            dest.h += + src.h;
                         }
                     }
                 }
             }
         } else {
-            auto t_dp_begin = timer.now();
+            start_time = timer::now();
+            auto t_dp_begin = timer::now();
             SyncArray<int> node_idx(n_instances);
             SyncArray<int> node_ptr(n_nodes_in_level + 1);
             {
@@ -611,7 +648,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                 thrust::upper_bound(thrust::host, nid4sort.host_data(), nid4sort.host_end(), counting_iter,
                                     counting_iter + n_nodes_in_level, node_ptr.host_data() + 1);
             }
-            auto t_dp_end = timer.now();
+            auto t_dp_end = timer::now();
             std::chrono::duration<double> dp_used_time = t_dp_end - t_dp_begin;
             this->total_dp_time += dp_used_time.count();
 
@@ -643,6 +680,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                     this->total_hist_num++;
                     #pragma omp parallel for
                     for(int fid = 0; fid < n_column; fid++){
+                        #pragma omp parallel for
                         for(int rid = 0; rid < (idx_end - idx_begin); rid++){
                             int iid = node_idx_data[rid + idx_begin];
                             unsigned char bid = dense_bin_id_data[iid * n_column + fid];
@@ -652,14 +690,19 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                                 GHPair &dest = hist_data[feature_offset + bid];
                                 if (!src.encrypted && !dest.encrypted){
                                     if (src.h != 0){
+#pragma omp atomic
                                         dest.h += src.h;
                                     }
                                     if (src.g != 0){
+#pragma omp atomic
                                         dest.g += src.g;
                                     }
                                 }
                                 else {
-                                    dest = dest + src;
+#pragma omp atomic
+                                    dest.g += src.g;
+#pragma omp atomic
+                                    dest.h += src.h;
                                 }
                             }
                         }
@@ -667,7 +710,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                 }
 
                 //subtract to the histogram of the other node
-                auto t_copy_start = timer.now();
+                auto t_copy_start = timer::now();
                 {
                     auto hist_data_computed = hist.host_data() + nid0_to_compute * n_bins;
                     auto hist_data_to_compute = hist.host_data() + nid0_to_substract * n_bins;
@@ -677,7 +720,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                         hist_data_to_compute[i] = father_hist_data[i] - hist_data_computed[i];
                     }
                 }
-                auto t_copy_end = timer.now();
+                auto t_copy_end = timer::now();
                 std::chrono::duration<double> cp_used_time = t_copy_end - t_copy_start;
                 this->total_copy_time += cp_used_time.count();
             }  // end for each node
@@ -688,12 +731,33 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
         for (int i = 0; i < n_nodes_in_level * n_bins; i++) {
             last_hist_data[i] = hist_data[i];
         }
+        end_time = timer::now();
+        std::chrono::duration<double> compute_histogram_inner_time_para = end_time - start_time;
+        LOG(DEBUG) << "compute_histogram_inner_time: " << compute_histogram_inner_time_para.count();
     }
 
     this->build_n_hist++;
     if (n_column > 1){
-        inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
-                              hist.host_data(), hist.host_data());
+//        SyncArray<GHPair> hist_res(hist.size());
+//        SyncArray<GHPair> hist_res_para(hist.size());
+//        hist_res.copy_from(hist);
+//        hist_res_para.copy_from(hist);
+
+//        start_time = timer::now();
+//        inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
+//                              hist.host_data(), hist_res.host_data());
+//        end_time = timer::now();
+//        std::chrono::duration<double> compute_histogram_inner_time = end_time - start_time;
+//        LOG(DEBUG) << "compute_histogram_inner_time: " << compute_histogram_inner_time.count();
+
+        inclusive_scan_by_cut_points(hist.host_data(), cut.cut_col_ptr.host_data(),
+                                     n_nodes_in_level, n_column, n_bins, hist.host_data());
+
+//        assert(hist_res_para.to_vec() == hist_res.to_vec());
+//        hist.copy_from(hist_res);
+
+        LOG(DEBUG) << "size of hist = " << hist.size();
+        LOG(DEBUG) << "n_split = " << n_split;
     }
     else{
         SyncArray<int> hist_fid_temp(n_split);
@@ -705,7 +769,8 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
         inclusive_scan_by_key(thrust::host, hist_fid_temp_data, hist_fid_temp_data + n_split,
                               hist.host_data(), hist.host_data());
     }
-    LOG(DEBUG) << hist;
+//    LOG(DEBUG) << hist;
+
 
     auto nodes_data = tree.nodes.host_data();
     auto missing_gh_data = missing_gh.host_data();
@@ -723,7 +788,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
             missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
         }
     }
-    return;
+
 }
 
 

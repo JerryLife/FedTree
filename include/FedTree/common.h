@@ -18,6 +18,8 @@
 #include "config.h"
 #include "thrust/tuple.h"
 #include "boost/json.hpp"
+#include "numeric"
+#include <thrust/execution_policy.h>
 //#include "FedTree/Encryption/HE.h"
 #include "FedTree/Encryption/paillier.h"
 
@@ -288,5 +290,20 @@ vector<T> flatten(IteratorType itr_begin, IteratorType itr_end) {
 
 void clean_gh_(vector<GHPair>& ghs);
 void clean_indices_(vector<int>& indices);
+
+template<typename T>
+void inclusive_scan_by_cut_points(const T *input, const int *cut_points, int n_nodes, int n_features, int n_bins, T *result) {
+#pragma omp parallel for
+    for (int i = 0; i < n_nodes; ++i) {
+#pragma omp parallel for
+        for (int j = 0; j < n_features; ++j) {
+            auto start_ptr = input + i * n_bins + cut_points[j];
+            auto end_ptr = input + i * n_bins + cut_points[j + 1];
+            auto result_ptr = result + i * n_bins + cut_points[j];
+//            thrust::inclusive_scan(thrust::host, start_ptr, end_ptr, result_ptr);
+            std::partial_sum(start_ptr, end_ptr, result_ptr);
+        }
+    }
+}
 
 #endif //FEDTREE_COMMON_H
