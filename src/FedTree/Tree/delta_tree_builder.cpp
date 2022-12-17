@@ -79,6 +79,12 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
     vector<DeltaTree> trees(param.tree_per_round);
     TIMED_FUNC(timerObj);
 
+    // initiate timer
+    typedef std::chrono::high_resolution_clock timer;
+    auto start_time = timer::now();
+    auto end_time = timer::now();
+    std::chrono::duration<double> duration = end_time - start_time;
+
     for (int k = 0; k < param.tree_per_round; ++k) {
         DeltaTree &tree_k = trees[k];
         float_type gain_coef = 0.;
@@ -118,26 +124,32 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
         is_prior.push_back(true);
 
         for (int level = 0; level < param.depth; ++level) {
-            //LOG(INFO)<<"in level:"<<level;
+            start_time = timer::now();
             find_split(level);
-            //split_point_all_reduce(level);
-            {
-                TIMED_SCOPE(timerObj, "apply sp");
-                update_tree();
-                //  LOG(INFO) << this->trees.nodes;
-//                update_ins2node_id();
-//                LOG(INFO) << "ins2node_id: " << ins2node_id;
-                update_ins2node_indices();
-                {
-                    LOG(TRACE) << "gathering ins2node id";
-                    //get final result of the reset instance id to node id
-                    if (!has_split) {
-                        LOG(INFO) << "no splittable nodes, stop";
-                        break;
-                    }
-                }
-                //ins2node_id_all_reduce(level);
+            end_time = timer::now();
+            duration = end_time - start_time;
+            LOG(DEBUG) << "find_split time = " << duration.count();
+
+
+            start_time = timer::now();
+            update_tree();
+            end_time = timer::now();
+            duration = end_time - start_time;
+            LOG(DEBUG) << "update_tree time = " << duration.count();
+
+            start_time = timer::now();
+            update_ins2node_indices();
+            end_time = timer::now();
+            duration = end_time - start_time;
+            LOG(DEBUG) << "update_ins2node_indices time = " << duration.count();
+
+            LOG(TRACE) << "gathering ins2node id";
+            //get final result of the reset instance id to node id
+            if (!has_split) {
+                LOG(INFO) << "no splittable nodes, stop";
+                break;
             }
+
             LOG(DEBUG) << "Number of nodes: " << tree.nodes.size();
         }
 
@@ -145,13 +157,22 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
         //here
 //        tree.prune_self(param.gamma);
 //        LOG(INFO) << "y_predict: " << y_predict;
+        start_time = timer::now();
         if(update_y_predict)
             predict_in_training(k);
+        end_time = timer::now();
+        duration = end_time - start_time;
+        LOG(DEBUG) << "predict_in_training time = " << duration.count();
+
+        start_time = timer::now();
         tree_k.nodes = tree.nodes;
         tree_k.dense_bin_id = dense_bin_id.to_vec();
         tree_k.cut = cut;
         tree_k.g_bin_width = g_bin_width;
         tree_k.h_bin_width = h_bin_width;
+        end_time = timer::now();
+        duration = end_time - start_time;
+        LOG(DEBUG) << "copy tree time = " << duration.count();
     }
 
     ins2node_indices_in_tree = ins2node_indices;    // return this value for removal
@@ -159,8 +180,13 @@ vector<DeltaTree> DeltaTreeBuilder::build_delta_approximate(const SyncArray<GHPa
 }
 
 void DeltaTreeBuilder::find_split(int level) {
-    TIMED_FUNC(timerObj);
-    std::chrono::high_resolution_clock timer;
+
+    // initialize timer
+    typedef std::chrono::high_resolution_clock timer;
+    auto start_time = timer::now();
+    auto end_time = timer::now();
+    std::chrono::duration<double> duration = end_time - start_time;
+
     int n_nodes_in_level = level == 0 ? 1 : num_nodes_per_level[level - 1] * 2;
 //    int n_nodes_in_level = 1 << level;
 //    int nid_offset = static_cast<int>(pow(2, level) - 1);
@@ -195,40 +221,41 @@ void DeltaTreeBuilder::find_split(int level) {
     vector<float_type> missing_g2(n_partition);
     LOG(TRACE) << "start finding split";
 
-    auto t_build_start = timer.now();
-
     SyncArray<GHPair> hist(n_max_splits);
     vector<float_type> hist_g2(n_max_splits);
+
     vector<DeltaTree::DeltaGain> gain(n_nodes_in_level * n_bins);
+
+    start_time = timer::now();
     compute_histogram_in_a_level(level, n_max_splits, n_bins, n_nodes_in_level, hist_fid_data, missing_gh, hist, missing_g2, hist_g2);
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "compute_histogram_in_a_level time = " << duration.count();
+
+    start_time = timer::now();
     compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist_g2, missing_g2, hist, 0);
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "compute_gain_in_a_level time = " << duration.count();
 
-//    vector<vector<gain_pair>> candidate_idx_gain;
-//    get_topk_gain_in_a_level(gain, candidate_idx_gain, n_nodes_in_level, n_bins, 10);
-//    vector<vector<gain_pair>> potential_idx_gain;
-//    int update_n_nodes_in_a_level;
-//    update_n_nodes_in_a_level = filter_potential_idx_gain(candidate_idx_gain, potential_idx_gain, 3, 3);
-
+    start_time = timer::now();
     vector<DeltaTree::SplitNeighborhood> best_split_nbr(n_nodes_in_level);
     get_best_split_nbr(gain, best_split_nbr, n_nodes_in_level, n_bins, param.nbr_size);
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "get_best_split_nbr time = " << duration.count();
+
+    start_time = timer::now();
     update_indices_in_split_nbr(best_split_nbr, node_indices);
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "update_indices_in_split_nbr time = " << duration.count();
 
-//    vector<int> n_samples_in_nodes(n_nodes_in_level);
-//    for (int i = nid_start_idx; i < nid_start_idx + n_nodes_in_level; ++i) {
-//        n_samples_in_nodes[i - nid_start_idx] = tree.nodes[i].n_instances;
-//    }
-//    vector<vector<gain_pair>> potential_idx_gain;
-//    int update_n_nodes_in_a_level;
-//    update_n_nodes_in_a_level = get_threshold_gain_in_a_level(gain, potential_idx_gain, n_nodes_in_level, n_bins,
-//                                                              param.min_diff_gain, param.max_range_gain, n_samples_in_nodes);
-
+    start_time = timer::now();
     get_split_points(best_split_nbr, n_nodes_in_level, hist_fid_data, missing_gh, hist, hist_g2, missing_g2, level);
-
-//    //LOG(INFO) << best_idx_gain;
-//    get_potential_split_points(potential_idx_gain, update_n_nodes_in_a_level, hist_fid_data, missing_gh, hist, hist_g2, level);
-//    //LOG(INFO) << this->sp;
-
-
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "get_split_points time = " << duration.count();
 
     num_nodes_per_level.emplace_back(n_nodes_in_level);
 }
@@ -326,6 +353,14 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
             return std::abs(a.second.gain_value) > std::abs(b.second.gain_value);
     };
 
+    // initialize timer
+    typedef std::chrono::high_resolution_clock timer;
+    auto start_time = timer::now();
+    auto end_time = timer::now();
+    std::chrono::duration<double> duration = end_time - start_time;
+
+    start_time = timer::now();
+
     // calculate score
     vector<float_type> gain_per_sp(gain.size());
     vector<float_type> remain_gain_per_sp(gain.size());
@@ -351,11 +386,17 @@ void DeltaTreeBuilder::get_best_split_nbr(const vector<DeltaTree::DeltaGain> &ga
         }
     };
 
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "get_best_split_nbr inner time: " << duration.count();
+
+#pragma omp parallel for
     for (int i = 0; i < n_bins * n_nodes_in_level; i += n_bins) {
         int nid = i / n_bins;
 
         // choose the best split neighborhood (with max scores)
         vector<IdxScore> idx_scores(sorted_dataset.n_features());
+#pragma omp parallel for
         for (int j = 0; j < sorted_dataset.n_features(); ++j) {
             int bid_start = cut.cut_col_ptr[j];
             int bid_end = cut.cut_col_ptr[j + 1];
@@ -679,10 +720,10 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 //    float_type sum_g22 = std::accumulate(hist_g2.begin(), hist_g2.begin() + cut.cut_col_ptr[1], 0.0);
 
     this->build_n_hist++;
-    inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
-                          hist.host_data(), hist.host_data());
-    inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
-                          hist_g2.begin(), hist_g2.begin());
+//    inclusive_scan_by_key(thrust::host, hist_fid, hist_fid + n_split,
+//                          hist.host_data(), hist.host_data());
+    inclusive_scan_by_cut_points(hist.host_data(), cut.cut_col_ptr.data(),
+                                 n_nodes_in_level, n_column, n_bins, hist.host_data());
 
 //    sum_g21 = std::accumulate(gh_pair.host_data(), gh_pair.host_data() + gh_pair.size(), 0.0, [](float_type a, const GHPair &b){ return  a + b.g * b.g;});
 //    sum_g22 = hist_g2[cut.cut_col_ptr[1] - 1];
@@ -696,22 +737,23 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
     auto hist_data = hist.host_data();
 
     for (int pid = 0; pid < n_partition; pid++) {
-        int nid0 = pid / n_column;
-        int nid = nid0 + nid_offset;
-        if (!nodes_data[nid].splittable()) continue;
-        int fid = pid % n_column;
-        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
-            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
-            float_type node_g2 = hist_g2[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
-            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
-//            if (missing_gh_data[pid].h < 0) {
-//                vector<float_type> close_h;
-//
-//            }
-//            assert(missing_gh_data[pid].h >= 0);
-            missing_g2[pid] = nodes_data[nid].sum_g2 - node_g2;
-            // missing value should be zero.
-        }
+//        int nid0 = pid / n_column;
+//        int nid = nid0 + nid_offset;
+//        if (!nodes_data[nid].splittable()) continue;
+//        int fid = pid % n_column;
+//        if (cut_col_ptr[fid + 1] != cut_col_ptr[fid]) {
+//            GHPair node_gh = hist_data[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
+//            float_type node_g2 = hist_g2[nid0 * n_bins + cut_col_ptr[fid + 1] - 1];
+//            missing_gh_data[pid] = nodes_data[nid].sum_gh_pair - node_gh;
+////            if (missing_gh_data[pid].h < 0) {
+////                vector<float_type> close_h;
+////
+////            }
+////            assert(missing_gh_data[pid].h >= 0);
+//            missing_g2[pid] = nodes_data[nid].sum_g2 - node_g2;
+//            // missing value should be zero.
+//        }
+        missing_gh_data[pid] = GHPair(0, 0);
     }
 }
 
