@@ -595,6 +595,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 //            vector<int> indices;
 //            GHPair sum_gh5;
             vector<GHPair> gh_vec(cut.cut_col_ptr[1], GHPair());
+#pragma omp parallel for
             for (int i = 0; i < n_all_instances * n_column; i++) {
                 int iid = i / n_column;
                 int fid = i % n_column;
@@ -610,9 +611,11 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 //                    } else {
 //                        assert(fid != 0);
 //                    }
-
-                    hist_data[feature_offset + bid] += gh_data[iid];
-                    hist_g2[feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
+#pragma omp atomic
+                    hist_data[feature_offset + bid].g += gh_data[iid].g;
+#pragma omp atomic
+                    hist_data[feature_offset + bid].h += gh_data[iid].h;
+//                    hist_g2[feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
                 }
             }
 //            GHPair sum_gh4 = std::accumulate(gh_vec.begin(), gh_vec.end(), GHPair());
@@ -669,6 +672,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
                     auto hist_data = hist.host_data() + nid0_to_compute * n_bins;
                     this->total_hist_num++;
 
+#pragma omp parallel for
                     for (int j = 0; j < nid_to_iid[nid0].size() * n_column; j++) {
                         int iid = nid_to_iid[nid0][j / n_column];
                         int fid = j % n_column;
@@ -677,8 +681,11 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
 
                         if (bid != -1) {
                             int feature_offset = cut_col_ptr_data[fid];
-                            hist_data[feature_offset + bid] += gh_data[iid];
-                            hist_g2[nid0_to_compute * n_bins + feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
+#pragma omp atomic
+                            hist_data[feature_offset + bid].g += gh_data[iid].g;
+#pragma omp atomic
+                            hist_data[feature_offset + bid].h += gh_data[iid].h;
+//                            hist_g2[nid0_to_compute * n_bins + feature_offset + bid] += gh_data[iid].g * gh_data[iid].g;
                         }
                     }
 //                    LOG(DEBUG);
@@ -736,6 +743,7 @@ void DeltaTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits,
     auto cut_col_ptr = cut.cut_col_ptr.data();
     auto hist_data = hist.host_data();
 
+#pragma omp parallel for
     for (int pid = 0; pid < n_partition; pid++) {
 //        int nid0 = pid / n_column;
 //        int nid = nid0 + nid_offset;
