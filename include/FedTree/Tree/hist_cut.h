@@ -7,7 +7,7 @@
 
 #include "FedTree/common.h"
 #include "FedTree/dataset.h"
-//#include "tree.h"
+#include "FedTree/MurmurHash3.h"
 #include "openssl/md5.h"
 #include <random>
 #include <utility>
@@ -82,23 +82,19 @@ public:
         /**
          * Compare cut values by hash. The result depends entirely on v1 and v2, but in an almost random way.
          */
-//        std::string fmt_v1 = string_format("%.4f", v1);
-//        std::string fmt_v2 = string_format("%.4f", v2);
-//        unsigned char md5_v1[MD5_DIGEST_LENGTH];
-//        unsigned char md5_v2[MD5_DIGEST_LENGTH];
-//        MD5((unsigned char *)fmt_v1.c_str(), fmt_v1.size(), md5_v1);
-//        MD5((unsigned char *)fmt_v2.c_str(), fmt_v1.size(), md5_v2);
-//        std::string md5_v1_str(reinterpret_cast<const char *>(md5_v1));
-//        std::string md5_v2_str(reinterpret_cast<const char *>(md5_v2));
-//        return md5_v1_str < md5_v2_str;
         auto v1_seed = (unsigned long) std::round(v1 * 10000);
         auto v2_seed = (unsigned long) std::round(v2 * 10000);
-        std::mt19937 rng_v1{v1_seed};
-        std::mt19937 rng_v2{v2_seed};
-        std::uniform_int_distribution<unsigned> dist(std::mt19937::min(), std::mt19937::max());
-        auto v1_value = dist(rng_v1);
-        auto v2_value = dist(rng_v2);
-        return v1_value < v2_value;
+
+        uint32_t v1_hash, v2_hash;
+        MurmurHash3_x86_32(&v1_seed, sizeof(v1_seed), 0, &v1_hash);
+        MurmurHash3_x86_32(&v2_seed, sizeof(v2_seed), 0, &v2_hash);
+
+//        std::mt19937 rng_v1{v1_seed};
+//        std::mt19937 rng_v2{v2_seed};
+//        std::uniform_int_distribution<unsigned> dist(std::mt19937::min(), std::mt19937::max());
+//        auto v1_value = dist(rng_v1);
+//        auto v2_value = dist(rng_v2);
+        return v1_hash < v2_hash;
     }
 };
 
