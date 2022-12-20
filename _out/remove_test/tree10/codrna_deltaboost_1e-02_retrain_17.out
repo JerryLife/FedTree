@@ -1,0 +1,371 @@
+[36m2022-10-15 23:31:05,577 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/codrna.train.remain_1e-02 ##
+[0m[36m2022-10-15 23:31:05,644 INFO dataset.cpp:892 : #instances = 58940, #features = 8
+[0m[36m2022-10-15 23:31:05,644 INFO dataset.cpp:906 : Load dataset using time: 0.0668247 s
+[0m[36m2022-10-15 23:31:05,644 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/codrna.test ##
+[0m[36m2022-10-15 23:31:05,869 INFO dataset.cpp:892 : #instances = 271617, #features = 8
+[0m[36m2022-10-15 23:31:05,869 INFO dataset.cpp:906 : Load dataset using time: 0.224726 s
+[0m[36m2022-10-15 23:31:05,869 INFO main.cpp:192 : start training
+[0m[36m2022-10-15 23:31:05,869 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/codrna.train.remain_1e-02 ##
+[0m[36m2022-10-15 23:31:05,888 INFO dataset.cpp:892 : #instances = 58940, #features = 8
+[0m[36m2022-10-15 23:31:05,888 INFO dataset.cpp:906 : Load dataset using time: 0.018944 s
+[0m[36m2022-10-15 23:31:05,888 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/codrna.train.delete_1e-02 ##
+[0m[36m2022-10-15 23:31:05,943 INFO dataset.cpp:892 : #instances = 595, #features = 8
+[0m[36m2022-10-15 23:31:05,943 INFO dataset.cpp:906 : Load dataset using time: 0.05469 s
+[0m[36m2022-10-15 23:31:05,943 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-15 23:31:06,168 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 0s
+[0m[36m2022-10-15 23:31:06,208 INFO deltaboost.cpp:51 : Init booster time: 0.26469s
+[0m[35m2022-10-15 23:31:06,545 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:06,545 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:06,555 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:06,590 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/106536.000000/396848.000000]
+[0m[35m2022-10-15 23:31:06,606 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:06,606 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:06,613 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:06,613 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:06,657 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/1/-4240.000000/20384.000000,0/1/2/63704.000000/147376.000000]
+[0m[35m2022-10-15 23:31:06,672 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:06,672 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:06,680 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:06,680 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:06,733 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/6/3/-22456.000000/51568.000000,0/5/4/-5112.000000/16944.000000,0/0/5/63600.000000/170496.000000,0/0/6/59824.000000/126656.000000]
+[0m[35m2022-10-15 23:31:06,747 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:06,747 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:06,755 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:06,755 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:06,818 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/7/272.000000/1088.000000,0/7/8/-9976.000000/24144.000000,0/1/9/912.000000/2464.000000,0/3/10/-4984.000000/13456.000000,0/0/11/-1480.000000/23280.000000,0/5/12/5680.000000/29824.000000,0/2/13/-1056.000000/5344.000000,0/4/14/58840.000000/121776.000000]
+[0m[35m2022-10-15 23:31:06,834 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:06,834 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:06,842 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:06,843 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:06,937 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/3/15/-1056.000000/2112.000000,0/7/16/320.000000/736.000000,0/5/17/-12472.000000/27216.000000,0/4/18/-4840.000000/13648.000000,0/7/19/-72.000000/752.000000,0/2/20/-64.000000/160.000000,0/6/21/-568.000000/2032.000000,0/3/22/-3368.000000/7952.000000,0/1/23/-680.000000/9104.000000,0/6/24/-2200.000000/6320.000000,0/4/25/52432.000000/115936.000000,0/0/26/7752.000000/19504.000000,0/5/27/-504.000000/2448.000000,0/7/28/368.000000/1088.000000,0/0/29/1336.000000/3632.000000,0/5/30/4600.000000/11184.000000]
+[0m[35m2022-10-15 23:31:06,953 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:06,953 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:06,961 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:06,963 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:07,139 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/-88.000000/368.000000,0/7/32/-1056.000000/2112.000000,0/3/33/-104.000000/208.000000,0/7/34/160.000000/320.000000,0/0/35/24.000000/144.000000,0/7/36/-6472.000000/14448.000000,0/7/37/-112.000000/256.000000,0/0/38/-648.000000/3088.000000,0/7/39/56.000000/144.000000,0/7/40/8.000000/336.000000,0/7/41/792.000000/1616.000000,0/7/42/8.000000/16.000000,0/5/43/-48.000000/128.000000,0/2/44/-680.000000/1680.000000,0/6/45/-1184.000000/2624.000000,0/7/46/-208.000000/640.000000,0/5/47/-16872.000000/39824.000000,0/0/48/872.000000/3312.000000,0/2/49/-1384.000000/7472.000000,0/5/50/-1896.000000/4368.000000,0/0/51/7048.000000/17200.000000,0/0/52/48736.000000/101280.000000,0/1/53/224.000000/3840.000000,0/4/54/6544.000000/14112.000000,0/4/55/5504.000000/12256.000000,0/6/56/-624.000000/1856.000000,0/3/57/-1456.000000/4192.000000,0/7/58/336.000000/704.000000,0/6/59/-384.000000/1088.000000,0/0/60/976.000000/1984.000000,0/7/61/49816.000000/101040.000000,0/0/62/4760.000000/10160.000000]
+[0m[35m2022-10-15 23:31:07,151 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:07,151 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:07,227 INFO deltabooster.cpp:133 : error = 0.155154
+[0m[36m2022-10-15 23:31:07,229 INFO deltaboost.cpp:90 : Tree 0, Number of nodes:125
+[0m[36m2022-10-15 23:31:07,274 INFO deltaboost.cpp:333 : predict time: 0.00743099s
+[0m[35m2022-10-15 23:31:07,501 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:07,501 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:07,511 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:07,545 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/57888.000000/368957.000000]
+[0m[35m2022-10-15 23:31:07,559 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:07,559 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:07,566 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:07,566 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:07,609 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/1/-1237.000000/14645.000000,0/1/2/35518.000000/136303.000000]
+[0m[35m2022-10-15 23:31:07,625 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:07,625 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:07,630 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:07,631 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:07,684 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/6/3/-12896.000000/51997.000000,0/6/4/-1718.000000/11733.000000,0/0/5/33346.000000/151872.000000,0/0/6/34856.000000/124289.000000]
+[0m[35m2022-10-15 23:31:07,699 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:07,699 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:07,707 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:07,707 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:07,774 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/7/220.000000/1750.000000,0/7/8/-3248.000000/14783.000000,0/7/9/409.000000/1448.000000,0/2/10/-1048.000000/4007.000000,0/0/11/53.000000/19005.000000,0/2/12/2117.000000/24049.000000,0/5/13/-436.000000/7481.000000,0/4/14/34240.000000/119034.000000]
+[0m[35m2022-10-15 23:31:07,790 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:07,790 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:07,797 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:07,798 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:07,898 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/3/15/-633.000000/2174.000000,0/7/16/269.000000/987.000000,0/7/17/-6689.000000/26445.000000,0/4/18/-932.000000/6867.000000,0/3/19/-109.000000/603.000000,0/7/20/314.000000/1024.000000,0/5/21/-673.000000/2510.000000,0/7/22/-621.000000/2157.000000,0/1/23/281.000000/6795.000000,0/4/24/1441.000000/11895.000000,0/5/25/2772.000000/22416.000000,0/0/26/3448.000000/14054.000000,0/3/27/63.000000/1044.000000,0/3/28/-806.000000/4580.000000,0/0/29/900.000000/3615.000000,0/0/30/30254.000000/101577.000000]
+[0m[35m2022-10-15 23:31:07,911 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:07,911 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:07,919 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:07,923 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:08,090 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/-58.000000/908.000000,0/7/32/-236.000000/788.000000,0/3/33/-117.000000/505.000000,0/3/34/-19.000000/61.000000,0/7/35/-2890.000000/10379.000000,0/7/36/-1387.000000/5738.000000,0/7/37/-2052.000000/7065.000000,0/7/38/-400.000000/3759.000000,0/1/39/232.000000/737.000000,0/2/40/-119.000000/348.000000,0/7/41/-1.000000/125.000000,0/7/42/143.000000/448.000000,0/1/43/379.000000/2039.000000,0/4/44/33.000000/94.000000,0/7/45/5.000000/62.000000,0/7/46/-153.000000/452.000000,0/5/47/-9907.000000/42120.000000,0/0/48/648.000000/4286.000000,0/1/49/177.000000/1250.000000,0/6/50/-388.000000/5148.000000,0/0/51/26072.000000/89212.000000,0/0/52/3933.000000/14823.000000,0/2/53/-1500.000000/7318.000000,0/7/54/3231.000000/11667.000000,0/7/55/559.000000/1819.000000,0/7/56/94.000000/296.000000,0/6/57/-71.000000/968.000000,0/7/58/26.000000/173.000000,0/7/59/-298.000000/1610.000000,0/0/60/839.000000/2880.000000,0/2/61/48.000000/3321.000000,0/7/62/30234.000000/101344.000000]
+[0m[35m2022-10-15 23:31:08,105 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:08,106 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:08,146 INFO deltabooster.cpp:133 : error = 0.0978985
+[0m[36m2022-10-15 23:31:08,147 INFO deltaboost.cpp:90 : Tree 1, Number of nodes:127
+[0m[36m2022-10-15 23:31:08,229 INFO deltaboost.cpp:333 : predict time: 0.00762069s
+[0m[35m2022-10-15 23:31:08,456 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:08,456 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:08,466 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:08,498 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/37225.000000/322717.000000]
+[0m[35m2022-10-15 23:31:08,511 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:08,511 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:08,522 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:08,522 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:08,562 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/1/-392.000000/12374.000000,0/1/2/22366.000000/113876.000000]
+[0m[35m2022-10-15 23:31:08,578 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:08,578 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:08,586 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:08,586 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:08,637 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/6/3/-9372.000000/53354.000000,0/5/4/-816.000000/8023.000000,0/0/5/21792.000000/132852.000000,0/0/6/20795.000000/97876.000000]
+[0m[35m2022-10-15 23:31:08,651 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:08,651 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:08,655 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:08,655 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:08,718 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/7/305.000000/1883.000000,0/4/8/68.000000/624.000000,0/2/9/-103.000000/854.000000,0/3/10/-912.000000/6940.000000,0/0/11/-1268.000000/39579.000000,0/7/12/20845.000000/116379.000000,0/3/13/-281.000000/4772.000000,0/4/14/20554.000000/94362.000000]
+[0m[35m2022-10-15 23:31:08,738 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:08,738 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:08,742 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:08,742 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:08,851 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/15/-297.000000/1497.000000,0/7/16/292.000000/1341.000000,0/7/17/-3350.000000/21234.000000,0/0/18/139.000000/334.000000,0/1/19/567.000000/2452.000000,0/7/20/26.000000/110.000000,0/7/21/123.000000/849.000000,0/7/22/-547.000000/4993.000000,0/1/23/-457.000000/7004.000000,0/5/24/-2461.000000/18930.000000,0/0/25/1830.000000/11918.000000,0/2/26/1417.000000/19629.000000,0/5/27/-138.000000/949.000000,0/5/28/-504.000000/3528.000000,0/0/29/357.000000/1693.000000,0/7/30/12473.000000/55632.000000]
+[0m[35m2022-10-15 23:31:08,865 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:08,865 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:08,870 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:08,874 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:09,039 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/13.000000/32.000000,0/7/32/2.000000/31.000000,0/3/33/-51.000000/250.000000,0/7/34/151.000000/608.000000,0/7/35/-3460.000000/18537.000000,0/3/36/-1916.000000/8828.000000,0/7/37/-16.000000/56.000000,0/7/38/114.000000/263.000000,0/7/39/12.000000/448.000000,0/7/40/429.000000/1983.000000,0/7/41/-104.000000/645.000000,0/7/42/17.000000/73.000000,0/7/43/-8.000000/154.000000,0/7/44/88.000000/395.000000,0/7/45/-325.000000/1783.000000,0/7/46/2.000000/305.000000,0/7/47/-3957.000000/23480.000000,0/7/48/1.000000/3968.000000,0/2/49/-838.000000/10087.000000,0/1/50/387.000000/1723.000000,0/3/51/-608.000000/2084.000000,0/0/52/1522.000000/7208.000000,0/5/53/1332.000000/10863.000000,0/0/54/2145.000000/12143.000000,0/7/55/1813.000000/8667.000000,0/7/56/13.000000/72.000000,0/7/57/230.000000/1229.000000,0/2/58/-365.000000/1414.000000,0/7/59/-23.000000/1528.000000,0/7/60/206.000000/910.000000,0/0/61/7528.000000/33967.000000,0/7/62/2086.000000/8996.000000]
+[0m[35m2022-10-15 23:31:09,051 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:09,051 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:09,090 INFO deltabooster.cpp:133 : error = 0.0843905
+[0m[36m2022-10-15 23:31:09,092 INFO deltaboost.cpp:90 : Tree 2, Number of nodes:127
+[0m[36m2022-10-15 23:31:09,133 INFO deltaboost.cpp:333 : predict time: 0.00762356s
+[0m[35m2022-10-15 23:31:09,358 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:09,358 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:09,368 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:09,402 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/23865.000000/273214.000000]
+[0m[35m2022-10-15 23:31:09,415 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:09,415 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:09,430 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:09,430 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:09,495 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/1/-697.000000/21657.000000,0/1/2/14776.000000/90898.000000]
+[0m[35m2022-10-15 23:31:09,511 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:09,511 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:09,519 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:09,519 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:09,566 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/3/-3980.000000/30714.000000,0/7/4/380.000000/4569.000000,0/0/5/14019.000000/122550.000000,0/0/6/13332.000000/76001.000000]
+[0m[35m2022-10-15 23:31:09,582 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:09,582 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:09,598 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:09,599 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:09,791 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/7/-1008.000000/5763.000000,0/7/8/-4009.000000/30612.000000,0/3/9/-1237.000000/13841.000000,0/1/10/502.000000/3672.000000,0/1/11/281.000000/9383.000000,0/2/12/1852.000000/36594.000000,0/3/13/72.000000/6916.000000,0/4/14/13249.000000/73070.000000]
+[0m[35m2022-10-15 23:31:09,819 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:09,819 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:09,834 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:09,835 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:09,941 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/4/15/-346.000000/1809.000000,0/7/16/-721.000000/4209.000000,0/7/17/25.000000/70.000000,0/7/18/-252.000000/2609.000000,0/7/19/265.000000/2505.000000,0/7/20/-825.000000/10939.000000,0/7/21/-60.000000/263.000000,0/3/22/75.000000/1541.000000,0/3/23/-4384.000000/31679.000000,0/2/24/-237.000000/1592.000000,0/5/25/1302.000000/20766.000000,0/0/26/2925.000000/24956.000000,0/7/27/1378.000000/7965.000000,0/7/28/291.000000/1447.000000,0/0/29/245.000000/1645.000000,0/7/30/13257.000000/72883.000000]
+[0m[35m2022-10-15 23:31:09,957 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:09,957 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:09,964 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:09,968 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:10,155 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/8.000000/11.000000,0/7/32/-330.000000/1742.000000,0/7/33/-100.000000/521.000000,0/7/34/-248.000000/1314.000000,0/7/35/0.000000/0.000000,0/7/36/11.000000/43.000000,0/2/37/-2818.000000/17912.000000,0/7/38/-259.000000/2546.000000,0/7/39/-53.000000/490.000000,0/7/40/121.000000/621.000000,0/7/41/-322.000000/2085.000000,0/2/42/-631.000000/3951.000000,0/7/43/9.000000/221.000000,0/7/44/-33.000000/169.000000,0/7/45/242.000000/1291.000000,0/7/46/84.000000/441.000000,0/0/47/595.000000/5666.000000,0/2/48/-3814.000000/23779.000000,0/0/49/719.000000/4698.000000,0/7/50/7.000000/15.000000,0/0/51/9235.000000/49660.000000,0/0/52/2044.000000/12764.000000,0/3/53/-1234.000000/6714.000000,0/5/54/-136.000000/4008.000000,0/7/55/0.000000/0.000000,0/7/56/613.000000/3135.000000,0/7/57/-8.000000/3954.000000,0/7/58/163.000000/858.000000,0/7/59/-13.000000/528.000000,0/7/60/249.000000/1492.000000,0/0/61/23.000000/108.000000,0/7/62/7915.000000/42199.000000]
+[0m[35m2022-10-15 23:31:10,167 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:10,167 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:10,222 INFO deltabooster.cpp:133 : error = 0.078779
+[0m[36m2022-10-15 23:31:10,223 INFO deltaboost.cpp:90 : Tree 3, Number of nodes:123
+[0m[36m2022-10-15 23:31:10,307 INFO deltaboost.cpp:333 : predict time: 0.00780381s
+[0m[35m2022-10-15 23:31:10,538 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:10,538 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:10,548 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:10,585 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/16157.000000/246262.000000]
+[0m[35m2022-10-15 23:31:10,601 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:10,601 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:10,609 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:10,609 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:10,649 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/1/24.000000/2368.000000,0/1/2/10170.000000/81602.000000]
+[0m[35m2022-10-15 23:31:10,665 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:10,665 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:10,675 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:10,675 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:10,742 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/3/-2980.000000/31993.000000,0/0/4/184.000000/1166.000000,0/0/5/9314.000000/85427.000000,0/0/6/9501.000000/64009.000000]
+[0m[35m2022-10-15 23:31:10,758 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:10,758 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:10,765 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:10,766 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:10,830 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/4/7/-1073.000000/6596.000000,0/4/8/-1689.000000/24018.000000,0/7/9/-172.000000/1169.000000,0/7/10/-1.000000/43.000000,0/6/11/-2434.000000/17275.000000,0/2/12/133.000000/14569.000000,0/5/13/-363.000000/5350.000000,0/3/14/141.000000/3635.000000]
+[0m[35m2022-10-15 23:31:10,846 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:10,846 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:10,854 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:10,854 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:10,960 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/15/-224.000000/2841.000000,0/7/16/-903.000000/5665.000000,0/7/17/-1282.000000/7824.000000,0/0/18/-59.000000/8527.000000,0/7/19/12.000000/33.000000,0/7/20/5.000000/15.000000,0/7/21/73.000000/503.000000,0/7/22/4.000000/27.000000,0/0/23/1781.000000/26493.000000,0/7/24/-1333.000000/11635.000000,0/5/25/290.000000/11917.000000,0/0/26/895.000000/6831.000000,0/2/27/-237.000000/2928.000000,0/3/28/-469.000000/4099.000000,0/7/29/5773.000000/34991.000000,0/0/30/253.000000/2663.000000]
+[0m[35m2022-10-15 23:31:10,976 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:10,976 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:10,983 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:10,984 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:11,182 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/9.000000/162.000000,0/7/32/-3.000000/492.000000,0/7/33/-163.000000/898.000000,0/7/34/-820.000000/5014.000000,0/7/35/-10.000000/109.000000,0/7/36/-122.000000/925.000000,0/7/37/-237.000000/1617.000000,0/6/38/-245.000000/6872.000000,0/-1/-1/0.000000/0.000000,0/-1/-1/0.000000/0.000000,0/7/41/-83.000000/584.000000,0/7/42/5.000000/15.000000,0/7/43/112.000000/620.000000,0/7/44/81.000000/473.000000,0/7/45/-5.000000/16.000000,0/7/46/4.000000/27.000000,0/0/47/-596.000000/17625.000000,0/3/48/-616.000000/5750.000000,0/7/49/-809.000000/4349.000000,0/2/50/-945.000000/5095.000000,0/7/51/8268.000000/52298.000000,0/0/52/975.000000/6277.000000,0/6/53/-707.000000/3233.000000,0/7/54/898.000000/5749.000000,0/4/55/1332.000000/8759.000000,0/7/56/50.000000/697.000000,0/7/57/7.000000/457.000000,0/7/58/-249.000000/1515.000000,0/0/59/3348.000000/21128.000000,0/7/60/2176.000000/12751.000000,0/7/61/-118.000000/958.000000,0/7/62/192.000000/1262.000000]
+[0m[35m2022-10-15 23:31:11,195 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:11,195 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:11,237 INFO deltabooster.cpp:133 : error = 0.0752335
+[0m[36m2022-10-15 23:31:11,239 INFO deltaboost.cpp:90 : Tree 4, Number of nodes:113
+[0m[36m2022-10-15 23:31:11,283 INFO deltaboost.cpp:333 : predict time: 0.00808379s
+[0m[35m2022-10-15 23:31:11,508 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:11,509 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:11,518 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:11,550 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/12937.000000/203639.000000]
+[0m[35m2022-10-15 23:31:11,567 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:11,567 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:11,574 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:11,574 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:11,645 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/1/-815.000000/24872.000000,0/1/2/8799.000000/75195.000000]
+[0m[35m2022-10-15 23:31:11,667 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:11,667 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:11,675 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:11,675 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:11,734 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/3/-936.000000/11128.000000,0/5/4/-1095.000000/15632.000000,0/0/5/6413.000000/62096.000000,0/0/6/7181.000000/50086.000000]
+[0m[35m2022-10-15 23:31:11,755 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:11,755 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:11,771 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:11,771 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:11,838 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/7/-1246.000000/10095.000000,0/7/8/-488.000000/5180.000000,0/2/9/-239.000000/2215.000000,0/7/10/39.000000/808.000000,0/3/11/-2909.000000/28309.000000,0/5/12/291.000000/11620.000000,0/2/13/-371.000000/2499.000000,0/7/14/5813.000000/38638.000000]
+[0m[35m2022-10-15 23:31:11,854 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:11,854 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:11,862 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:11,862 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:11,961 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/15/4.000000/22.000000,0/7/16/-843.000000/7118.000000,0/7/17/26.000000/576.000000,0/3/18/-512.000000/3095.000000,0/4/19/575.000000/6765.000000,0/7/20/27.000000/205.000000,0/7/21/-775.000000/11239.000000,0/7/22/-24.000000/255.000000,0/0/23/1453.000000/18474.000000,0/2/24/-2406.000000/16283.000000,0/2/25/109.000000/8826.000000,0/0/26/824.000000/6882.000000,0/5/27/-232.000000/1210.000000,0/7/28/31.000000/171.000000,0/0/29/1037.000000/6285.000000,0/7/30/-16.000000/51.000000]
+[0m[35m2022-10-15 23:31:11,975 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:11,975 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:11,983 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:11,995 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:12,175 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/-4.000000/187.000000,0/7/32/0.000000/0.000000,0/7/33/-302.000000/2266.000000,0/7/34/-685.000000/5568.000000,0/7/35/-429.000000/4386.000000,0/7/36/12.000000/30.000000,0/7/37/64.000000/772.000000,0/7/38/-64.000000/437.000000,0/7/39/-59.000000/246.000000,0/1/40/504.000000/2657.000000,0/7/41/-168.000000/1070.000000,0/7/42/17.000000/101.000000,0/7/43/-320.000000/3030.000000,0/7/44/-607.000000/7435.000000,0/7/45/5.000000/16.000000,0/7/46/-21.000000/241.000000,0/6/47/-1052.000000/10411.000000,0/5/48/-310.000000/3419.000000,0/5/49/-652.000000/5804.000000,0/7/50/-220.000000/2946.000000,0/7/51/5394.000000/35728.000000,0/0/52/563.000000/4695.000000,0/3/53/-523.000000/2843.000000,0/7/54/146.000000/1730.000000,0/1/55/2228.000000/15948.000000,0/7/56/-233.000000/1126.000000,0/7/57/-400.000000/2080.000000,0/7/58/14.000000/74.000000,0/1/59/486.000000/4102.000000,0/7/60/1018.000000/6228.000000,0/7/61/840.000000/5000.000000,0/7/62/-16.000000/51.000000]
+[0m[35m2022-10-15 23:31:12,187 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:12,187 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:12,228 INFO deltabooster.cpp:133 : error = 0.0717542
+[0m[36m2022-10-15 23:31:12,230 INFO deltaboost.cpp:90 : Tree 5, Number of nodes:123
+[0m[36m2022-10-15 23:31:12,307 INFO deltaboost.cpp:333 : predict time: 0.00457027s
+[0m[35m2022-10-15 23:31:12,532 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:12,532 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:12,542 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:12,574 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/8464.000000/153979.000000]
+[0m[35m2022-10-15 23:31:12,587 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:12,587 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:12,594 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:12,595 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:12,638 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/3/1/-1844.000000/30728.000000,0/1/2/5425.000000/44765.000000]
+[0m[35m2022-10-15 23:31:12,654 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:12,654 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:12,665 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:12,665 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:12,723 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/3/790.000000/15875.000000,0/7/4/63.000000/1312.000000,0/0/5/3940.000000/46690.000000,0/3/6/12.000000/2943.000000]
+[0m[35m2022-10-15 23:31:12,738 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:12,738 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:12,746 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:12,746 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:12,810 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/6/7/-890.000000/6798.000000,0/1/8/1211.000000/11950.000000,0/7/9/-113.000000/919.000000,0/7/10/-19.000000/106.000000,0/5/11/-2384.000000/43208.000000,0/5/12/-121.000000/5855.000000,0/7/13/5408.000000/41228.000000,0/0/14/150.000000/1195.000000]
+[0m[35m2022-10-15 23:31:12,826 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:12,826 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:12,833 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:12,834 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:12,970 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/15/33.000000/10675.000000,0/7/16/-721.000000/5629.000000,0/7/17/-16.000000/436.000000,0/7/18/1222.000000/10348.000000,0/7/19/-1169.000000/20410.000000,0/7/20/-58.000000/605.000000,0/0/21/128.000000/819.000000,0/7/22/-9.000000/48.000000,0/2/23/182.000000/10798.000000,0/2/24/-1831.000000/14554.000000,0/2/25/398.000000/12865.000000,0/0/26/271.000000/2975.000000,0/0/27/51.000000/332.000000,0/7/28/1025.000000/6597.000000,0/7/29/21.000000/447.000000,0/7/30/126.000000/1085.000000]
+[0m[35m2022-10-15 23:31:12,993 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:12,993 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:13,000 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:13,005 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:13,210 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/0.000000/0.000000,0/7/32/-64.000000/7534.000000,0/7/33/-129.000000/849.000000,0/7/34/-635.000000/4865.000000,0/7/35/-352.000000/3168.000000,0/7/36/-27.000000/209.000000,0/0/37/95.000000/671.000000,0/7/38/621.000000/4178.000000,0/7/39/-124.000000/616.000000,0/4/40/-144.000000/10484.000000,0/7/41/-14.000000/70.000000,0/7/42/-9.000000/150.000000,0/7/43/-22.000000/200.000000,0/7/44/60.000000/435.000000,0/7/45/-10.000000/58.000000,0/7/46/-9.000000/48.000000,0/7/47/641.000000/2979.000000,0/0/48/460.000000/6314.000000,0/0/49/701.000000/14092.000000,0/7/50/-1542.000000/13460.000000,0/7/51/3349.000000/24191.000000,0/0/52/680.000000/9244.000000,0/7/53/-193.000000/1777.000000,0/7/54/264.000000/2637.000000,0/7/55/-39.000000/187.000000,0/7/56/16.000000/134.000000,0/7/57/3634.000000/27914.000000,0/7/58/38.000000/182.000000,0/7/59/-24.000000/92.000000,0/7/60/4.000000/21.000000,0/7/61/20.000000/94.000000,0/7/62/49.000000/269.000000]
+[0m[35m2022-10-15 23:31:13,222 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:13,222 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:13,261 INFO deltabooster.cpp:133 : error = 0.0691252
+[0m[36m2022-10-15 23:31:13,263 INFO deltaboost.cpp:90 : Tree 6, Number of nodes:121
+[0m[36m2022-10-15 23:31:13,308 INFO deltaboost.cpp:333 : predict time: 0.00854588s
+[0m[35m2022-10-15 23:31:13,538 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:13,538 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:13,548 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:13,582 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/5820.000000/112738.000000]
+[0m[35m2022-10-15 23:31:13,598 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:13,598 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:13,605 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:13,606 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:13,661 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/1/42.000000/62223.000000,0/6/2/573.000000/51947.000000]
+[0m[35m2022-10-15 23:31:13,692 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:13,692 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:13,703 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:13,703 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:13,770 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/3/-1485.000000/19946.000000,0/1/4/1801.000000/30524.000000,0/3/5/655.000000/17235.000000,0/0/6/1611.000000/26231.000000]
+[0m[35m2022-10-15 23:31:13,786 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:13,786 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:13,794 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:13,794 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:13,858 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/4/7/-19.000000/138.000000,0/7/8/-324.000000/6107.000000,0/7/9/-1215.000000/26660.000000,0/2/10/-131.000000/10094.000000,0/7/11/762.000000/4681.000000,0/0/12/863.000000/9058.000000,0/1/13/414.000000/5053.000000,0/3/14/16.000000/10394.000000]
+[0m[35m2022-10-15 23:31:13,874 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:13,874 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:13,882 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:13,882 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:13,985 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/15/30.000000/30.000000,0/7/16/-19.000000/133.000000,0/7/17/-146.000000/1297.000000,0/4/18/51.000000/3226.000000,0/7/19/-566.000000/4786.000000,0/7/20/-225.000000/7976.000000,0/5/21/51.000000/5435.000000,0/7/22/61.000000/565.000000,0/7/23/3601.000000/34258.000000,0/7/24/491.000000/3220.000000,0/1/25/303.000000/3116.000000,0/7/26/286.000000/1815.000000,0/2/27/-1357.000000/11587.000000,0/7/28/473.000000/4526.000000,0/7/29/1498.000000/13702.000000,0/0/30/369.000000/4359.000000]
+[0m[35m2022-10-15 23:31:13,999 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:13,999 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:14,006 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:14,008 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:14,184 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/4.000000/26.000000,0/7/32/0.000000/0.000000,0/7/33/0.000000/0.000000,0/7/34/-2.000000/21.000000,0/7/35/-713.000000/9438.000000,0/7/36/-131.000000/1159.000000,0/7/37/-52.000000/706.000000,0/7/38/-2.000000/2809.000000,0/7/39/31.000000/204.000000,0/7/40/-329.000000/2260.000000,0/7/41/-956.000000/16517.000000,0/1/42/222.000000/1871.000000,0/7/43/1859.000000/14343.000000,0/0/44/250.000000/2201.000000,0/7/45/-145.000000/9077.000000,0/7/46/21.000000/118.000000,0/7/47/140.000000/4063.000000,0/2/48/-45.000000/1479.000000,0/7/49/116.000000/550.000000,0/7/50/110.000000/678.000000,0/7/51/-97.000000/1875.000000,0/7/52/308.000000/2894.000000,0/7/53/586.000000/6528.000000,0/7/54/235.000000/1542.000000,0/7/55/185.000000/6531.000000,0/7/56/-1222.000000/10912.000000,0/7/57/-40.000000/296.000000,0/7/58/94.000000/670.000000,0/0/59/161.000000/1169.000000,0/7/60/726.000000/5943.000000,0/7/61/-37.000000/3300.000000,0/7/62/187.000000/1534.000000]
+[0m[35m2022-10-15 23:31:14,203 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:14,204 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:14,255 INFO deltabooster.cpp:133 : error = 0.0634363
+[0m[36m2022-10-15 23:31:14,257 INFO deltaboost.cpp:90 : Tree 7, Number of nodes:123
+[0m[36m2022-10-15 23:31:14,354 INFO deltaboost.cpp:333 : predict time: 0.00801576s
+[0m[35m2022-10-15 23:31:14,585 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:14,586 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:14,595 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:14,642 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/4417.000000/140094.000000]
+[0m[35m2022-10-15 23:31:14,655 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:14,655 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:14,662 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:14,662 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:14,706 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/1/-427.000000/16016.000000,0/1/2/3155.000000/34981.000000]
+[0m[35m2022-10-15 23:31:14,719 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:14,719 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:14,727 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:14,727 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:14,778 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/4/3/69.000000/293.000000,0/7/4/15.000000/3205.000000,0/0/5/2822.000000/54300.000000,0/5/6/5.000000/3637.000000]
+[0m[35m2022-10-15 23:31:14,791 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:14,791 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:14,798 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:14,799 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:14,881 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/7/-818.000000/15393.000000,0/7/8/29.000000/164.000000,0/7/9/-458.000000/12091.000000,0/7/10/-36.000000/2471.000000,0/5/11/-809.000000/6598.000000,0/3/12/-361.000000/7676.000000,0/3/13/639.000000/11610.000000,0/0/14/210.000000/1729.000000]
+[0m[35m2022-10-15 23:31:14,895 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:14,895 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:14,903 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:14,903 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:15,008 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/15/-174.000000/1728.000000,0/7/16/-111.000000/829.000000,0/7/17/15.000000/28.000000,0/7/18/30.000000/159.000000,0/7/19/16.000000/492.000000,0/7/20/-31.000000/251.000000,0/7/21/9.000000/43.000000,0/7/22/-24.000000/141.000000,0/2/23/-1338.000000/29033.000000,0/7/24/-85.000000/1524.000000,0/6/25/592.000000/22417.000000,0/0/26/38.000000/4699.000000,0/7/27/2239.000000/16719.000000,0/0/28/752.000000/6760.000000,0/3/29/-250.000000/1428.000000,0/7/30/208.000000/1596.000000]
+[0m[35m2022-10-15 23:31:15,033 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:15,033 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:15,041 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:15,045 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:15,251 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/-19.000000/777.000000,0/7/32/-76.000000/626.000000,0/7/33/-517.000000/9231.000000,0/7/34/-99.000000/765.000000,0/7/35/25.000000/96.000000,0/7/36/7.000000/13.000000,0/7/37/0.000000/0.000000,0/7/38/11.000000/71.000000,0/7/39/0.000000/228.000000,0/7/40/16.000000/492.000000,0/7/41/-46.000000/2094.000000,0/7/42/-36.000000/235.000000,0/7/43/-2.000000/8.000000,0/7/44/9.000000/43.000000,0/7/45/13.000000/1900.000000,0/7/46/0.000000/31.000000,0/3/47/9.000000/9571.000000,0/7/48/-310.000000/11924.000000,0/7/49/-48.000000/482.000000,0/7/50/1.000000/54.000000,0/7/51/2609.000000/24062.000000,0/0/52/735.000000/6381.000000,0/7/53/-110.000000/1155.000000,0/7/54/145.000000/1346.000000,0/7/55/120.000000/1772.000000,0/7/56/2232.000000/16707.000000,0/2/57/-243.000000/1365.000000,0/7/58/649.000000/5601.000000,0/7/59/4.000000/137.000000,0/6/60/-281.000000/1191.000000,0/7/61/0.000000/0.000000,0/7/62/172.000000/1212.000000]
+[0m[35m2022-10-15 23:31:15,273 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:15,273 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:15,329 INFO deltabooster.cpp:133 : error = 0.0619427
+[0m[36m2022-10-15 23:31:15,330 INFO deltaboost.cpp:90 : Tree 8, Number of nodes:117
+[0m[36m2022-10-15 23:31:15,387 INFO deltaboost.cpp:333 : predict time: 0.00795632s
+[0m[35m2022-10-15 23:31:15,629 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:15,629 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:15,642 DEBUG delta_tree_builder.cpp:579 : 
+[0m[32m2022-10-15 23:31:15,678 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/0/3677.000000/104344.000000]
+[0m[35m2022-10-15 23:31:15,695 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:15,695 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 3
+[0m[35m2022-10-15 23:31:15,702 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:15,702 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:15,782 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/5/1/-378.000000/6036.000000,0/1/2/4437.000000/91313.000000]
+[0m[35m2022-10-15 23:31:15,795 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:15,795 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 7
+[0m[35m2022-10-15 23:31:15,803 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:15,803 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:15,885 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/2/3/-520.000000/6031.000000,0/7/4/-294.000000/2243.000000,0/0/5/323.000000/4186.000000,0/0/6/2830.000000/29868.000000]
+[0m[35m2022-10-15 23:31:15,911 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:15,911 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 15
+[0m[35m2022-10-15 23:31:15,927 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:15,927 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:15,998 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/0/7/723.000000/37058.000000,0/0/8/-6.000000/2360.000000,0/7/9/20.000000/30.000000,0/7/10/3.000000/15.000000,0/7/11/19.000000/162.000000,0/7/12/268.000000/2509.000000,0/1/13/1760.000000/17206.000000,0/7/14/2718.000000/24475.000000]
+[0m[35m2022-10-15 23:31:16,011 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:16,011 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 31
+[0m[35m2022-10-15 23:31:16,018 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:16,019 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:16,123 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/15/-261.000000/6608.000000,0/1/16/1226.000000/12176.000000,0/7/17/-521.000000/3615.000000,0/7/18/55.000000/1894.000000,0/7/19/-83.000000/967.000000,0/7/20/12.000000/24.000000,0/7/21/-170.000000/1410.000000,0/7/22/3.000000/15.000000,0/7/23/-702.000000/4983.000000,0/7/24/-1.000000/20.000000,0/7/25/-26.000000/142.000000,0/7/26/239.000000/2359.000000,0/7/27/780.000000/8864.000000,0/4/28/1909.000000/15902.000000,0/7/29/167.000000/4101.000000,0/7/30/2415.000000/20536.000000]
+[0m[35m2022-10-15 23:31:16,135 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:16,135 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 63
+[0m[35m2022-10-15 23:31:16,143 TRACE delta_tree_builder.cpp:196 : start finding split
+[0m[35m2022-10-15 23:31:16,144 TRACE delta_tree_builder.cpp:538 : start finding split
+[0m[32m2022-10-15 23:31:16,333 DEBUG delta_tree_builder.cpp:1216 : split points (gain/fea_id/nid): [0/7/31/-267.000000/3199.000000,0/7/32/-135.000000/1687.000000,0/7/33/49.000000/944.000000,0/7/34/1196.000000/11442.000000,0/7/35/9.000000/45.000000,0/7/36/-12.000000/191.000000,0/7/37/-47.000000/406.000000,0/7/38/53.000000/844.000000,0/7/39/5.000000/2237.000000,0/7/40/-11.000000/468.000000,0/7/41/0.000000/0.000000,0/7/42/0.000000/0.000000,0/7/43/-123.000000/772.000000,0/7/44/-43.000000/422.000000,0/-1/-1/0.000000/0.000000,0/-1/-1/0.000000/0.000000,0/7/47/-399.000000/3537.000000,0/7/48/-118.000000/1335.000000,0/7/49/20.000000/142.000000,0/7/50/-1.000000/20.000000,0/7/51/85.000000/1346.000000,0/0/52/12.000000/106.000000,0/7/53/27.000000/138.000000,0/7/54/207.000000/1778.000000,0/5/55/-1227.000000/30433.000000,0/2/56/-78.000000/2388.000000,0/7/57/-8.000000/411.000000,0/7/58/1912.000000/15822.000000,0/7/59/-34.000000/409.000000,0/7/60/10.000000/871.000000,0/7/61/-36.000000/588.000000,0/7/62/1789.000000/15690.000000]
+[0m[35m2022-10-15 23:31:16,349 TRACE delta_tree_builder.cpp:132 : gathering ins2node id
+[0m[32m2022-10-15 23:31:16,349 DEBUG delta_tree_builder.cpp:141 : Number of nodes: 127
+[0m[36m2022-10-15 23:31:16,392 INFO deltabooster.cpp:133 : error = 0.0617768
+[0m[36m2022-10-15 23:31:16,394 INFO deltaboost.cpp:90 : Tree 9, Number of nodes:113
+[0m[36m2022-10-15 23:31:16,394 INFO deltaboost.cpp:98 : training time = 10.1785
+[0m[36m2022-10-15 23:31:16,993 INFO parser.cpp:395 : saved to cache/codrna_tree10_retrain_1e-02_17_deltaboost.json
+[0m[36m2022-10-15 23:31:17,088 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-15 23:31:17,100 INFO deltaboost.cpp:333 : predict time: 0.0120682s
+[0m[32m2022-10-15 23:31:17,100 DEBUG deltaboost.cpp:228 : y_predict:[-3.13941,-2.4831,-3.28611,-0.347047,-3.54289,-3.53793,-3.54289,-3.39247,-1.75109,-2.37405,-2.87789,-1.66458,-1.02979,-3.67184,-3.11358,-3.56067,-2.45851,-0.463587,-3.01154,-3.10822,-3.51017,-3.01154,-3.32087,-3.10822,-1.85644,-3.50798,-3.54289,-2.28296,-2.84315,-3.54289,-1.85644,-3.67184,-3.72453,-3.44683,-1.85644,-3.72453,-3.54289,1.73803,-3.69963,-2.33553,-0.768834,-3.54289,-2.33553,-2.33553,-2.18403,-1.78836,-3.54289,-2.28296,-3.40809,-2.60397,-2.84949,-3.01154,-1.92913,-1.61963,-3.30366,-2.83722,-1.28353,-3.18787,-3.56129,1.59259,-2.84315,-2.83538,-0.736189,-0.514252,-1.56851,-2.10846,-1.22956,-3.13941,-0.458117,-3.61987,-1.53233,-1.19752,-3.51017,-3.40035,-3.50798,-3.30366,-3.48949,-3.44641,-3.3787,-2.92535,-2.44388,-1.85644,-3.48949,-3.34227,-3.59557,-3.2356,-2.97469,-3.54289,-3.54289,-3.01154,-3.42792,-3.50798,-1.92913,-3.59557,-2.58669,-3.53793,-3.50798,-3.10211,-1.56145,-2.46229,-2.53595,-3.61398,-2.91681,-3.15184,-3.06471,-3.50798,-3.7082,-3.7082,-3.54289,-3.56129,-2.53595,-2.16729,-3.50766,-1.65254,-3.10211,-3.50798,-1.65254,-3.72453,-3.43049,-1.56145,-2.55193,-1.85644,-3.43049,-3.19633,-2.83094,-3.50798,-3.56376,-3.06471,-3.34169,-3.59557,0.250529,-3.52425,-3.61398,-3.3633,-3.3597,-3.7082,-3.55915,-3.59557,-3.66636,-3.55915,-2.81253,-1.8117,-3.59557,-3.3597,-3.39806,-3.3633,-3.3633,-2.4889,-3.3633,-3.13941,-1.85644,-2.87368,-3.48949,-3.59557,-3.50798,-3.56067,-3.52425,-3.52425,-3.38179,-1.13207,-3.45998,-3.59557,-2.83094,-2.42187,-3.66636,-3.61367,-3.54289,-3.59557,-3.59557,-3.50798,-3.54289,-3.3787,-3.50798,-3.3787,-3.3787,-3.72453,-3.3597,-3.54289,-3.13941,-3.2166,-3.56067,-2.84315,-2.38039,-3.50798,-3.3787,-2.3077,-2.3077,-3.28611,-3.3597,-3.59557,-3.56067,-3.50798,-3.3597,-3.59557,-3.4991,-2.81253,-3.56067,-1.85644,-3.3597,-2.93314,-3.3597,-3.54289,-3.43049,-3.41642,-3.54289,-3.06402,-0.431272,-1.92913,-2.84728,-2.81253,-3.32087,-3.56067,-3.52425,-3.50798,-3.56067,-3.39806,-3.42792,-2.0794,-3.59557,-3.54289,-1.06545,-2.61015,-1.89006,-3.54538,-3.21266,-3.54289,-3.59557,-3.44683,-2.55193,-2.40879,-3.50798,-3.28611,-2.86155,-3.56067,-3.52216,-3.3787,-3.47848,-3.44797,-3.51017,-3.56067,-3.72453,-2.87789,-2.84728,-3.3597,-3.72453,-0.796355,-3.45287,-3.28611,-1.5242,-2.87789,-3.54289,-3.53793,-3.4723,-3.51943,-3.69963,-1.78696,-2.23822,-3.18776,-2.87485,-3.67184,-3.50798,-2.45851,-2.53417,0.108674,-3.10822,-3.01154,-3.51017,-3.10822,-3.10822,-3.28611,-3.59557,-3.50798,-2.84728,-2.87789,-2.81253,-3.54289,-3.67184,-3.67184,-3.67184,-3.72453,-3.44683,-3.56067,-3.54289,0.537885,-3.54289,-0.832268,-0.0444615,-3.54289,-3.54289,-3.56129,-3.29842,-3.16946,-2.90514,-3.38279,-3.01154,-3.28611,-3.01154,-3.50798,-3.59557,-3.10822,-2.83722,-3.53613,-3.54289,-3.56129,-2.84949,-2.65222,-1.85644,-2.6342,-0.937061,-2.32896,-1.56851,-2.80765,-3.28611,-2.58524,-1.26625,-3.61987,-1.75384,-3.50798,-3.51017,-3.35484,-3.40035,-3.50798,-3.48949,-3.44641,-3.3248,-3.54289,-2.44388,-1.13207,-3.54289,-3.54289,-3.54289,-3.2356,-3.54289,-3.54289,-3.54289,-3.10822,-3.50798,-3.28611,-3.41642,-3.54289,-3.53793,-3.54289,-3.50798,-3.56129,-3.61367,-3.7082,-2.53595,-3.56129,-3.15184,-3.54289,-3.59557,-3.50798,-3.7082,-3.67184,-3.54289,-3.56129,-3.43483,-3.50766,-3.72453,-3.56129,-3.50798,-3.61367,-3.61398,-3.72453,-3.65551,-2.81253,-2.55193,-3.44949,-3.65551,-3.67184,-3.66636,-3.50798,-3.54289,-2.9477,-3.57756,-3.54289,-3.50798,-3.54289,-3.56129,-3.45998,-3.65551,-3.44683,-3.54289,-3.59557,-3.32328,-3.54289,-3.59557,-3.43049,-3.3787,-3.61987,-3.3633,-3.45998,-3.48949,-2.40879,-3.3633,-3.38279,-3.42792,-3.54289,-3.48949,-2.84315,-2.03571,-3.3633,-3.50798,-3.52425,-3.59557,-3.59557,-3.45998,-3.3787,-3.50798,-3.59557,-3.66636,-3.61367,-3.54289,-3.40035,-3.54289,-3.50798,-3.59557,-3.44683,-3.50798,-3.54289,-3.67184,-3.42792,-3.59557,-3.54289,-3.47848,-3.50798,-3.50798,-2.81253,-3.50798,-2.81253,-3.54289,-2.36044,-3.38279,-3.41642,-2.81253,-3.59557,-3.56067,-2.38039,-3.54289,-3.41642,-2.3077,-3.59557,-3.56067,-3.3597,-3.67184,-3.54289,-3.59557,-3.54289,-3.3787,-3.3787,-3.54289,-3.38279,-3.59557,-3.59557,-3.72453,-1.92913,-3.56067,-3.50798,-3.50798,-3.50798,-3.38179,-3.50798,-3.42792,-3.50798,-3.54289,-3.50798,-1.56145,-3.21266,-3.67184,-2.43923,-2.5829,-3.54289,-3.54538,-3.54289,-3.51017,-3.50798,-3.28611,-3.2356,-3.44949,-3.56067,-3.59557,-3.54289,-3.47848,-3.56999,-3.50798,-3.67184,-3.72453,-3.50766,-3.54289,-3.72453,-3.67184,-3.36623,-3.28611,-1.5242,-3.50766,-3.54289,-3.54289,-3.44683,-3.50366,-2.25493,-3.72453,-2.90514,-3.67184,-1.58179,-3.2356,-3.50798,-2.33508,-2.45851,-3.01154,-3.10822,-3.01154,-3.51017,-3.32087,-3.10822,-3.38279,-3.59557,-3.59557,-2.87789,-2.87789,-3.3787,-1.94753,-3.67184,-3.67184,-3.72453,-3.11364,-3.67184,-3.50798,-3.54289,-3.67184,-3.16946,-1.4197,-3.4549,-3.16946,-3.54289,-3.56129,-2.72573,-3.16946,-2.90514,-3.38279,-3.40809,-3.38279,-3.01154,-3.50798,-3.59557,-3.40035,-2.83722,-3.53613,-3.16946,-3.56129,-3.38279,-2.10119,-3.3787,-0.127282,-0.488249,-2.32896,-1.66313,-3.30461,-3.28611,-1.91925,-1.26625,-0.883116,-1.808,-3.50798,-3.51017,-3.50798,-3.40035,-3.50798,-3.48949,-3.59557,-3.48949,-3.54289,-1.92913,-3.48949,-3.54289,-3.54289,-3.54289,-3.28611,-3.54289,-3.3597,-3.54289,-3.42792,-3.50798,-3.38279,-3.54289,-3.40035,-3.53793,-3.59557,-3.50798,-3.59557,-2.86155,-2.56656,-3.65551,-3.65551,-3.54538,-3.54289,-3.08371,-3.65551,-3.65551,-3.54538,-3.54289,-3.7082,-3.08312,-1.08195,-3.72453,-2.56656,-3.50798,-3.61367,-3.08312,-3.66636,-3.7082,-1.92913,-3.41349,-3.61367,-3.65551,-3.67184,-3.66636,-3.57283,-3.54289,-2.28171,-3.56129,-2.11246,-3.50798,-3.54289,-3.56129,-3.54289,-3.65551,-3.67184,-3.54289,-3.61367,-3.54289,-3.54289,-3.3597,-3.54289,-3.59557,-3.59557,-3.45998,-3.45998,-3.56067,-3.38152,-3.3633,-3.59557,-3.42792,-3.54289,-3.48949,-3.50798,-3.56067,-3.45998,-3.50798,-3.38179,-2.84315,-3.59557,-3.45998,-3.48721,-3.50798,-3.54289,-3.66636,-3.54289,-3.54289,-3.30366,-3.59557,-3.54289,-3.59557,-2.87789,-3.50798,-3.54289,-3.67184,-3.42792,-3.54289,-3.28611,-3.38179,-3.50798,-3.50798,-3.59557,-3.50798,-3.54289,-3.54289,-3.3787,-3.38279,-3.3597,-3.54289,-3.50798,-3.50798,-2.44388,-3.54289,-3.44641,-2.81253,-3.54289,-3.56067,-3.3597,-3.67184,-3.3597,-3.3787,-3.61367,-3.59557,-3.3597,-3.54289,-0.883116,-2.84315,-3.59557,-3.72453, ...(270917 more)
+[0m[36m2022-10-15 23:31:17,108 INFO deltaboost.cpp:242 : Test: error = 0.0566533
+[0m[36m2022-10-15 23:31:17,461 INFO parser.cpp:439 : saved to cache/codrna_tree10_retrain_1e-02_17_deltaboost_score_test.csv
+[0m[36m2022-10-15 23:31:17,461 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-15 23:31:17,465 INFO deltaboost.cpp:333 : predict time: 0.00406744s
+[0m[32m2022-10-15 23:31:17,465 DEBUG deltaboost.cpp:205 : y_predict:[-3.2456,2.03712,-2.61143,2.13323,-3.59422,-3.44005,-3.51017,-2.73184,2.6408,1.19191,2.42402,1.70025,-3.5824,2.02361,-3.22596,-3.50493,-2.88759,-3.65006,1.04567,-3.59422,-3.53307,-3.48883,2.33077,1.99795,1.64315,-2.25913,-3.16487,2.88947,-1.22073,-3.50798,-3.36258,-1.3977,-0.165316,-2.47949,1.65976,-2.83758,-3.3623,2.18693,-3.50814,-3.30269,-3.5824,-1.88985,0.644592,-3.59422,-3.32254,2.58301,-3.45161,1.72565,2.90414,-3.16946,-3.09746,-3.36258,-2.59868,2.2592,-0.961233,-3.48883,-3.5538,-3.53307,-3.55931,-0.94566,-3.20988,2.0414,-2.52305,-2.5829,-3.57668,-0.252964,-2.5451,1.15765,-3.0299,-3.59422,-2.48828,-2.94299,2.05295,-1.99088,2.94311,-3.33457,-2.82458,0.27819,-3.41136,-2.52305,2.95769,1.23955,-3.60018,2.15526,-3.59557,-3.59422,-2.91737,1.04719,-3.13778,2.55295,-3.61262,1.69801,-2.05439,3.03555,2.15845,-1.68983,0.702537,-3.29257,-3.48883,-2.63603,-3.50814,-3.63599,-3.16503,3.0438,-3.48883,-3.3623,-2.61144,-2.09272,1.89071,-3.57668,-3.48883,-3.28115,-3.51368,-3.48883,1.41701,0.186011,2.58927,1.94371,-2.76502,-3.29257,-3.24611,-3.30327,-3.44005,-3.5538,-3.33549,-3.18354,0.955387,1.1536,-1.81717,-0.0411757,-3.01122,-3.48883,-3.5538,-2.38394,1.96608,-3.55931,-2.93227,-3.59422,-3.01122,-3.41136,-3.55931,2.84279,-2.93232,-2.58732,1.8653,2.80651,1.97039,-3.63599,-3.55931,2.95473,-3.21175,1.16526,0.668101,1.34979,0.930417,-3.5189,-2.02933,-3.5538,2.68661,-3.72722,-3.29917,2.18444,-3.57927,2.26652,-3.5538,-2.61143,-2.40521,-3.48883,-2.31958,-3.59557,-1.62486,-3.3597,-3.57668,2.4962,1.95315,-3.18354,-3.67184,-3.26407,-3.44005,-1.74541,-3.55931,-1.94876,-3.33757,-3.32254,2.53353,-3.48883,-2.75255,-1.68817,3.07344,0.025805,-2.61642,-0.00242414,-3.51368,2.65069,1.80309,-3.44005,-3.17497,2.71527,-3.39523,-3.15314,-3.36814,-2.44489,1.73919,-3.20258,-3.55931,-3.43407,-3.41176,-2.46426,-3.48883,-3.34939,2.50413,-1.44915,-1.26841,-3.24611,-2.97814,-2.20346,3.29825,-3.44005,-3.61262,-3.54289,-0.175354,-2.94299,2.09638,-1.24623,-2.52739,3.02427,-3.48883,-3.6385,0.788958,-3.65484,2.75518,-3.5299,2.7708,-3.61262,1.62802,-3.55931,-2.04033,-1.47715,-3.2647,2.80656,-3.59422,2.80283,2.4273,-2.85817,2.55218,-3.51332,-3.42714,-3.5538,1.76681,-2.66369,2.09537,-1.21158,-3.0307,-3.59422,2.56785,-1.26069,-2.48257,0.219895,-3.63599,2.23792,1.71119,2.7264,-1.03581,-3.28115,-3.71538,-3.54872,-3.63599,-3.5189,-3.48883,-3.63599,-3.72317,-2.32288,0.0335823,-3.55931,2.01759,-3.63599,-3.68276,2.21999,2.76246,-2.60664,-1.87365,-2.39522,2.40617,-2.84728,-2.37988,2.58126,-2.05808,1.85807,-1.94635,-3.62273,-3.30424,-3.16487,-3.06639,2.30088,-2.61143,1.21643,-2.29743,-3.46467,-3.27526,-2.82031,-2.17687,-0.711509,0.236813,-1.01615,2.08388,-2.39035,-3.60109,-1.17368,2.48529,2.75814,2.55604,2.80588,2.75891,-0.220696,-3.17587,1.91814,-2.0635,1.96262,1.87923,2.29546,2.26255,-3.59422,-3.24611,-2.92901,1.54828,1.64203,-3.5189,1.708,0.388129,1.36892,2.58974,-2.69366,-1.30108,-3.54289,-3.5314,2.19675,2.89066,-2.86546,-3.58091,-3.48883,-3.5189,1.07428,-2.59825,2.59594,2.76246,-1.12042,1.31242,-2.38186,-3.44005,-2.05725,-3.59557,2.60895,-2.63846,-3.43515,-0.257535,2.81434,-2.64914,-2.79648,-1.73953,2.50082,2.50575,1.42505,2.46913,2.99028,-3.48883,-2.39035,-3.48883,1.21503,1.24393,2.37378,-3.51017,-3.43407,-2.44388,2.60076,0.533613,-2.83825,-3.28428,-3.5189,-2.83299,0.300478,-3.59422,-3.21977,-3.31507,2.39334,-3.54872,-3.35366,1.75819,-3.31507,-1.71554,-2.70382,2.60915,-3.19171,1.50023,3.06477,-0.525381,-3.07722,-3.60109,-3.1392,2.82627,-3.17815,1.8852,-3.29257,-3.55931,0.425262,2.40803,-3.48883,-3.4362,-3.48883,-3.16864,-3.59422,-0.186502,-1.50289,1.34973,-3.45898,-3.60109,2.70129,-3.51017,-3.5538,1.46999,-2.9375,-3.59422,2.83216,-3.28115,1.50771,-3.53856,2.62814,-3.29068,2.26829,-3.61262,-1.02103,-3.55931,2.56785,-2.749,-3.35507,-3.44005,-3.16838,-2.04259,-2.07288,-3.29778,-0.429818,3.0438,2.73987,2.51832,2.38173,2.26255,-3.62273,-3.28115,-2.5551,-2.71053,2.04206,-3.55931,2.29942,2.73447,-3.05513,-2.99339,-3.22964,2.11172,-3.24247,0.596759,-2.98209,2.58524,-3.5189,2.80301,-3.2647,2.12399,-2.76142,-2.87716,-2.63098,1.59497,3.09384,2.85497,1.31996,-2.5551,-3.52452,2.28023,-3.41176,0.117809,-3.61262,-3.21977,-3.28115,-1.92376,1.35835,-2.36971,-3.59422,1.0488,1.42465,2.90578,-3.69344,-1.10641,1.63764,-1.25928,1.42929,-3.48883,0.00974113,2.58524,2.46913,-3.21977,1.58007,-1.83997,-3.51368,2.56785,-3.34371,-3.20258,-3.10849,2.27417,-3.12444,-3.48883,-0.601155,1.53461,-3.15052,-0.0524367,-3.59422,-3.41136,2.19838,1.72838,-3.60109,-3.6664,-3.55841,2.90314,3.09812,-1.09168,-3.24611,-2.97465,-3.20988,2.00649,0.0766001,-2.558,-3.61998,0.538771,-3.63599,-1.25667,0.564983,2.63748,-3.63599,-3.66642,-3.63599,-2.43262,-3.40206,-2.42187,2.70129,0.27819,-1.60447,-2.99052,-0.0217922,-3.46044,2.6844,2.47605,-3.24611,-3.59422,-0.741522,1.26963,-3.47613,-3.65006,-3.47613,-1.9766,-3.59422,-1.65225,-1.3081,2.90623,-3.44005,-1.61076,2.0324,-3.59422,-3.14521,-2.78016,-3.34984,-3.44005,-0.0910062,-3.5824,-3.63599,2.27497,2.76084,-2.29837,-3.39271,-2.71215,-3.48883,-2.57849,3.2123,-2.79156,-3.55931,0.219895,-3.43728,-2.30436,3.03087,2.49552,-3.51368,-3.60789,-3.01952,-3.51368,1.63883,1.83504,-3.54289,-3.50814,-3.13497,0.502535]
+[0m[36m2022-10-15 23:31:17,474 INFO deltaboost.cpp:218 : Test: error = 0.0638655
+[0m[36m2022-10-15 23:31:17,474 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-15 23:31:17,483 INFO deltaboost.cpp:333 : predict time: 0.00869157s
+[0m[32m2022-10-15 23:31:17,483 DEBUG deltaboost.cpp:205 : y_predict:[2.95856,-2.55154,-3.3438,-3.27526,-3.67184,-3.29257,-0.795594,-3.46533,-2.23914,-3.05538,1.88977,-3.3787,-2.81619,-3.27021,-3.59422,0.698864,2.04823,2.61328,2.76612,2.09484,0.81591,-3.2647,-3.13778,-3.27053,-2.24294,2.27188,1.09279,-1.43012,0.0184534,-3.34939,-3.54885,2.33901,-3.665,-3.63599,-3.32254,2.63276,1.7092,-3.56413,2.39571,-3.39738,2.96887,-3.34449,3.13762,-3.38098,-2.26966,0.537885,-1.56378,-3.61262,0.144025,1.54963,-2.93227,-3.48883,0.438749,-0.968597,-2.59907,2.37933,-3.2647,-1.23627,-3.59422,-3.56467,2.12636,-3.24611,-0.508974,0.907472,-2.17347,-3.54872,-3.5538,2.56785,2.57355,1.85652,-3.14482,1.43173,-3.52425,2.0185,-2.86922,-2.88388,-3.58091,0.518624,-3.48883,-2.46179,-2.89622,1.82684,0.0769383,-2.86292,-3.59422,1.11104,-3.665,-3.2678,-1.73417,2.58677,2.49181,-3.48883,-3.56413,-3.55931,-3.65484,-2.86292,-3.55931,2.90578,-3.4189,-3.48939,-3.55931,-3.5538,-3.26101,2.89559,-3.44005,-2.99194,-3.59422,-1.08269,-2.18207,1.06392,-2.47263,2.13975,-3.59422,-2.63359,1.30773,1.36147,0.896563,0.318029,-3.55931,-3.47125,1.15859,-3.46467,-3.68276,-2.25886,-3.52452,-3.2678,-3.50814,2.05858,2.61841,-3.40239,-3.6664,-3.21977,-3.56336,-3.59422,-3.27192,1.91471,-3.2298,-3.48883,1.70274,-3.29159,2.66508,-3.29257,-3.54885,2.57024,-3.28115,2.34499,-2.71395,0.245838,-2.57,2.66002,-3.24611,0.488669,2.22614,-3.57927,-3.45161,-2.75787,2.22571,-3.24437,-2.97803,2.34615,-3.32254,3.04883,-1.88735,-3.59826,1.56995,2.01839,0.849973,-2.8311,-3.57927,2.42396,2.10597,-3.4751,-3.40035,1.79217,2.47605,-3.51368,-2.58496,2.03841,-3.48883,2.02361,0.495485,-2.55274,1.07803,-1.43889,0.0425898,2.59594,0.810874,2.18185,2.821,-3.48883,-3.70684,-3.27864,-3.17497,0.024625,1.35158,-3.5538,2.92923,-3.48883,2.61797,-3.5538,-2.78864,2.68661,2.72233,1.29976,-3.41939,-3.51368,2.6611,-3.56376,2.36695,-3.41136,2.47387,-3.48883,-3.57668,1.67711,2.63132,-3.30366,-3.29257,-1.30555,2.79072,-3.52908,-3.48883,-3.59422,1.39908,1.13091,-2.64143,-2.49007,-2.20906,-0.0718859,-2.94299,-2.88875,-3.59557,-1.7065,2.58986,-2.98203,2.82627,1.40607,2.81213,-2.94496,-1.80589,0.717849,-3.44005,-3.34449,-3.55931,-3.53307,2.29942,2.37841,2.00532,2.03414,0.771381,2.02775,-3.41271,-0.602119,0.717276,-2.25733,-3.59422,-3.21977,-2.90749,-3.55931,2.64114,-3.28115,-3.02213,1.28318,-1.82971,-0.174044,-3.54289,2.26665,-3.43407,-3.72317,-3.19413,-3.44005,3.32648,-0.504773,2.89504,-3.1523,-3.61262,-3.28428,-0.503565,-3.56129,-2.89461,-3.24611,-3.59557,-3.51368,2.09616,-3.59923,-0.0947498,0.200784,-2.92535,-2.62601,-1.68817,1.7673,0.861636,-3.24611,-2.86292,-1.13927,2.45346,-3.05176,-3.56999,-3.50674,-2.93814,2.54347,-3.58375,-3.54872,1.07416,2.6539,-1.63967,-1.30108,2.79992,-3.22828,2.20692,1.60595,0.985271,1.6128,-3.6664,0.00400314,-3.6664,-3.04441,-2.71623,2.39207,-3.55094,-3.59422,-3.48883,-3.48883,-3.59957,2.34787,0.49423,-2.5091,1.94476,-2.83758,-3.55931,1.22704,-2.03222,-3.56413,2.9661,2.09537,-3.30366,2.1641,-3.48883,-2.66369,-3.70678,-1.32065,-2.93521,-3.44616,-2.66369,-3.44005,-3.28115,-2.52948,2.65319,-3.60789,3.32648,-3.48883,-3.50312,0.858996,-2.66684,-0.572933,-3.21977,2.0907,2.96831,-3.665,-2.20111,-3.29778,1.80217,2.96609,1.59933,-2.53593,-0.904141,2.64191,-3.48883,0.671264,2.32209,-2.62524,-3.55931,-2.61421,-3.16487,-3.5189,-3.6664,-2.62781,-2.11807,0.219895,-3.12484,-3.55931,-2.26055,-3.21977,-2.31501,2.2929,-3.48883,-3.27526,2.36031,-1.24623,-3.22828,-3.32924,-3.24611,-3.35366,-3.36258,-0.102599,-1.68543,-2.16091,1.63465,-3.21315,-3.76495,-3.55931,-3.39523,1.0046,0.81489,-3.41349,-3.50418,-3.21902,-3.63599,-3.35507,2.58524,-3.24611,-3.01154,-3.72317,-0.508956,-3.59422,-0.220696,-3.63599,2.4354,2.47605,-3.24611,-3.72453,-3.12444,-3.05046,-3.48883,-1.24335,-3.33761,-3.3623,-2.18141,1.70132,1.82532,-0.173959,-0.170753,-3.22596,-1.63197,0.879676,-3.04227,-2.61421,-3.58375,-3.70678,-3.06402,-3.34939,3.10751,-3.59422,-2.11531,1.30757,3.15313,-3.5189,0.790696,2.06928,-3.31507,-3.11465,-2.40548,-3.3623,-3.47613,-0.556385,-3.12484,-2.99031,3.05651,-3.34351,-3.63599,-2.93227,-3.51368,-3.30511,-3.48883,-3.55931,2.34415,1.55607,1.26963,1.08065,-2.93227,1.40609,-3.57221,-3.16946,-3.55931,1.88026,-3.5538,1.45174,1.56137,2.21929,-3.4362,-3.48883,1.98392,-3.44785,-0.155344,3.01546,-1.91373,-3.59422,-3.48883,-3.55931,-2.8135,-0.303168,-1.82782,-1.72455,2.44884,-3.04177,-3.34939,0.137931,-2.15871,1.53349,-0.462738,-3.38279,-3.48883,-3.19214,-2.16156,-2.7381,2.53792,2.09633,-3.59422,2.13919,-3.48883,2.96609,-3.5189,-2.86292,3.14076,0.213858,-3.50798,-3.20988,-3.34351,-3.47613,-3.48883,-1.02575,-0.921588,1.98588,-3.58091,1.35954,-3.24611,3.20767,-3.34742,3.01616,-2.94569,-3.44117,-3.63599,-3.23195,-3.54289,-0.0411757,-3.59422,-3.5189,-3.54872,-2.52766,2.26017,2.71362,2.92316,2.07362,-3.72317,-2.93814,-2.02424,2.0043,-3.23249,-3.5538,3.21413,2.52746,3.04197,-3.00312,-3.28115,2.7711,-3.24611,-3.37528,2.50634,-3.24611,-3.72317,2.82627,0.219895,1.85318,-3.59422,-3.24611,2.56785,-3.5538,-2.92221,1.70604,-3.50798,-2.78703,2.64652,1.13696,2.71023,-3.12444,-3.54289,-3.59557,1.84391,-3.59422,-1.31972,1.11158,-3.5824,-2.61947,2.97207,-3.66028,0.555003,-3.17497,0.403603,-3.48883,-1.82159,0.6878,1.82852,-1.55187,-2.86292,-3.64923,1.54963,2.48529,1.94054,2.13875,1.63542,1.13616,1.91058,2.91968,-3.48883,-3.51813,-3.15217,-0.685714,-3.05673,1.87398,-3.49582,2.4427,-3.57668,1.19618,-0.776942,-3.02508,2.28316,-2.51192,1.95,-3.45898,-3.29917,1.14337,-2.98312,1.90742,0.676913,2.56785,-3.54885,-3.50403,-2.27058,-3.60485,1.64846,-3.24727,2.98298,-2.62005,-1.91492,-3.60109,1.01718,-3.55931,-2.6289,-3.48883,-2.73118,-2.77724,-3.31507,-3.66636,2.61254,1.36501,-2.56052,-2.4462,-0.39922,-3.40035,1.98766,-3.5538,-2.83758,1.49043,0.661853,-3.59422,3.27805,-3.54289,-2.70028,-3.48883,1.16147,-2.77724,-1.13428,-3.60477,-3.70678,1.33636,-3.63599,-2.57,-3.59422,-3.59422,2.33464,-2.45248,-2.65348,2.42819,1.41704,2.48529,2.198,1.33564,2.7972,2.27773,1.95774,-3.61262,1.79891,-1.02331,1.10676,1.72425,-1.03133,2.42453,-3.48883,2.14836,-3.35507,2.47791,-0.276329,-0.893109,-3.32924,2.55409,-3.33818,-2.0635,0.373102,-3.48883,-3.55931,-2.7647, ...(58240 more)
+[0m[36m2022-10-15 23:31:17,490 INFO deltaboost.cpp:218 : Test: error = 0.0612317
+[0m

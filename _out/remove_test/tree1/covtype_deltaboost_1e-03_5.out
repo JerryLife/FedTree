@@ -1,0 +1,48 @@
+[36m2022-10-10 21:46:30,493 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/covtype.train ##
+[0m[36m2022-10-10 21:46:38,076 INFO dataset.cpp:892 : #instances = 464809, #features = 54
+[0m[36m2022-10-10 21:46:38,076 INFO dataset.cpp:906 : Load dataset using time: 7.58293 s
+[0m[36m2022-10-10 21:46:38,076 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/covtype.test ##
+[0m[36m2022-10-10 21:46:40,160 INFO dataset.cpp:892 : #instances = 116203, #features = 54
+[0m[36m2022-10-10 21:46:40,160 INFO dataset.cpp:906 : Load dataset using time: 2.08405 s
+[0m[36m2022-10-10 21:46:40,160 INFO main.cpp:192 : start training
+[0m[36m2022-10-10 21:46:40,160 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/covtype.train.remain_1e-03 ##
+[0m[36m2022-10-10 21:46:46,098 INFO dataset.cpp:892 : #instances = 464345, #features = 54
+[0m[36m2022-10-10 21:46:46,098 INFO dataset.cpp:906 : Load dataset using time: 5.93824 s
+[0m[36m2022-10-10 21:46:46,098 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/covtype.train.delete_1e-03 ##
+[0m[36m2022-10-10 21:46:46,840 INFO dataset.cpp:892 : #instances = 464, #features = 54
+[0m[36m2022-10-10 21:46:46,840 INFO dataset.cpp:906 : Load dataset using time: 0.74183 s
+[0m[36m2022-10-10 21:46:46,840 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-10 21:46:52,699 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 1s
+[0m[36m2022-10-10 21:46:52,822 INFO deltaboost.cpp:47 : Init booster time: 5.98177s
+[0m[36m2022-10-10 21:46:57,129 INFO delta_tree_builder.cpp:92 : delta_gain_eps = 0
+[0m[36m2022-10-10 21:47:04,141 INFO deltabooster.cpp:116 : error = 0.26114
+[0m[36m2022-10-10 21:47:04,156 INFO deltaboost.cpp:75 : Tree 0, Number of nodes:109
+[0m[36m2022-10-10 21:47:04,156 INFO deltaboost.cpp:83 : training time = 11.2815
+[0m[36m2022-10-10 21:47:05,042 INFO parser.cpp:395 : saved to cache/covtype_tree1_original_1e-03_5_deltaboost.json
+[0m[36m2022-10-10 21:47:05,152 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-10 21:47:05,167 INFO deltaboost.cpp:318 : predict time: 0.01465s
+[0m[36m2022-10-10 21:47:05,169 INFO deltaboost.cpp:227 : Test: error = 0.262429
+[0m[36m2022-10-10 21:47:05,468 INFO parser.cpp:439 : saved to cache/covtype_tree1_original_1e-03_5_deltaboost_score_test.csv
+[0m[36m2022-10-10 21:47:05,468 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-10 21:47:05,468 INFO deltaboost.cpp:318 : predict time: 0.000321331s
+[0m[36m2022-10-10 21:47:05,468 INFO deltaboost.cpp:203 : Test: error = 0.24569
+[0m[36m2022-10-10 21:47:05,468 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-10 21:47:05,518 INFO deltaboost.cpp:318 : predict time: 0.0493457s
+[0m[36m2022-10-10 21:47:05,525 INFO deltaboost.cpp:203 : Test: error = 0.261155
+[0m[36m2022-10-10 21:47:05,525 INFO main.cpp:287 : 464 samples to be removed from model
+[0m[36m2022-10-10 21:47:05,529 INFO deltaboost.cpp:97 : Preparing for deletion
+[0m[36m2022-10-10 21:47:05,567 INFO deltaboost.cpp:127 : Deleting 1trees
+[0m[36m2022-10-10 21:47:05,743 INFO main.cpp:293 : removing time = 0.21839
+[0m[36m2022-10-10 21:47:05,743 INFO main.cpp:295 : Predict after removals
+[0m[36m2022-10-10 21:47:05,743 INFO main.cpp:296 : On test dataset
+[0m[36m2022-10-10 21:47:05,749 INFO deltaboost.cpp:318 : predict time: 0.00575242s
+[0m[36m2022-10-10 21:47:05,751 INFO deltaboost.cpp:227 : Test: error = 0.262429
+[0m[36m2022-10-10 21:47:05,983 INFO parser.cpp:439 : saved to cache/covtype_tree1_original_1e-03_5_deleted_score_test.csv
+[0m[36m2022-10-10 21:47:05,983 INFO main.cpp:305 : On deleted dataset
+[0m[36m2022-10-10 21:47:05,984 INFO deltaboost.cpp:318 : predict time: 0.000332761s
+[0m[36m2022-10-10 21:47:05,984 INFO deltaboost.cpp:203 : Test: error = 0.24569
+[0m[36m2022-10-10 21:47:05,984 INFO main.cpp:310 : On remained dataset
+[0m[36m2022-10-10 21:47:05,990 INFO deltaboost.cpp:318 : predict time: 0.00570804s
+[0m[36m2022-10-10 21:47:05,996 INFO deltaboost.cpp:203 : Test: error = 0.261155
+[0m[36m2022-10-10 21:47:06,503 INFO parser.cpp:395 : saved to cache/covtype_tree1_original_1e-03_5_deleted.json
+[0m

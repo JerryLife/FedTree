@@ -1,0 +1,31 @@
+[36m2022-10-11 19:59:13,128 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/susy.train.remain_1e-02 ##
+[0m[36m2022-10-11 19:59:32,644 INFO dataset.cpp:892 : #instances = 3960000, #features = 18
+[0m[36m2022-10-11 19:59:32,644 INFO dataset.cpp:906 : Load dataset using time: 19.5164 s
+[0m[36m2022-10-11 19:59:32,644 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/susy.test ##
+[0m[36m2022-10-11 19:59:36,150 INFO dataset.cpp:892 : #instances = 1000000, #features = 18
+[0m[36m2022-10-11 19:59:36,150 INFO dataset.cpp:906 : Load dataset using time: 3.50598 s
+[0m[36m2022-10-11 19:59:36,150 INFO main.cpp:192 : start training
+[0m[36m2022-10-11 19:59:36,150 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/susy.train.remain_1e-02 ##
+[0m[36m2022-10-11 19:59:51,046 INFO dataset.cpp:892 : #instances = 3960000, #features = 18
+[0m[36m2022-10-11 19:59:51,046 INFO dataset.cpp:906 : Load dataset using time: 14.8958 s
+[0m[36m2022-10-11 19:59:51,046 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/susy.train.delete_1e-02 ##
+[0m[36m2022-10-11 19:59:51,216 INFO dataset.cpp:892 : #instances = 40000, #features = 18
+[0m[36m2022-10-11 19:59:51,216 INFO dataset.cpp:906 : Load dataset using time: 0.170273 s
+[0m[36m2022-10-11 19:59:51,216 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-11 20:00:16,626 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 5s
+[0m[36m2022-10-11 20:00:17,564 INFO deltaboost.cpp:47 : Init booster time: 26.3476s
+[0m[36m2022-10-11 20:01:19,155 INFO deltabooster.cpp:116 : error = 0.23554
+[0m[36m2022-10-11 20:01:19,246 INFO deltaboost.cpp:75 : Tree 0, Number of nodes:127
+[0m[36m2022-10-11 20:01:19,246 INFO deltaboost.cpp:83 : training time = 61.5853
+[0m[36m2022-10-11 20:01:23,979 INFO parser.cpp:395 : saved to cache/susy_tree1_retrain_1e-02_60_deltaboost.json
+[0m[36m2022-10-11 20:01:24,958 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-11 20:01:24,992 INFO deltaboost.cpp:318 : predict time: 0.0335096s
+[0m[36m2022-10-11 20:01:25,006 INFO deltaboost.cpp:227 : Test: error = 0.235776
+[0m[36m2022-10-11 20:01:26,552 INFO parser.cpp:439 : saved to cache/susy_tree1_retrain_1e-02_60_deltaboost_score_test.csv
+[0m[36m2022-10-11 20:01:26,552 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-11 20:01:26,554 INFO deltaboost.cpp:318 : predict time: 0.00171939s
+[0m[36m2022-10-11 20:01:26,554 INFO deltaboost.cpp:203 : Test: error = 0.231025
+[0m[36m2022-10-11 20:01:26,554 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-11 20:01:26,667 INFO deltaboost.cpp:318 : predict time: 0.112714s
+[0m[36m2022-10-11 20:01:26,707 INFO deltaboost.cpp:203 : Test: error = 0.23554
+[0m

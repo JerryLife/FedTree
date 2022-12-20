@@ -1,0 +1,32 @@
+[36m2022-10-10 23:48:46,589 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/msd.train.remain_1e-02 ##
+[0m[36m2022-10-10 23:49:02,254 INFO dataset.cpp:892 : #instances = 459078, #features = 90
+[0m[36m2022-10-10 23:49:02,254 INFO dataset.cpp:906 : Load dataset using time: 15.6644 s
+[0m[36m2022-10-10 23:49:02,254 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/msd.test ##
+[0m[36m2022-10-10 23:49:05,147 INFO dataset.cpp:892 : #instances = 51630, #features = 90
+[0m[36m2022-10-10 23:49:05,147 INFO dataset.cpp:906 : Load dataset using time: 2.89344 s
+[0m[36m2022-10-10 23:49:05,147 INFO main.cpp:192 : start training
+[0m[36m2022-10-10 23:49:05,147 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/msd.train.remain_1e-02 ##
+[0m[36m2022-10-10 23:49:19,664 INFO dataset.cpp:892 : #instances = 459078, #features = 90
+[0m[36m2022-10-10 23:49:19,664 INFO dataset.cpp:906 : Load dataset using time: 14.5166 s
+[0m[36m2022-10-10 23:49:19,664 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/msd.train.delete_1e-02 ##
+[0m[36m2022-10-10 23:49:20,689 INFO dataset.cpp:892 : #instances = 4637, #features = 90
+[0m[36m2022-10-10 23:49:20,689 INFO dataset.cpp:906 : Load dataset using time: 1.02548 s
+[0m[36m2022-10-10 23:49:20,690 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-10 23:49:30,868 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 1s
+[0m[36m2022-10-10 23:49:31,025 INFO deltaboost.cpp:47 : Init booster time: 10.3357s
+[0m[36m2022-10-10 23:49:36,037 INFO delta_tree_builder.cpp:92 : delta_gain_eps = 0
+[0m[36m2022-10-10 23:49:49,188 INFO deltabooster.cpp:116 : RMSE = 0.100679
+[0m[36m2022-10-10 23:49:49,202 INFO deltaboost.cpp:75 : Tree 0, Number of nodes:127
+[0m[36m2022-10-10 23:49:49,202 INFO deltaboost.cpp:83 : training time = 18.1232
+[0m[36m2022-10-10 23:49:49,907 INFO parser.cpp:395 : saved to cache/msd_tree1_retrain_1e-02_41_deltaboost.json
+[0m[36m2022-10-10 23:49:50,063 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-10 23:49:50,070 INFO deltaboost.cpp:318 : predict time: 0.00712189s
+[0m[36m2022-10-10 23:49:50,072 INFO deltaboost.cpp:227 : Test: RMSE = 0.10074
+[0m[36m2022-10-10 23:49:50,245 INFO parser.cpp:439 : saved to cache/msd_tree1_retrain_1e-02_41_deltaboost_score_test.csv
+[0m[36m2022-10-10 23:49:50,245 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-10 23:49:50,246 INFO deltaboost.cpp:318 : predict time: 0.000869708s
+[0m[36m2022-10-10 23:49:50,247 INFO deltaboost.cpp:203 : Test: RMSE = 0.1008
+[0m[36m2022-10-10 23:49:50,247 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-10 23:49:50,297 INFO deltaboost.cpp:318 : predict time: 0.0504112s
+[0m[36m2022-10-10 23:49:50,304 INFO deltaboost.cpp:203 : Test: RMSE = 0.100679
+[0m

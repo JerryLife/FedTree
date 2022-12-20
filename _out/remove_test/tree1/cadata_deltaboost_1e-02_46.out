@@ -1,0 +1,48 @@
+[36m2022-10-10 21:44:43,019 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/cadata.train ##
+[0m[36m2022-10-10 21:44:43,094 INFO dataset.cpp:892 : #instances = 16512, #features = 8
+[0m[36m2022-10-10 21:44:43,094 INFO dataset.cpp:906 : Load dataset using time: 0.0749019 s
+[0m[36m2022-10-10 21:44:43,094 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/cadata.test ##
+[0m[36m2022-10-10 21:44:43,095 INFO dataset.cpp:892 : #instances = 4128, #features = 8
+[0m[36m2022-10-10 21:44:43,095 INFO dataset.cpp:906 : Load dataset using time: 0.00164623 s
+[0m[36m2022-10-10 21:44:43,095 INFO main.cpp:192 : start training
+[0m[36m2022-10-10 21:44:43,095 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/cadata.train.remain_1e-02 ##
+[0m[36m2022-10-10 21:44:43,103 INFO dataset.cpp:892 : #instances = 16347, #features = 8
+[0m[36m2022-10-10 21:44:43,103 INFO dataset.cpp:906 : Load dataset using time: 0.00732971 s
+[0m[36m2022-10-10 21:44:43,103 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/cadata.train.delete_1e-02 ##
+[0m[36m2022-10-10 21:44:43,103 INFO dataset.cpp:892 : #instances = 165, #features = 8
+[0m[36m2022-10-10 21:44:43,103 INFO dataset.cpp:906 : Load dataset using time: 0.000424641 s
+[0m[36m2022-10-10 21:44:43,103 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-10 21:44:43,140 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 0s
+[0m[36m2022-10-10 21:44:43,144 INFO deltaboost.cpp:47 : Init booster time: 0.0404643s
+[0m[36m2022-10-10 21:44:43,291 INFO delta_tree_builder.cpp:92 : delta_gain_eps = 0
+[0m[36m2022-10-10 21:44:43,432 INFO deltabooster.cpp:116 : RMSE = 0.153333
+[0m[36m2022-10-10 21:44:43,432 INFO deltaboost.cpp:75 : Tree 0, Number of nodes:65
+[0m[36m2022-10-10 21:44:43,432 INFO deltaboost.cpp:83 : training time = 0.288017
+[0m[36m2022-10-10 21:44:43,454 INFO parser.cpp:395 : saved to cache/cadata_tree1_original_1e-02_46_deltaboost.json
+[0m[36m2022-10-10 21:44:43,459 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-10 21:44:43,459 INFO deltaboost.cpp:318 : predict time: 0.00028657s
+[0m[36m2022-10-10 21:44:43,459 INFO deltaboost.cpp:227 : Test: RMSE = 0.158971
+[0m[36m2022-10-10 21:44:43,468 INFO parser.cpp:439 : saved to cache/cadata_tree1_original_1e-02_46_deltaboost_score_test.csv
+[0m[36m2022-10-10 21:44:43,468 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-10 21:44:43,469 INFO deltaboost.cpp:318 : predict time: 0.00026702s
+[0m[36m2022-10-10 21:44:43,469 INFO deltaboost.cpp:203 : Test: RMSE = 0.162018
+[0m[36m2022-10-10 21:44:43,469 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-10 21:44:43,469 INFO deltaboost.cpp:318 : predict time: 0.000296147s
+[0m[36m2022-10-10 21:44:43,470 INFO deltaboost.cpp:203 : Test: RMSE = 0.153243
+[0m[36m2022-10-10 21:44:43,470 INFO main.cpp:287 : 165 samples to be removed from model
+[0m[36m2022-10-10 21:44:43,470 INFO deltaboost.cpp:97 : Preparing for deletion
+[0m[36m2022-10-10 21:44:43,471 INFO deltaboost.cpp:127 : Deleting 1trees
+[0m[36m2022-10-10 21:44:43,478 INFO main.cpp:293 : removing time = 0.00798101
+[0m[36m2022-10-10 21:44:43,478 INFO main.cpp:295 : Predict after removals
+[0m[36m2022-10-10 21:44:43,478 INFO main.cpp:296 : On test dataset
+[0m[36m2022-10-10 21:44:43,481 INFO deltaboost.cpp:318 : predict time: 0.00352727s
+[0m[36m2022-10-10 21:44:43,482 INFO deltaboost.cpp:227 : Test: RMSE = 0.159019
+[0m[36m2022-10-10 21:44:43,496 INFO parser.cpp:439 : saved to cache/cadata_tree1_original_1e-02_46_deleted_score_test.csv
+[0m[36m2022-10-10 21:44:43,496 INFO main.cpp:305 : On deleted dataset
+[0m[36m2022-10-10 21:44:43,497 INFO deltaboost.cpp:318 : predict time: 0.000310113s
+[0m[36m2022-10-10 21:44:43,497 INFO deltaboost.cpp:203 : Test: RMSE = 0.162529
+[0m[36m2022-10-10 21:44:43,497 INFO main.cpp:310 : On remained dataset
+[0m[36m2022-10-10 21:44:43,497 INFO deltaboost.cpp:318 : predict time: 0.000317653s
+[0m[36m2022-10-10 21:44:43,498 INFO deltaboost.cpp:203 : Test: RMSE = 0.153253
+[0m[36m2022-10-10 21:44:43,523 INFO parser.cpp:395 : saved to cache/cadata_tree1_original_1e-02_46_deleted.json
+[0m

@@ -63,7 +63,7 @@ class Record(object):
                         j = json.loads(j)
                         for k, v in j.items():
                             ret[k].append(v[0])
-                        record = cls(ret, model_type, slice_num)
+                        record = cls(ret, model_type, slice_num, dataset)
                         logging.debug("Done loading hedgecut")
                 return record
             else:
@@ -73,7 +73,7 @@ class Record(object):
                     if slice_num is not None:
                         for k, v in j.items():
                             j[k] = v[:slice_num]
-                    record = cls(j, model_type, slice_num)
+                    record = cls(j, model_type, slice_num, dataset)
                     logging.debug("Done loading hedgecut")
                     return record
 
@@ -180,7 +180,7 @@ def plot_score_before_after_removal(out_dir, datasets, remove_ratios, save_path=
                 df.set_index('Dataset', inplace=True)
                 df_ratios.append(df)
         df_combine = pd.concat(df_ratios, axis=1)
-        df_combine.insert(0, 'Method', columns)
+        df_combine.insert(0, 'Method')
 
         df_combine.style.format(lambda x: f"{x:.6f}")
         # df_combine = df_combine[['Method', r'$D$', r'$D_f$', r'$D_r$', r'$D$', r'$D_f$', r'$D_r$']]
@@ -190,34 +190,61 @@ def plot_score_before_after_removal(out_dir, datasets, remove_ratios, save_path=
         print(latex_table)
 
 
-def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n_trees=50):
-    assert present in ['test', 'all']
+def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n_trees=50, n_rounds=1):
+    assert present in ['test']
+    xgboost_scores = {
+        'codrna': 1 - 0.9552,
+        'covtype': 1 - 0.8016,
+        'gisette': 1 - 0.9630,
+        'cadata': 0.1165,
+        'msd': 0.1143,
+    }
+    rf_scores = {
+        'codrna': 0.1011,
+        'covtype': 0.2472,
+        'gisette': 0.0590,
+        'cadata': 0.1307,
+        'msd': 0.1170,
+    }
+    dt_scores = {
+        'codrna': 0.0670,
+        'covtype': 0.2225,
+        'gisette': 0.0750,
+        'cadata': 0.1382,
+        'msd': 0.1185,
+    }
+
     summary = []
     for dataset in datasets:
-        ratio = 0.01  # either should be the same
-        out_deltaboost_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_deltaboost_{ratio}.out")
-        out_gbdt_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_gbdt.out")
-        metric, deltaboost_data = get_scores_from_file(out_deltaboost_path, out_fmt='float')
+        ratio = '1e-03'  # either should be the same
+        deltaboost_scores = []
+        for i in range(n_rounds):
+            out_deltaboost_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_deltaboost_{ratio}_retrain_{i}.out")
+            metric, deltaboost_data = get_scores_from_file(out_deltaboost_path, out_fmt='float')
+            deltaboost_scores.append(deltaboost_data[0])
+        db_mean = np.mean(deltaboost_scores)
+        out_gbdt_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_gbdt_{ratio}.out")
         _, gbdt_data = get_scores_from_file(out_gbdt_path, out_fmt='float')
-        deltaboost_scores = deltaboost_data[:3]
-        gbdt_scores = gbdt_data
+        gbdt_score = gbdt_data[0]
+        summary.append([db_mean, gbdt_score, xgboost_scores[dataset], rf_scores[dataset], dt_scores[dataset]])
 
-        # empty datasets
-        if len(deltaboost_scores) == 0 or len(gbdt_scores) == 0:
-            if present == 'test':
-                summary.append([0, 0])
-            else:
-                assert False
-        else:
-            if present == 'test':
-                summary.append([gbdt_scores[0], deltaboost_scores[0]])
-            else:
-                assert False
+        # # empty datasets
+        # if len(deltaboost_scores) == 0 or len(gbdt_scores) == 0:
+        #     if present == 'test':
+        #         summary.append([0, 0])
+        #     else:
+        #         assert False
+        # else:
+        #     if present == 'test':
+        #         summary.append([gbdt_scores[0], deltaboost_scores[0]])
+        #     else:
+        #         assert False
     # plot
     if present == 'test':
-        summary_df = pd.DataFrame(data=summary, index=datasets, columns=['GBDT', 'DeltaBoost'])
-        ax = summary_df.plot(kind='bar', rot=0, xlabel='Datasets', ylabel='Error/RMSE',
-                             title=f'Error/RMSE of DeltaBoost and GBDT (tree {n_trees})',
+        algos = ['DeltaBoost', 'GBDT', 'XGBoost', 'Random Forest', 'Decision Tree']
+        summary_df = pd.DataFrame(data=summary, index=datasets, columns=algos)
+        ax = summary_df.plot(kind='bar', rot=0, xlabel='Datasets', ylabel='Error',
+                             title=f'Error of DeltaBoost and GBDT (tree {n_trees})',
                              figsize=None)
         ax.margins(y=0.1)
         ax.legend()
@@ -424,6 +451,8 @@ class ModelDiffSingle:
             :param i: instance index
             :return: normalized histogram counts
             """
+            # if i == 81:
+            #     return np.nan, np.nan, np.nan
             original_hist_i = np.histogram(self.original_score[:, i], bins=n_bins,
                                            range=(min_value, max_value), density=True)[0]
             retrain_hist_i = np.histogram(self.retrain_score[:, i], bins=n_bins,
@@ -445,10 +474,10 @@ class ModelDiffSingle:
         logging.debug("Done")
 
         if return_std:
-            return (np.mean(original_vs_retrain), np.std(original_vs_retrain)), \
-                   (np.mean(retrain_vs_deleted), np.std(retrain_vs_deleted))
+            return (np.nanmean(original_vs_retrain), np.nanstd(original_vs_retrain)), \
+                   (np.nanmean(retrain_vs_deleted), np.nanstd(retrain_vs_deleted))
         else:
-            return np.mean(original_vs_retrain), np.mean(retrain_vs_deleted)
+            return np.nanmean(original_vs_retrain), np.nanmean(retrain_vs_deleted)
 
     def get_accuracy(self):
         logging.debug("Loading Accuracy")
@@ -517,7 +546,8 @@ class ModelDiff:
         if dart_path is not None:
             Record.dart_path = dart_path
 
-    def get_raw_data_forget_(self, n_bins=50, save_path=None, update_hedgecut=None, update_dart=None, update_deltaboost=None,
+    def get_raw_data_forget_(self, n_bins=50, save_path=None, update_hedgecut=None, update_dart=None,
+                             update_deltaboost=None,
                              update_datasets=None):
         """
         Get raw data of three methods and stored in self.table_data
@@ -531,9 +561,9 @@ class ModelDiff:
         """
         # initialize parameters
         if self.forget_table_cache_path is None:
-            _update_dart = _update_hedgecut = _update_deltaboost = True     # default update all
+            _update_dart = _update_hedgecut = _update_deltaboost = True  # default update all
         else:
-            _update_dart = _update_hedgecut = _update_deltaboost = False    # default to load from cache
+            _update_dart = _update_hedgecut = _update_deltaboost = False  # default to load from cache
         # overwrite parameters if specified
         _update_dart = _update_dart if update_dart is None else update_dart
         _update_hedgecut = _update_hedgecut if update_hedgecut is None else update_hedgecut
@@ -542,7 +572,7 @@ class ModelDiff:
         ratio2version = {'1e-03': '0.1%', '1e-02': '1%'}
         for i, dataset in enumerate(self.datasets):
             for j, remove_ratio in enumerate(self.remove_ratios):
-                if dataset in ['codrna', 'gisette', 'covtype', 'higgs']:
+                if dataset in ['codrna', 'gisette', 'covtype', 'higgs', 'susy']:
                     if _update_dart and (update_datasets is None or dataset in update_datasets):
                         # load dart from record
                         logging.debug(f"Loading dart record")
@@ -584,18 +614,22 @@ class ModelDiff:
                     logging.info(f"{dataset} {remove_ratio} HedgeCut and DART skipped.")
 
                 if _update_deltaboost and (update_datasets is None or dataset in update_datasets):
-                    # load deltaboost by inference or outputs
-                    model_diff_deltaboost = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
-                                                            self.keyword, n_jobs=self.n_jobs,
-                                                            deltaboost_path=self.deltaboost_path,
-                                                            deltaboost_predict=self.deltaboost_predict)
-                    if self.deltaboost_predict:
-                        model_diff_deltaboost.predict_(self.n_used_trees)
-                    ovr_deltaboost_data, rvd_deltaboost_data = model_diff_deltaboost.get_hellinger_distance(
-                        return_std=True,
-                        n_bins=n_bins)
-                    ovr_deltaboost: str = f"{ovr_deltaboost_data[0]:.4f}\\textpm {ovr_deltaboost_data[1]:.4f}"
-                    rvd_deltaboost: str = f"{rvd_deltaboost_data[0]:.4f}\\textpm {rvd_deltaboost_data[1]:.4f}"
+                    try:
+                        # load deltaboost by inference or outputs
+                        model_diff_deltaboost = ModelDiffSingle(dataset, self.n_trees, remove_ratio, self.n_rounds,
+                                                                self.keyword, n_jobs=self.n_jobs,
+                                                                deltaboost_path=self.deltaboost_path,
+                                                                deltaboost_predict=self.deltaboost_predict)
+                        if self.deltaboost_predict:
+                            model_diff_deltaboost.predict_(self.n_used_trees)
+                        ovr_deltaboost_data, rvd_deltaboost_data = model_diff_deltaboost.get_hellinger_distance(
+                            return_std=True,
+                            n_bins=n_bins)
+                        ovr_deltaboost: str = f"{ovr_deltaboost_data[0]:.4f}\\textpm {ovr_deltaboost_data[1]:.4f}"
+                        rvd_deltaboost: str = f"{rvd_deltaboost_data[0]:.4f}\\textpm {rvd_deltaboost_data[1]:.4f}"
+                    except Exception as e:
+                        logging.error(f"{dataset} {remove_ratio} deltaboost failed: {e}")
+                        ovr_deltaboost = rvd_deltaboost = '-'
                 else:
                     logging.debug(f"Loading deltaboost results from cache")
                     ovr_deltaboost = self.table_data[i * 2, j * 3 + 2]
@@ -634,7 +668,7 @@ class ModelDiff:
         ratio2version = {'1e-03': '0.1%', '1e-02': '1%'}
         for i, dataset in enumerate(self.datasets):
             for j, remove_ratio in enumerate(self.remove_ratios):
-                if dataset in ['codrna', 'gisette', 'covtype', 'higgs']:
+                if dataset in ['codrna', 'gisette', 'covtype', 'higgs', 'susy']:
                     if _update_dart and (update_datasets is None or dataset in update_datasets):
                         # load dart from record
                         logging.debug(f"Loading dart record")
@@ -679,25 +713,45 @@ class ModelDiff:
                     logging.info(f"{dataset} {remove_ratio} HedgeCut and DART skipped.")
 
                 if _update_deltaboost and (update_datasets is None or dataset in update_datasets):
-                    logging.debug(f"Loading deltaboost data from output")
-                    deltaboost_original_scores = np.zeros(self.n_rounds)
-                    deltaboost_deleted_scores = np.zeros(self.n_rounds)
-                    deltaboost_retrain_scores = np.zeros(self.n_rounds)
-                    keyword2id = {'delete': 0, 'remain': 1, 'test': 2}
-                    for t in range(self.n_rounds):
-                        original_out_path = os.path.join(self.deltaboost_out_path, f"{dataset}_deltaboost_{remove_ratio}_{t}.out")
-                        retrain_out_path = os.path.join(self.deltaboost_out_path, f"{dataset}_deltaboost_{remove_ratio}_retrain_{t}.out")
-                        _, raw_original_scores = get_scores_from_file(original_out_path, out_fmt='float')
-                        _, raw_retrain_scores = get_scores_from_file(retrain_out_path, out_fmt='float')
+                    try:
+                        logging.debug(f"Loading deltaboost data from output")
+                        deltaboost_original_scores = np.zeros(self.n_rounds)
+                        deltaboost_deleted_scores = np.zeros(self.n_rounds)
+                        deltaboost_retrain_scores = np.zeros(self.n_rounds)
+                        keyword2id = {'delete': 0, 'remain': 1, 'test': 2}
+                        for t in range(self.n_rounds):
+                            try:
+                                original_out_path = os.path.join(self.deltaboost_out_path,
+                                                                 f"{dataset}_deltaboost_{remove_ratio}_{t}.out")
+                                retrain_out_path = os.path.join(self.deltaboost_out_path,
+                                                                f"{dataset}_deltaboost_{remove_ratio}_retrain_{t}.out")
+                                _, raw_original_scores = get_scores_from_file(original_out_path, out_fmt='float')
+                                _, raw_retrain_scores = get_scores_from_file(retrain_out_path, out_fmt='float')
 
-                        deltaboost_original_scores[t] = raw_original_scores[keyword2id[self.keyword]]
-                        deltaboost_deleted_scores[t] = raw_original_scores[keyword2id[self.keyword] + 3]
-                        deltaboost_retrain_scores[t] = raw_retrain_scores[keyword2id[self.keyword]]
+                                if len(raw_original_scores) != 0:
+                                    deltaboost_original_scores[t] = raw_original_scores[keyword2id[self.keyword]]
+                                    deltaboost_deleted_scores[t] = raw_original_scores[keyword2id[self.keyword] + 3]
+                                else:
+                                    deltaboost_original_scores[t] = np.nan
+                                    warnings.warn(f"Empty original scores for {dataset} {remove_ratio} {t}")
 
-                    acc_deltaboost_origin = f"{np.mean(deltaboost_original_scores):.4f}\\textpm {np.std(deltaboost_original_scores):.4f}"
-                    acc_deltaboost_forget = f"{np.mean(deltaboost_deleted_scores):.4f}\\textpm {np.std(deltaboost_deleted_scores):.4f}"
-                    acc_deltaboost_retrain = f"{np.mean(deltaboost_retrain_scores):.4f}\\textpm {np.std(deltaboost_retrain_scores):.4f}"
-                    logging.info(f"Done.")
+                                if len(raw_retrain_scores) != 0:
+                                    deltaboost_retrain_scores[t] = raw_retrain_scores[keyword2id[self.keyword]]
+                                else:
+                                    deltaboost_retrain_scores[t] = np.nan
+                                    warnings.warn(f"Empty retrain scores for {dataset} {remove_ratio} {t}")
+                            except IndexError:
+                                deltaboost_original_scores[t] = np.nan
+                                deltaboost_retrain_scores[t] = np.nan
+                                warnings.warn(f"Nan Value scores for {dataset} {remove_ratio} {t}")
+
+                        acc_deltaboost_origin = f"{np.nanmean(deltaboost_original_scores):.4f}\\textpm {np.nanstd(deltaboost_original_scores):.4f}"
+                        acc_deltaboost_forget = f"{np.nanmean(deltaboost_deleted_scores):.4f}\\textpm {np.nanstd(deltaboost_deleted_scores):.4f}"
+                        acc_deltaboost_retrain = f"{np.nanmean(deltaboost_retrain_scores):.4f}\\textpm {np.nanstd(deltaboost_retrain_scores):.4f}"
+                        logging.info(f"Done.")
+                    except Exception as e:
+                        logging.error(f"Failed to load deltaboost data from output, {e}")
+                        acc_deltaboost_origin = acc_deltaboost_forget = acc_deltaboost_retrain = '-'
                 else:
                     logging.debug(f"Loading deltaboost results from cache")
                     acc_deltaboost_origin = self.accuracy_table[i * 3, j * 3 + 2]
@@ -766,8 +820,8 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d:%H:%M:%S',
         level=logging.DEBUG)
 
-    # datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
-    datasets = ['susy']
+    datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
+    # datasets = ['cadata', 'codrna']
     remove_ratios = ['1e-03', '1e-02']
     # remove_ratios = ['0.001', '0.01']
     # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)
@@ -793,26 +847,55 @@ if __name__ == '__main__':
     #     df_combine = pd.concat([df1, df2.drop(columns=df2.columns[0])], axis=1)
     #     print(df_combine.to_latex(escape=False))
 
-    model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=100, n_jobs=1,
-                           # forget_table_cache_path="out/forget_table.csv",
-                           forget_table_cache_path=None,
-                           # accuracy_table_cache_path="out/accuracy_table.csv",
-                           accuracy_table_cache_path=None,
-                           # deltaboost_out_path="../out/remove_test/tree1/",
-                           deltaboost_out_path=None
+    # model_diff = ModelDiff(datasets, remove_ratios, 1, n_rounds=100, n_jobs=1,
+    #                        hedgecut_path="/data/junhui/Hedgecut",
+    #                        dart_path="/data/junhui/DART",
+    #                        deltaboost_out_path="../out/remove_test/tree1/",
+    #                        deltaboost_path="../cache_local",
+    #                        # forget_table_cache_path="out/forget_table.csv",
+    #                        forget_table_cache_path="out/forget_table_susy.csv",
+    #                        # accuracy_table_cache_path="out/accuracy_table.csv",
+    #                        accuracy_table_cache_path="out/accuracy_table_susy.csv",
+    #                        )
+    # deltaboost_path="/data/zhaomin/DeltaBoost/cache")
+    # model_diff.get_raw_data_forget_(n_bins=50,
+    #                                 update_deltaboost=True,
+    #                                 update_datasets=['susy'],
+    #                                 # save_path="out/forget_table_susy.csv",
+    #                                 )
+    # model_diff.print_latex_forget()
+
+    # model_diff.get_raw_data_accuracy_(update_deltaboost=False,
+    #                                   update_dart=False,
+    #                                   update_hedgecut=True,
+    #                                   update_datasets=['susy'],
+    #                                   # save_path="out/accuracy_table_susy.csv",
+    #                                   )
+    # model_diff.print_latex_accuracy()
+
+    model_diff = ModelDiff(datasets, remove_ratios, 10, n_rounds=100, n_jobs=1,
+                           hedgecut_path="/data/junhui/Hedgecut",
+                           dart_path="/data/junhui/DART",
+                           deltaboost_out_path="../out/remove_test/tree10/",
+                           deltaboost_path="../cache",
+                           forget_table_cache_path="out/forget_table_tree10.csv",
+                           # forget_table_cache_path=None,
+                           accuracy_table_cache_path="out/accuracy_table_tree10.csv",
+                           # accuracy_table_cache_path=None,
                            )
-                            # deltaboost_path="/data/zhaomin/DeltaBoost/cache")
     model_diff.get_raw_data_forget_(n_bins=50,
+                                    update_dart=False,
+                                    update_hedgecut=False,
                                     update_deltaboost=True,
-                                    update_datasets=['susy'],
-                                    save_path="out/forget_table_susy.csv",
+                                    update_datasets=['msd'],
+                                    save_path="out/forget_table_tree10.csv",
                                     )
     model_diff.print_latex_forget()
 
-    model_diff.get_raw_data_accuracy_(update_deltaboost=False,
-                                      update_dart=False,
-                                      update_hedgecut=True,
-                                      update_datasets=['susy'],
-                                      save_path="out/accuracy_table_susy.csv",
-                                      )
-    model_diff.print_latex_accuracy()
+    # model_diff.get_raw_data_accuracy_(update_dart=False,
+    #                                   update_hedgecut=False,
+    #                                   update_deltaboost=True,
+    #                                   update_datasets=['msd'],
+    #                                   save_path="out/accuracy_table_tree10.csv",
+    #                                   )
+    # model_diff.print_latex_accuracy()

@@ -1,0 +1,33 @@
+[36m2022-10-11 00:58:22,318 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/gisette.train.remain_1e-02 ##
+[0m[36m2022-10-11 00:58:25,534 INFO dataset.cpp:892 : #instances = 5940, #features = 5000
+[0m[36m2022-10-11 00:58:25,534 INFO dataset.cpp:906 : Load dataset using time: 3.21535 s
+[0m[36m2022-10-11 00:58:25,534 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/gisette.test ##
+[0m[36m2022-10-11 00:58:26,250 INFO dataset.cpp:892 : #instances = 1000, #features = 5000
+[0m[36m2022-10-11 00:58:26,250 INFO dataset.cpp:906 : Load dataset using time: 0.715962 s
+[0m[36m2022-10-11 00:58:26,250 INFO main.cpp:192 : start training
+[0m[36m2022-10-11 00:58:26,250 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/gisette.train.remain_1e-02 ##
+[0m[36m2022-10-11 00:58:28,002 INFO dataset.cpp:892 : #instances = 5940, #features = 5000
+[0m[36m2022-10-11 00:58:28,002 INFO dataset.cpp:906 : Load dataset using time: 1.75168 s
+[0m[36m2022-10-11 00:58:28,002 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/gisette.train.delete_1e-02 ##
+[0m[36m2022-10-11 00:58:28,038 INFO dataset.cpp:892 : #instances = 60, #features = 5000
+[0m[36m2022-10-11 00:58:28,038 INFO dataset.cpp:906 : Load dataset using time: 0.0365683 s
+[0m[36m2022-10-11 00:58:28,038 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-11 00:58:34,656 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 3s
+[0m[36m2022-10-11 00:58:34,821 INFO deltaboost.cpp:47 : Init booster time: 6.78226s
+[0m[36m2022-10-11 00:58:34,919 INFO delta_tree_builder.cpp:92 : delta_gain_eps = 0
+[0m[36m2022-10-11 00:59:00,069 INFO delta_tree_builder.cpp:132 : no splittable nodes, stop
+[0m[36m2022-10-11 00:59:03,110 INFO deltabooster.cpp:116 : error = 0.0762627
+[0m[36m2022-10-11 00:59:03,110 INFO deltaboost.cpp:75 : Tree 0, Number of nodes:13
+[0m[36m2022-10-11 00:59:03,110 INFO deltaboost.cpp:83 : training time = 28.2436
+[0m[36m2022-10-11 00:59:03,625 INFO parser.cpp:395 : saved to cache/gisette_tree1_retrain_1e-02_81_deltaboost.json
+[0m[36m2022-10-11 00:59:03,626 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-11 00:59:03,629 INFO deltaboost.cpp:318 : predict time: 0.00259739s
+[0m[36m2022-10-11 00:59:03,629 INFO deltaboost.cpp:227 : Test: error = 0.092
+[0m[36m2022-10-11 00:59:03,632 INFO parser.cpp:439 : saved to cache/gisette_tree1_retrain_1e-02_81_deltaboost_score_test.csv
+[0m[36m2022-10-11 00:59:03,632 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-11 00:59:03,633 INFO deltaboost.cpp:318 : predict time: 0.000344744s
+[0m[36m2022-10-11 00:59:03,633 INFO deltaboost.cpp:203 : Test: error = 0.0833333
+[0m[36m2022-10-11 00:59:03,633 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-11 00:59:03,646 INFO deltaboost.cpp:318 : predict time: 0.0136732s
+[0m[36m2022-10-11 00:59:03,647 INFO deltaboost.cpp:203 : Test: error = 0.0762627
+[0m

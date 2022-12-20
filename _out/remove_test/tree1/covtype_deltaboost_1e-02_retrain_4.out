@@ -1,0 +1,32 @@
+[36m2022-10-11 12:02:34,801 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/covtype.train.remain_1e-02 ##
+[0m[36m2022-10-11 12:02:36,716 INFO dataset.cpp:892 : #instances = 460161, #features = 54
+[0m[36m2022-10-11 12:02:36,717 INFO dataset.cpp:906 : Load dataset using time: 1.9158 s
+[0m[36m2022-10-11 12:02:36,717 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/covtype.test ##
+[0m[36m2022-10-11 12:02:37,128 INFO dataset.cpp:892 : #instances = 116203, #features = 54
+[0m[36m2022-10-11 12:02:37,128 INFO dataset.cpp:906 : Load dataset using time: 0.411432 s
+[0m[36m2022-10-11 12:02:37,128 INFO main.cpp:192 : start training
+[0m[36m2022-10-11 12:02:37,128 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/covtype.train.remain_1e-02 ##
+[0m[36m2022-10-11 12:02:38,644 INFO dataset.cpp:892 : #instances = 460161, #features = 54
+[0m[36m2022-10-11 12:02:38,644 INFO dataset.cpp:906 : Load dataset using time: 1.51615 s
+[0m[36m2022-10-11 12:02:38,644 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/covtype.train.delete_1e-02 ##
+[0m[36m2022-10-11 12:02:38,671 INFO dataset.cpp:892 : #instances = 4648, #features = 54
+[0m[36m2022-10-11 12:02:38,671 INFO dataset.cpp:906 : Load dataset using time: 0.0272151 s
+[0m[36m2022-10-11 12:02:38,671 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-11 12:02:44,267 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 1s
+[0m[36m2022-10-11 12:02:44,405 INFO deltaboost.cpp:47 : Init booster time: 5.73343s
+[0m[36m2022-10-11 12:02:48,665 INFO delta_tree_builder.cpp:92 : delta_gain_eps = 0
+[0m[36m2022-10-11 12:02:55,526 INFO deltabooster.cpp:116 : error = 0.260961
+[0m[36m2022-10-11 12:02:55,539 INFO deltaboost.cpp:75 : Tree 0, Number of nodes:127
+[0m[36m2022-10-11 12:02:55,539 INFO deltaboost.cpp:83 : training time = 11.0787
+[0m[36m2022-10-11 12:02:56,388 INFO parser.cpp:395 : saved to cache/covtype_tree1_retrain_1e-02_4_deltaboost.json
+[0m[36m2022-10-11 12:02:56,500 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-11 12:02:56,517 INFO deltaboost.cpp:318 : predict time: 0.0168187s
+[0m[36m2022-10-11 12:02:56,518 INFO deltaboost.cpp:227 : Test: error = 0.262188
+[0m[36m2022-10-11 12:02:56,751 INFO parser.cpp:439 : saved to cache/covtype_tree1_retrain_1e-02_4_deltaboost_score_test.csv
+[0m[36m2022-10-11 12:02:56,751 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-11 12:02:56,752 INFO deltaboost.cpp:318 : predict time: 0.00102487s
+[0m[36m2022-10-11 12:02:56,753 INFO deltaboost.cpp:203 : Test: error = 0.263769
+[0m[36m2022-10-11 12:02:56,753 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-11 12:02:56,823 INFO deltaboost.cpp:318 : predict time: 0.0706379s
+[0m[36m2022-10-11 12:02:56,838 INFO deltaboost.cpp:203 : Test: error = 0.260961
+[0m

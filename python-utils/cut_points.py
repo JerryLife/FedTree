@@ -123,6 +123,14 @@ class BinTree:
         else:
             return split_values_de
 
+    def get_n_instances(self, increase=True):
+        leaf_bins, last_bin = self.get_leaf_bins(return_last=True)
+        n_instances_de = np.array([bin.n_instances for bin in leaf_bins])  # this array is descendingly sorted
+        if increase:
+            return n_instances_de[::-1]
+        else:
+            return n_instances_de
+
     def remove_samples_(self, x_remove):
         """
         Remove samples in all nodes by BFS
@@ -464,7 +472,7 @@ def get_invalid_cut_points_ground_truth(splits, remain_splits):
 
 
 if __name__ == '__main__':
-    X, y = load_data("../data/gisette.train", data_fmt='csv', output_dense=True)
+    X, y = load_data("../data/codrna.train", data_fmt='csv', output_dense=True)
     # gh = load_gradients("../cache/codrna.json")
 
     # gh = np.array([np.ones(X.shape[0]), np.ones(X.shape[0]) / 4]).reshape([1, 2, -1])
@@ -483,7 +491,7 @@ if __name__ == '__main__':
     #                                        delta_gain_img_path=f"fig/delta_gain/codrna/gh_tree_{tree_id}_feature_{feature_id}.jpg")
     #     print(f"Tree {tree_id} done.")
     np.random.seed(0)
-    threshold = 100
+    threshold = 700
     n_removing_samples = int(X.shape[0] * 0.01)
     for i, x in enumerate(X.T):
         removed_indices = np.random.choice(np.arange(x.size), n_removing_samples, replace=False)
@@ -510,23 +518,27 @@ if __name__ == '__main__':
         # mean, std = check_vulnerability(n_samples_in_bins, bid_to_nid, split_info, n_removing_samples, threshold)
         # print(f"Diff mean: {mean}, std: {std}, num_bins {len(n_samples_in_bins)}")
         pass
-    #     assert (np.intersect1d(splits, splits_remain) == splits_remain).all()
-    #     assert splits.shape[0] == splits_remain.shape[0] and (splits == splits_remain).all()
-    #     assert check_split_equal(x_remain, splits, splits_remain)
-    #
-    #     fig, ax = plt.subplots(3, 1)
-    #     feature_hist, _ = np.histogram(x, bins=n_samples_in_bins.shape[0], density=False)
-    #     feature_hist = feature_hist[feature_hist > 0].flatten()
-    #     ax[2].hist(feature_hist, bins=30)
-    #     large_x_lim = ax[2].get_xlim()
-    #     flat_hist = np.ones_like(n_samples_in_bins) * x.shape[0] // n_samples_in_bins.shape[0]
-    #     ax[0].hist(flat_hist, bins=30, range=large_x_lim)
-    #     ax[0].set_xlim(large_x_lim)
-    #     ax[1].hist(n_samples_in_bins, bins=30)
-    #     ax[1].set_xlim(large_x_lim)
-    #     ax[0].set_xlabel("Number of instances in bin (instance-based)")
-    #     ax[1].set_xlabel("Number of instances in bin (proposed)")
-    #     ax[2].set_xlabel("Number of instances in bin (naive feature-based)")
-    #     ax[1].set_ylabel("Number of bins")
-    #     plt.tight_layout()
-    #     plt.show()
+        # assert (np.intersect1d(splits, splits_remain) == splits_remain).all()
+        # assert splits.shape[0] == splits_remain.shape[0] and (splits == splits_remain).all()
+        # assert check_split_equal(x_remain, splits, splits_remain)
+
+        n_samples_in_bins = tree.get_n_instances()
+        # n_samples_in_bins_remain = tree_remain.get_n_instances()
+        plot_bins = 20
+        fig, ax = plt.subplots(3, 1)
+        feature_hist, _ = np.histogram(x, bins=n_samples_in_bins.shape[0], density=False)
+        feature_hist = feature_hist[feature_hist > 0].flatten()
+        ax[2].hist(feature_hist, bins=plot_bins)
+        large_x_lim = ax[2].get_xlim()
+        flat_hist = np.ones_like(n_samples_in_bins) * x.shape[0] // n_samples_in_bins.shape[0]
+        ax[0].hist(flat_hist, bins=plot_bins, range=large_x_lim)
+        ax[0].set_xlim(large_x_lim)
+        ax[1].hist(n_samples_in_bins, bins=plot_bins)
+        ax[1].set_xlim(large_x_lim)
+        ax[0].set_xlabel("Number of instances in bin (GBDT)")
+        ax[1].set_xlabel("Number of instances in bin (DeltaBoost)")
+        ax[2].set_xlabel("Number of instances in bin (feature-based)")
+        ax[1].set_ylabel("Number of bins")
+        plt.tight_layout()
+        plt.show()
+        break

@@ -74,7 +74,7 @@ class Hist:
         indices = np.argsort(-x)
         x = x[indices]
         gh = gh[:, indices]
-        n_samples_in_bins, splits = load_cut_points(x, threshold=threshold)
+        n_samples_in_bins, splits, _ = load_cut_points(x, threshold=threshold)
         split_indices = np.zeros(n_samples_in_bins.shape, dtype='int')
         split_indices[1:] = np.cumsum(n_samples_in_bins)[:-1]  # set first id as 0, remove the last id
         gh_in_bins = np.add.reduceat(gh, split_indices, axis=1)
@@ -142,6 +142,10 @@ class Hist:
 
         return ev_delta_gain
 
+    def calc_ev_remain_gain_in_bins(self, remove_ratio, _lambda=1):
+        return self.calc_ev_delta_gain_in_bins(remove_ratio, _lambda=_lambda) + self.get_gain(_lambda)
+
+
     def estimate_removed_gh_in_bins(self, remove_ratio, n_est_rounds=1000, seed=0):
         np.random.seed(seed)
         remove_indices = np.array([np.random.choice(np.arange(self.gh.shape[1]),
@@ -176,6 +180,18 @@ class Hist:
             plt.close()
 
         return delta_gain
+
+    def estimate_remain_gain_in_bins(self, remove_ratio, n_est_rounds=1000, _lambda=1, delta_gain_img_path=None, seed=0):
+        remove_gh_in_bins = self.estimate_removed_gh_in_bins(remove_ratio, n_est_rounds, seed=seed)
+        remain_gh_in_bins = self.gh_in_bins - remove_gh_in_bins
+        remain_gh_leftsum = np.cumsum(remain_gh_in_bins, axis=2)
+        remain_gh_sum = np.sum(remain_gh_in_bins, axis=2)
+        remain_gain = np.maximum(remain_gh_leftsum[:, 0, :] ** 2 / (_lambda + remain_gh_leftsum[:, 1, :]) +
+                                 (remain_gh_sum[:, 0].reshape(-1, 1) - remain_gh_leftsum[:, 0, :]) ** 2 /
+                                 (_lambda + remain_gh_sum[:, 1].reshape(-1, 1) - remain_gh_leftsum[:, 1, :]) -
+                                 remain_gh_sum[:, 0].reshape(-1, 1) ** 2 / (
+                                         _lambda + remain_gh_sum[:, 1].reshape(-1, 1)), -np.inf)
+        return remain_gain
 
     def calc_tail_bound_T_all(self, delta, remove_ratio):
         """
@@ -264,7 +280,7 @@ class Hist:
 
 def plot_est_vs_calc_delta_gain(dataset):
     os.makedirs(f"fig/delta_gain/{dataset}", exist_ok=True)
-    X, y = load_data(f"../data/{dataset}.train", data_fmt='libsvm', output_dense=True)
+    X, y = load_data(f"../data/{dataset}.train", data_fmt='csv', output_dense=True)
     with open(f"../cache/{dataset}.json", 'r') as f:
         js = json.load(f)
     print("Loaded.")
@@ -299,6 +315,45 @@ def plot_est_vs_calc_delta_gain(dataset):
           f"overall estimation time {est_time}")
 
 
+def plot_est_vs_calc_remain_gain(dataset):
+    os.makedirs(f"fig/delta_gain/{dataset}", exist_ok=True)
+    X, y = load_data(f"../data/{dataset}.train", data_fmt='csv', output_dense=True)
+    with open(f"../cache/{dataset}_tree1_original_1e-02_0_deltaboost.json", 'r') as f:
+        js = json.load(f)
+    print("Loaded.")
+    gh = load_gradients(js)
+    calc_time = timedelta()
+    est_time = timedelta()
+    plt.rcParams.update({'font.size': 14})
+    for tree_id in range(len(js['deltaboost']['trees'])):
+        for feature_id in range(X.shape[1]):
+            hist = Hist.generate_robust_hist(X[:, feature_id], gh[tree_id])
+            time_start = datetime.now()
+            ev_remain_gain = hist.calc_ev_remain_gain_in_bins(0.01)
+            # ev_second_moment = hist.calc_ev_second_moment_leftsum(0.01)
+            calc_time_end = datetime.now()
+            remain_gain = hist.estimate_remain_gain_in_bins(0.01, 1000)
+            est_time_end = datetime.now()
+            calc_time += calc_time_end - time_start
+            est_time += est_time_end - calc_time_end
+            print(f"Tree {tree_id}, feature {feature_id}: "
+                  f"Calculation time {(calc_time_end - time_start).microseconds}, "
+                  f"estimation time {(est_time_end - calc_time_end).microseconds}")
+
+            ev_remain_gain_est = np.mean(remain_gain, axis=0)
+            gh_leftsum = np.cumsum(hist.gh_in_bins, axis=1)
+            plt.plot(gh_leftsum[1], ev_remain_gain_est, label='Approximated', marker='o', markevery=22, markersize=6)
+            plt.plot(gh_leftsum[1], ev_remain_gain, label='Calculated', marker='^', markevery=17, markersize=6)
+            plt.legend()
+            plt.ylabel(r"E[$\phi_1$] after removal")
+            plt.xlabel("Sorted split values")
+            plt.xticks([])
+            plt.savefig(f"fig/remain_gain/{dataset}/deltagain-ev-tree-{tree_id}-feature-{feature_id}.jpg", bbox_inches='tight')
+            plt.close()
+    print(f"Overall calculation time {calc_time}, "
+          f"overall estimation time {est_time}")
+
+
 def plot_gain_vs_remain_gain(dataset):
     os.makedirs(f"fig/gain_func/{dataset}", exist_ok=True)
     X, y = load_data(f"../data/{dataset}.train", data_fmt='libsvm', output_dense=True)
@@ -318,8 +373,8 @@ def plot_gain_vs_remain_gain(dataset):
 if __name__ == '__main__':
     dataset = "cadata"
     # plot_gain_vs_remain_gain(dataset)
-    # plot_est_vs_calc_delta_gain(dataset)
-    plot_gain_vs_remain_gain(dataset)
+    plot_est_vs_calc_remain_gain(dataset)
+    # plot_gain_vs_remain_gain(dataset)
     # remove_ratio = 0.01
     # os.makedirs(f"fig/delta_gain/{dataset}", exist_ok=True)
     # X, y = load_data(f"../data/{dataset}.train", data_fmt='libsvm', output_dense=True)

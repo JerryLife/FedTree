@@ -1,0 +1,39 @@
+[33m2022-09-11 10:44:41,497 WARNING parser.cpp:195 : "performe_remove" is unknown option!
+[0m[36m2022-09-11 10:44:41,498 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/higgs.train.remain_1e-03 ##
+[0m[36m2022-09-11 10:44:55,319 INFO dataset.cpp:892 : #instances = 8791200, #features = 28
+[0m[36m2022-09-11 10:44:55,319 INFO dataset.cpp:906 : Load dataset using time: 13.8208 s
+[0m[36m2022-09-11 10:44:55,319 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/higgs.test ##
+[0m[36m2022-09-11 10:44:59,715 INFO dataset.cpp:892 : #instances = 2200000, #features = 28
+[0m[36m2022-09-11 10:44:59,715 INFO dataset.cpp:906 : Load dataset using time: 4.39636 s
+[0m[36m2022-09-11 10:44:59,715 INFO main.cpp:192 : start training
+[0m[36m2022-09-11 10:44:59,715 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/higgs.train.remain_1e-03 ##
+[0m[36m2022-09-11 10:45:14,023 INFO dataset.cpp:892 : #instances = 8791200, #features = 28
+[0m[36m2022-09-11 10:45:14,023 INFO dataset.cpp:906 : Load dataset using time: 14.3075 s
+[0m[36m2022-09-11 10:45:14,023 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/higgs.train.delete_1e-03 ##
+[0m[36m2022-09-11 10:45:14,045 INFO dataset.cpp:892 : #instances = 8800, #features = 28
+[0m[36m2022-09-11 10:45:14,045 INFO dataset.cpp:906 : Load dataset using time: 0.0225614 s
+[0m[36m2022-09-11 10:45:14,045 INFO deltaboost.cpp:36 : starting building trees
+[0m[36m2022-09-11 11:32:20,709 INFO delta_tree_builder.cpp:88 : delta_gain_eps = 0
+[0m[36m2022-09-11 11:35:10,990 INFO deltabooster.cpp:85 : error = 0.529848
+[0m[36m2022-09-11 11:35:11,372 INFO deltaboost.cpp:64 : Tree 0, Number of nodes:127
+[0m[36m2022-09-11 11:35:11,372 INFO deltaboost.cpp:72 : training time = 180.67
+[0m[36m2022-09-11 11:35:56,248 INFO parser.cpp:376 : saved to cache/higgs_tree1_retrain_1e-03_deltaboost.json
+[0m[36m2022-09-11 11:36:00,242 INFO main.cpp:263 : On test dataset
+[0m[36m2022-09-11 13:37:16,365 INFO deltaboost.cpp:181 : Test: error = 0.530215
+[0m[36m2022-09-11 13:37:16,366 INFO main.cpp:267 : On deleted dataset
+[0m[36m2022-09-11 13:37:47,564 INFO deltaboost.cpp:181 : Test: error = 0.528409
+[0m[36m2022-09-11 13:37:47,564 INFO main.cpp:272 : On remained dataset
+[0m[36m2022-09-11 21:54:46,343 INFO deltaboost.cpp:181 : Test: error = 0.529848
+[0m[36m2022-09-11 21:54:46,343 INFO main.cpp:282 : 8791 samples to be removed from model
+[0m[36m2022-09-11 21:54:46,392 INFO deltaboost.cpp:86 : Preparing for deletion
+[0m[36m2022-09-11 21:55:07,707 INFO deltaboost.cpp:107 : Deleting...
+[0m[36m2022-09-11 21:55:11,262 INFO main.cpp:288 : removing time = 24.9191
+[0m[36m2022-09-11 21:55:11,262 INFO main.cpp:290 : Predict after removals
+[0m[36m2022-09-11 21:55:11,262 INFO main.cpp:291 : On test dataset
+[0m[36m2022-09-11 23:58:57,246 INFO deltaboost.cpp:181 : Test: error = 0.530215
+[0m[36m2022-09-11 23:58:57,246 INFO main.cpp:295 : On deleted dataset
+[0m[36m2022-09-11 23:59:28,908 INFO deltaboost.cpp:181 : Test: error = 0.528409
+[0m[36m2022-09-11 23:59:28,908 INFO main.cpp:300 : On remained dataset
+[0m[36m2022-09-12 08:18:06,063 INFO deltaboost.cpp:181 : Test: error = 0.529848
+[0m[36m2022-09-12 08:18:50,171 INFO parser.cpp:376 : saved to cache/higgs_tree1_retrain_1e-03_deleted.json
+[0m

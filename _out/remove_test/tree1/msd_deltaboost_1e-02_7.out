@@ -1,0 +1,48 @@
+[36m2022-10-10 21:50:48,152 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/msd.train ##
+[0m[36m2022-10-10 21:50:55,653 INFO dataset.cpp:892 : #instances = 463715, #features = 90
+[0m[36m2022-10-10 21:50:55,653 INFO dataset.cpp:906 : Load dataset using time: 7.50114 s
+[0m[36m2022-10-10 21:50:55,653 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/msd.test ##
+[0m[36m2022-10-10 21:50:56,274 INFO dataset.cpp:892 : #instances = 51630, #features = 90
+[0m[36m2022-10-10 21:50:56,274 INFO dataset.cpp:906 : Load dataset using time: 0.620724 s
+[0m[36m2022-10-10 21:50:56,274 INFO main.cpp:192 : start training
+[0m[36m2022-10-10 21:50:56,274 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/msd.train.remain_1e-02 ##
+[0m[36m2022-10-10 21:51:04,106 INFO dataset.cpp:892 : #instances = 459078, #features = 90
+[0m[36m2022-10-10 21:51:04,106 INFO dataset.cpp:906 : Load dataset using time: 7.83252 s
+[0m[36m2022-10-10 21:51:04,106 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/msd.train.delete_1e-02 ##
+[0m[36m2022-10-10 21:51:04,183 INFO dataset.cpp:892 : #instances = 4637, #features = 90
+[0m[36m2022-10-10 21:51:04,183 INFO dataset.cpp:906 : Load dataset using time: 0.0766874 s
+[0m[36m2022-10-10 21:51:04,183 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-10 21:51:16,653 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 2s
+[0m[36m2022-10-10 21:51:16,844 INFO deltaboost.cpp:47 : Init booster time: 12.6609s
+[0m[36m2022-10-10 21:51:20,795 INFO delta_tree_builder.cpp:92 : delta_gain_eps = 0
+[0m[36m2022-10-10 21:51:34,775 INFO deltabooster.cpp:116 : RMSE = 0.100939
+[0m[36m2022-10-10 21:51:34,790 INFO deltaboost.cpp:75 : Tree 0, Number of nodes:127
+[0m[36m2022-10-10 21:51:34,790 INFO deltaboost.cpp:83 : training time = 17.8814
+[0m[36m2022-10-10 21:51:35,698 INFO parser.cpp:395 : saved to cache/msd_tree1_original_1e-02_7_deltaboost.json
+[0m[36m2022-10-10 21:51:35,812 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-10 21:51:35,823 INFO deltaboost.cpp:318 : predict time: 0.0112126s
+[0m[36m2022-10-10 21:51:35,824 INFO deltaboost.cpp:227 : Test: RMSE = 0.101024
+[0m[36m2022-10-10 21:51:35,997 INFO parser.cpp:439 : saved to cache/msd_tree1_original_1e-02_7_deltaboost_score_test.csv
+[0m[36m2022-10-10 21:51:35,997 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-10 21:51:35,998 INFO deltaboost.cpp:318 : predict time: 0.00107446s
+[0m[36m2022-10-10 21:51:35,999 INFO deltaboost.cpp:203 : Test: RMSE = 0.100623
+[0m[36m2022-10-10 21:51:35,999 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-10 21:51:36,066 INFO deltaboost.cpp:318 : predict time: 0.0676889s
+[0m[36m2022-10-10 21:51:36,075 INFO deltaboost.cpp:203 : Test: RMSE = 0.100942
+[0m[36m2022-10-10 21:51:36,075 INFO main.cpp:287 : 4637 samples to be removed from model
+[0m[36m2022-10-10 21:51:36,081 INFO deltaboost.cpp:97 : Preparing for deletion
+[0m[36m2022-10-10 21:51:36,101 INFO deltaboost.cpp:127 : Deleting 1trees
+[0m[36m2022-10-10 21:51:41,131 INFO main.cpp:293 : removing time = 5.05555
+[0m[36m2022-10-10 21:51:41,131 INFO main.cpp:295 : Predict after removals
+[0m[36m2022-10-10 21:51:41,131 INFO main.cpp:296 : On test dataset
+[0m[36m2022-10-10 21:51:41,136 INFO deltaboost.cpp:318 : predict time: 0.00524184s
+[0m[36m2022-10-10 21:51:41,137 INFO deltaboost.cpp:227 : Test: RMSE = 0.101038
+[0m[36m2022-10-10 21:51:41,292 INFO parser.cpp:439 : saved to cache/msd_tree1_original_1e-02_7_deleted_score_test.csv
+[0m[36m2022-10-10 21:51:41,292 INFO main.cpp:305 : On deleted dataset
+[0m[36m2022-10-10 21:51:41,294 INFO deltaboost.cpp:318 : predict time: 0.00112006s
+[0m[36m2022-10-10 21:51:41,294 INFO deltaboost.cpp:203 : Test: RMSE = 0.100875
+[0m[36m2022-10-10 21:51:41,294 INFO main.cpp:310 : On remained dataset
+[0m[36m2022-10-10 21:51:41,349 INFO deltaboost.cpp:318 : predict time: 0.0550385s
+[0m[36m2022-10-10 21:51:41,359 INFO deltaboost.cpp:203 : Test: RMSE = 0.100967
+[0m[36m2022-10-10 21:51:41,874 INFO parser.cpp:395 : saved to cache/msd_tree1_original_1e-02_7_deleted.json
+[0m

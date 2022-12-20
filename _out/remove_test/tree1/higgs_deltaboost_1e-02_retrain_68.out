@@ -1,0 +1,32 @@
+[36m2022-10-11 12:23:19,163 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/higgs.train.remain_1e-02 ##
+[0m[36m2022-10-11 12:24:34,872 INFO dataset.cpp:892 : #instances = 8712000, #features = 28
+[0m[36m2022-10-11 12:24:34,872 INFO dataset.cpp:906 : Load dataset using time: 75.7089 s
+[0m[36m2022-10-11 12:24:34,872 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/higgs.test ##
+[0m[36m2022-10-11 12:24:52,213 INFO dataset.cpp:892 : #instances = 2200000, #features = 28
+[0m[36m2022-10-11 12:24:52,213 INFO dataset.cpp:906 : Load dataset using time: 17.3406 s
+[0m[36m2022-10-11 12:24:52,213 INFO main.cpp:192 : start training
+[0m[36m2022-10-11 12:24:52,213 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/higgs.train.remain_1e-02 ##
+[0m[36m2022-10-11 12:25:41,404 INFO dataset.cpp:892 : #instances = 8712000, #features = 28
+[0m[36m2022-10-11 12:25:41,405 INFO dataset.cpp:906 : Load dataset using time: 49.1918 s
+[0m[36m2022-10-11 12:25:41,405 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/higgs.train.delete_1e-02 ##
+[0m[36m2022-10-11 12:25:41,836 INFO dataset.cpp:892 : #instances = 88000, #features = 28
+[0m[36m2022-10-11 12:25:41,836 INFO dataset.cpp:906 : Load dataset using time: 0.431719 s
+[0m[36m2022-10-11 12:25:41,836 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-11 12:26:45,914 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 7s
+[0m[36m2022-10-11 12:26:47,325 INFO deltaboost.cpp:47 : Init booster time: 65.489s
+[0m[36m2022-10-11 12:26:51,549 INFO delta_tree_builder.cpp:92 : delta_gain_eps = 0
+[0m[36m2022-10-11 12:27:39,587 INFO deltabooster.cpp:116 : error = 0.352267
+[0m[36m2022-10-11 12:27:39,796 INFO deltaboost.cpp:75 : Tree 0, Number of nodes:127
+[0m[36m2022-10-11 12:27:39,797 INFO deltaboost.cpp:83 : training time = 52.1541
+[0m[36m2022-10-11 12:27:51,297 INFO parser.cpp:395 : saved to cache/higgs_tree1_retrain_1e-02_68_deltaboost.json
+[0m[36m2022-10-11 12:27:53,689 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-11 12:27:53,793 INFO deltaboost.cpp:318 : predict time: 0.104172s
+[0m[36m2022-10-11 12:27:53,827 INFO deltaboost.cpp:227 : Test: error = 0.351927
+[0m[36m2022-10-11 12:27:57,342 INFO parser.cpp:439 : saved to cache/higgs_tree1_retrain_1e-02_68_deltaboost_score_test.csv
+[0m[36m2022-10-11 12:27:57,342 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-11 12:27:57,349 INFO deltaboost.cpp:318 : predict time: 0.00653942s
+[0m[36m2022-10-11 12:27:57,350 INFO deltaboost.cpp:203 : Test: error = 0.354682
+[0m[36m2022-10-11 12:27:57,350 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-11 12:27:57,758 INFO deltaboost.cpp:318 : predict time: 0.408219s
+[0m[36m2022-10-11 12:27:57,854 INFO deltaboost.cpp:203 : Test: error = 0.352267
+[0m

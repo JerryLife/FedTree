@@ -1,0 +1,47 @@
+[36m2022-10-11 19:15:23,768 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/susy.train ##
+[0m[36m2022-10-11 19:15:40,840 INFO dataset.cpp:892 : #instances = 4000000, #features = 18
+[0m[36m2022-10-11 19:15:40,840 INFO dataset.cpp:906 : Load dataset using time: 17.0713 s
+[0m[36m2022-10-11 19:15:40,840 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/susy.test ##
+[0m[36m2022-10-11 19:15:43,976 INFO dataset.cpp:892 : #instances = 1000000, #features = 18
+[0m[36m2022-10-11 19:15:43,976 INFO dataset.cpp:906 : Load dataset using time: 3.13603 s
+[0m[36m2022-10-11 19:15:43,976 INFO main.cpp:192 : start training
+[0m[36m2022-10-11 19:15:43,976 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/susy.train.remain_1e-02 ##
+[0m[36m2022-10-11 19:15:58,375 INFO dataset.cpp:892 : #instances = 3960000, #features = 18
+[0m[36m2022-10-11 19:15:58,375 INFO dataset.cpp:906 : Load dataset using time: 14.3993 s
+[0m[36m2022-10-11 19:15:58,375 INFO dataset.cpp:721 : loading csv dataset from file ## ./data/susy.train.delete_1e-02 ##
+[0m[36m2022-10-11 19:15:58,525 INFO dataset.cpp:892 : #instances = 40000, #features = 18
+[0m[36m2022-10-11 19:15:58,525 INFO dataset.cpp:906 : Load dataset using time: 0.149428 s
+[0m[36m2022-10-11 19:15:58,525 INFO deltaboost.cpp:38 : starting building trees
+[0m[36m2022-10-11 19:16:23,686 INFO hist_cut.cpp:706 : generate_bin_trees_ time: 6s
+[0m[36m2022-10-11 19:16:24,722 INFO deltaboost.cpp:47 : Init booster time: 26.1972s
+[0m[36m2022-10-11 19:17:20,130 INFO deltabooster.cpp:116 : error = 0.235453
+[0m[36m2022-10-11 19:17:20,231 INFO deltaboost.cpp:75 : Tree 0, Number of nodes:127
+[0m[36m2022-10-11 19:17:20,231 INFO deltaboost.cpp:83 : training time = 55.3445
+[0m[36m2022-10-11 19:17:25,092 INFO parser.cpp:395 : saved to cache/susy_tree1_original_1e-02_70_deltaboost.json
+[0m[36m2022-10-11 19:17:26,102 INFO main.cpp:263 : On test dataset
+[0m[36m2022-10-11 19:17:26,132 INFO deltaboost.cpp:318 : predict time: 0.030363s
+[0m[36m2022-10-11 19:17:26,151 INFO deltaboost.cpp:227 : Test: error = 0.235696
+[0m[36m2022-10-11 19:17:28,868 INFO parser.cpp:439 : saved to cache/susy_tree1_original_1e-02_70_deltaboost_score_test.csv
+[0m[36m2022-10-11 19:17:28,868 INFO main.cpp:272 : On deleted dataset
+[0m[36m2022-10-11 19:17:28,870 INFO deltaboost.cpp:318 : predict time: 0.0022054s
+[0m[36m2022-10-11 19:17:28,871 INFO deltaboost.cpp:203 : Test: error = 0.230775
+[0m[36m2022-10-11 19:17:28,871 INFO main.cpp:277 : On remained dataset
+[0m[36m2022-10-11 19:17:29,015 INFO deltaboost.cpp:318 : predict time: 0.144505s
+[0m[36m2022-10-11 19:17:29,102 INFO deltaboost.cpp:203 : Test: error = 0.2355
+[0m[36m2022-10-11 19:17:29,102 INFO main.cpp:287 : 40000 samples to be removed from model
+[0m[36m2022-10-11 19:17:29,141 INFO deltaboost.cpp:97 : Preparing for deletion
+[0m[36m2022-10-11 19:17:30,277 INFO deltaboost.cpp:127 : Deleting 1 trees
+[0m[36m2022-10-11 19:17:34,744 INFO main.cpp:293 : removing time = 5.64242
+[0m[36m2022-10-11 19:17:34,744 INFO main.cpp:295 : Predict after removals
+[0m[36m2022-10-11 19:17:34,744 INFO main.cpp:296 : On test dataset
+[0m[36m2022-10-11 19:17:34,751 INFO deltaboost.cpp:318 : predict time: 0.00673875s
+[0m[36m2022-10-11 19:17:34,781 INFO deltaboost.cpp:227 : Test: error = 0.235788
+[0m[36m2022-10-11 19:17:37,480 INFO parser.cpp:439 : saved to cache/susy_tree1_original_1e-02_70_deleted_score_test.csv
+[0m[36m2022-10-11 19:17:37,480 INFO main.cpp:305 : On deleted dataset
+[0m[36m2022-10-11 19:17:37,480 INFO deltaboost.cpp:318 : predict time: 0.000481466s
+[0m[36m2022-10-11 19:17:37,480 INFO deltaboost.cpp:203 : Test: error = 0.231075
+[0m[36m2022-10-11 19:17:37,481 INFO main.cpp:310 : On remained dataset
+[0m[36m2022-10-11 19:17:37,572 INFO deltaboost.cpp:318 : predict time: 0.0913481s
+[0m[36m2022-10-11 19:17:37,599 INFO deltaboost.cpp:203 : Test: error = 0.235568
+[0m[36m2022-10-11 19:17:41,360 INFO parser.cpp:395 : saved to cache/susy_tree1_original_1e-02_70_deleted.json
+[0m
