@@ -32,7 +32,7 @@ def plot_gradient_diff(dataset, n_trees, remove_ratio: str, output_dir):
     gbdt_remain = GBDT.load_from_json(js2, 'deltaboost')
     gbdt_deleted = GBDT.load_from_json(js3, 'deltaboost')
     # train_X, train_y = load_data(f"../data/{dataset}.train", data_fmt='libsvm', output_dense=True)
-    remain_X, remain_y = load_data(f"../data/{dataset}.train.remain_{remove_ratio}", data_fmt='libsvm',
+    remain_X, remain_y = load_data(f"../_data/{dataset}.train.remain_{remove_ratio}", data_fmt='libsvm',
                                    output_dense=True)
 
     # plt.style.use('seaborn-deep')
@@ -81,7 +81,7 @@ def plot_score_diff(dataset, n_trees, remove_ratio: str, output_dir, print_metri
     gbdt_remain = GBDT.load_from_json(js2, 'deltaboost')
     gbdt_deleted = GBDT.load_from_json(js3, 'deltaboost')
     # train_X, train_y = load_data(f"../data/{dataset}.train", data_fmt='libsvm', output_dense=True)
-    remain_X, remain_y = load_data(f"../data/{dataset}.train.remain_{remove_ratio}", data_fmt='csv',
+    remain_X, remain_y = load_data(f"../_data/{dataset}.train.remain_{remove_ratio}", data_fmt='csv',
                                    output_dense=True)
 
     # plt.style.use('seaborn-deep')

@@ -472,7 +472,7 @@ def get_invalid_cut_points_ground_truth(splits, remain_splits):
 
 
 if __name__ == '__main__':
-    X, y = load_data("../data/codrna.train", data_fmt='csv', output_dense=True)
+    X, y = load_data("../_data/codrna.train", data_fmt='csv', output_dense=True)
     # gh = load_gradients("../cache/codrna.json")
 
     # gh = np.array([np.ones(X.shape[0]), np.ones(X.shape[0]) / 4]).reshape([1, 2, -1])

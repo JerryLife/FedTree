@@ -24,7 +24,7 @@ def evaluate_overfit_dataset(train_X, train_y, test_X, test_y):
 
 
 if __name__ == '__main__':
-    train_X, train_y, test_X, test_y = generate_overfit_dataset("../data/overfit")
+    train_X, train_y, test_X, test_y = generate_overfit_dataset("../_data/overfit")
     evaluate_overfit_dataset(train_X, train_y, test_X, test_y)
 
 

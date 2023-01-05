@@ -190,9 +190,9 @@ if __name__ == '__main__':
     n_trees = 30
     ratio = '1e-02'
     i = 0
-    visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_{i}_deleted.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+    visualize(f"../_cache/{dataset}_tree{n_trees}_original_{ratio}_{i}_deleted.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
     # visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_{i}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
-    visualize(f"../cache/{dataset}_tree{n_trees}_retrain_{ratio}_{i}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+    visualize(f"../_cache/{dataset}_tree{n_trees}_retrain_{ratio}_{i}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
 
     # visualize(args.path, model_type=args.model_type, output_dir=args.output_dir)
 

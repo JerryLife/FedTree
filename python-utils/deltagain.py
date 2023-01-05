@@ -280,8 +280,8 @@ class Hist:
 
 def plot_est_vs_calc_delta_gain(dataset):
     os.makedirs(f"fig/delta_gain/{dataset}", exist_ok=True)
-    X, y = load_data(f"../data/{dataset}.train", data_fmt='csv', output_dense=True)
-    with open(f"../cache/{dataset}.json", 'r') as f:
+    X, y = load_data(f"../_data/{dataset}.train", data_fmt='csv', output_dense=True)
+    with open(f"../_cache/{dataset}.json", 'r') as f:
         js = json.load(f)
     print("Loaded.")
     gh = load_gradients(js)
@@ -317,8 +317,8 @@ def plot_est_vs_calc_delta_gain(dataset):
 
 def plot_est_vs_calc_remain_gain(dataset):
     os.makedirs(f"fig/delta_gain/{dataset}", exist_ok=True)
-    X, y = load_data(f"../data/{dataset}.train", data_fmt='csv', output_dense=True)
-    with open(f"../cache/{dataset}_tree1_original_1e-02_0_deltaboost.json", 'r') as f:
+    X, y = load_data(f"../_data/{dataset}.train", data_fmt='csv', output_dense=True)
+    with open(f"../_cache/{dataset}_tree1_original_1e-02_0_deltaboost.json", 'r') as f:
         js = json.load(f)
     print("Loaded.")
     gh = load_gradients(js)
@@ -356,8 +356,8 @@ def plot_est_vs_calc_remain_gain(dataset):
 
 def plot_gain_vs_remain_gain(dataset):
     os.makedirs(f"fig/gain_func/{dataset}", exist_ok=True)
-    X, y = load_data(f"../data/{dataset}.train", data_fmt='libsvm', output_dense=True)
-    with open(f"../cache/{dataset}_deltaboost.json", 'r') as f:
+    X, y = load_data(f"../_data/{dataset}.train", data_fmt='libsvm', output_dense=True)
+    with open(f"../_cache/{dataset}_deltaboost.json", 'r') as f:
         js = json.load(f)
     print("Loaded.")
     gh = load_gradients(js)

@@ -54,7 +54,7 @@ def count_potential_nodes(deltaboost_js: dict, bid_threshold=5, skip_close=False
 
 
 if __name__ == '__main__':
-    model_path = "../cache/codrna.json"
+    model_path = "../_cache/codrna.json"
     with open(model_path, 'r') as f:
         js = json.load(f)
 

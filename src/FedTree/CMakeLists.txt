@@ -1,3 +1,9 @@
+cmake_minimum_required(VERSION 3.15)
+
+if(COMMAND cmake_policy)
+    cmake_policy(SET CMP0003 NEW)
+endif(COMMAND cmake_policy)
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -15,6 +21,8 @@ set(Boost_LIBRARIES /usr/local/lib)
 find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(/usr/include/openssl)
+
+include_directories(/usr/include/)
 
 list(REMOVE_ITEM DIST_SRC "${CMAKE_CURRENT_LIST_DIR}/fedtree_train.cpp" "${CMAKE_CURRENT_LIST_DIR}/fedtree_predict.cpp" "${CMAKE_CURRENT_LIST_DIR}/fedtree_distributed_party.cpp" "${CMAKE_CURRENT_LIST_DIR}/fedtree_distributed_server.cpp")
 # SIM_SRC for simulation

@@ -10,9 +10,11 @@ remove = '1e-03'
 cnt_rvd_equal = 0
 n_rounds = 10
 for i in range(1, n_rounds):
-    retrain = GBDT.load_from_json(json.load(open(f"../cache/{dataset}_tree{tree}_retrain_{remove}_{i}_deltaboost.json")), 'deltaboost')
-    delete = GBDT.load_from_json(json.load(open(f"../cache/{dataset}_tree{tree}_original_{remove}_{i}_deleted.json")), 'deltaboost')
-    originl = GBDT.load_from_json(json.load(open(f"../cache/{dataset}_tree{tree}_original_{remove}_{i}_deltaboost.json")), 'deltaboost')
+    retrain = GBDT.load_from_json(json.load(open(
+        f"../_cache/{dataset}_tree{tree}_retrain_{remove}_{i}_deltaboost.json")), 'deltaboost')
+    delete = GBDT.load_from_json(json.load(open(f"../_cache/{dataset}_tree{tree}_original_{remove}_{i}_deleted.json")), 'deltaboost')
+    originl = GBDT.load_from_json(json.load(open(
+        f"../_cache/{dataset}_tree{tree}_original_{remove}_{i}_deltaboost.json")), 'deltaboost')
     # retrain = GBDT.load_from_json(json.load(open(f"../cache/{dataset}_tree{tree}_retrain_{remove}_deltaboost.json")), 'deltaboost')
     # delete = GBDT.load_from_json(json.load(open(f"../cache/{dataset}_tree{tree}_original_{remove}_deleted.json")), 'deltaboost')
 

@@ -263,9 +263,9 @@ def summary_model_diff_for_dataset(dataset, n_trees, remove_ratios):
     for remove_ratio in remove_ratios:
         print(f"Remove ratio {remove_ratio}:")
         print("Loading models.")
-        model_path = f"../cache/{dataset}_tree{n_trees}_original_{remove_ratio}_deltaboost.json"
-        model_remain_path = f"../cache/{dataset}_tree{n_trees}_retrain_{remove_ratio}_deltaboost.json"
-        model_deleted_path = f"../cache/{dataset}_tree{n_trees}_original_{remove_ratio}_deleted.json"
+        model_path = f"../_cache/{dataset}_tree{n_trees}_original_{remove_ratio}_deltaboost.json"
+        model_remain_path = f"../_cache/{dataset}_tree{n_trees}_retrain_{remove_ratio}_deltaboost.json"
+        model_deleted_path = f"../_cache/{dataset}_tree{n_trees}_original_{remove_ratio}_deleted.json"
         with open(model_path, 'r') as f1, open(model_remain_path, 'r') as f2, open(model_deleted_path) as f3:
             js1 = json.load(f1)
             js2 = json.load(f2)
@@ -276,11 +276,11 @@ def summary_model_diff_for_dataset(dataset, n_trees, remove_ratios):
 
         print("Loading dataset.")
         # train_X, train_y = load_data(f"../data/{dataset}.train", data_fmt='libsvm', output_dense=True)
-        remain_X, remain_y = load_data(f"../data/{dataset}.train.remain_{remove_ratio}", data_fmt='csv',
+        remain_X, remain_y = load_data(f"../_data/{dataset}.train.remain_{remove_ratio}", data_fmt='csv',
                                        output_dense=True)
-        delete_X, delete_y = load_data(f"../data/{dataset}.train.delete_{remove_ratio}", data_fmt='csv',
+        delete_X, delete_y = load_data(f"../_data/{dataset}.train.delete_{remove_ratio}", data_fmt='csv',
                                        output_dense=True)
-        test_X, test_y = load_data(f"../data/{dataset}.test", data_fmt='csv', output_dense=True)
+        test_X, test_y = load_data(f"../_data/{dataset}.test", data_fmt='csv', output_dense=True)
 
         print("Prediction on remain")
         original_score_on_remain = gbdt_original.predict_score(remain_X)
@@ -355,11 +355,11 @@ class ModelDiffSingle:
                 # load data from prediction
                 logging.debug("Loading deltaboost data")
                 if keyword in ['remain', 'delete']:
-                    self.X, self.y = load_data(f"../data/{dataset}.train.{keyword}_{remove_ratio}",
+                    self.X, self.y = load_data(f"../_data/{dataset}.train.{keyword}_{remove_ratio}",
                                                data_fmt='csv',
                                                output_dense=True)
                 elif keyword == 'test':
-                    self.X, self.y = load_data(f"../data/{dataset}.test", data_fmt='csv', output_dense=True)
+                    self.X, self.y = load_data(f"../_data/{dataset}.test", data_fmt='csv', output_dense=True)
                 else:
                     raise ValueError(f"Invalid keyword: {keyword}")
                 self.original_score = np.zeros((n_rounds, self.X.shape[0]))
@@ -877,7 +877,7 @@ if __name__ == '__main__':
                            hedgecut_path="/data/junhui/Hedgecut",
                            dart_path="/data/junhui/DART",
                            deltaboost_out_path="../out/remove_test/tree10/",
-                           deltaboost_path="../cache",
+                           deltaboost_path="../_cache",
                            forget_table_cache_path="out/forget_table_tree10.csv",
                            # forget_table_cache_path=None,
                            accuracy_table_cache_path="out/accuracy_table_tree10.csv",

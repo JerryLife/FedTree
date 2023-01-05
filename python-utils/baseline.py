@@ -67,8 +67,8 @@ class Record(object):
 
 
 def test_xgb_cls(dataset, n_trees=10):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
-    test_dataset_path = f'../data/{dataset}.test'
+    train_dataset_path = f'../_data/{dataset}.train.remain_1e-03'
+    test_dataset_path = f'../_data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
     dtrain = xgb.DMatrix(X, label=y, missing=np.NaN)
@@ -85,8 +85,8 @@ def test_xgb_cls(dataset, n_trees=10):
 
 
 def test_xgb_reg(dataset, n_trees=10):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
-    test_dataset_path = f'../data/{dataset}.test'
+    train_dataset_path = f'../_data/{dataset}.train.remain_1e-03'
+    test_dataset_path = f'../_data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
     dtrain = xgb.DMatrix(X, label=y, missing=np.NaN)
@@ -103,8 +103,8 @@ def test_xgb_reg(dataset, n_trees=10):
 
 
 def test_tree_cls(dataset):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
-    test_dataset_path = f'../data/{dataset}.test'
+    train_dataset_path = f'../_data/{dataset}.train.remain_1e-03'
+    test_dataset_path = f'../_data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
     st = time.time()
@@ -119,8 +119,8 @@ def test_tree_cls(dataset):
 
 
 def test_tree_reg(dataset):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
-    test_dataset_path = f'../data/{dataset}.test'
+    train_dataset_path = f'../_data/{dataset}.train.remain_1e-03'
+    test_dataset_path = f'../_data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
     st = time.time()
@@ -135,8 +135,8 @@ def test_tree_reg(dataset):
 
 
 def test_rf_cls(dataset, n_trees=10):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
-    test_dataset_path = f'../data/{dataset}.test'
+    train_dataset_path = f'../_data/{dataset}.train.remain_1e-03'
+    test_dataset_path = f'../_data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
     st = time.time()
@@ -150,8 +150,8 @@ def test_rf_cls(dataset, n_trees=10):
     return rf
 
 def test_rf_reg(dataset, n_trees=10):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
-    test_dataset_path = f'../data/{dataset}.test'
+    train_dataset_path = f'../_data/{dataset}.train.remain_1e-03'
+    test_dataset_path = f'../_data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
     st = time.time()
