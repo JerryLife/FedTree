@@ -1,8 +1,15 @@
+# for xnode3 only
+#set(CMAKE_C_COMPILER "/home/zhaomin/bin/gcc")
+#set(CMAKE_CXX_COMPILER "/home/zhaomin/bin/g++")
+
 cmake_minimum_required(VERSION 3.15)
 #cmake_policy(SET CMP0104 NEW)
 #cmake_policy(SET CMP0048 NEW)
 cmake_policy(SET CMP0042 NEW)
 project(FedTree LANGUAGES C CXX)
+
+set(DISTRIBUTED OFF)
+set(BUILD_TESTS OFF)
 
 if(MSVC)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
@@ -127,10 +134,10 @@ if (USE_CUDA)
 endif ()
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/FedTree)
 
-if (BUILD_TESTS)
-    message("Building tests")
-    add_subdirectory(src/test)
-endif ()
+#if (BUILD_TESTS)
+#    message("Building tests")
+#    add_subdirectory(src/test)
+#endif ()
 
 # configuration file
 

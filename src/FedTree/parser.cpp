@@ -304,6 +304,7 @@ void Parser::save_model(const string& model_path, GBDTParam &model_param, vector
         }
     }
     out_model_file.close();
+    LOG(INFO) << "model saved to " << model_path;
 }
 
 void Parser::load_model(const string &model_path, DeltaBoostParam &model_param, DeltaBoost &model, DataSet &dataset) {

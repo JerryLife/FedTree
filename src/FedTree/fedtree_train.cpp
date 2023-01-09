@@ -153,13 +153,15 @@ int main(int argc, char** argv){
             string model_path = string_format("cache/%s_deltaboost.model",
                                               fl_param.deltaboost_param.save_model_name.c_str());
             deltaboost->train(fl_param.deltaboost_param, dataset);
-//            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
-//            parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
+            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
 
-            string model_path_json = string_format("cache/%s_deltaboost.json",
-                                              fl_param.deltaboost_param.save_model_name.c_str());
-            parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
+//            auto deltaboost_load = std::unique_ptr<DeltaBoost>(new DeltaBoost());
+            parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
 
+
+//            string model_path_json = string_format("cache/%s_deltaboost.json",
+//                                              fl_param.deltaboost_param.save_model_name.c_str());
+//            parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
 
             LOG(INFO) << "On test dataset";
             vector<float_type> test_scores;
@@ -182,12 +184,13 @@ int main(int argc, char** argv){
 
             if (fl_param.deltaboost_param.perform_remove) {
                 // start removal
-                std::chrono::high_resolution_clock timer;
-                auto start_rm = timer.now();
                 int num_removals = static_cast<int>(fl_param.deltaboost_param.remove_ratio * dataset.n_instances());
                 LOG(INFO) << num_removals << " samples to be removed from model";
                 vector<int> removing_indices(static_cast<int>(fl_param.deltaboost_param.remove_ratio * dataset.n_instances()));
                 std::iota(removing_indices.begin(), removing_indices.end(), 0);
+
+                std::chrono::high_resolution_clock timer;
+                auto start_rm = timer.now();
                 deltaboost->remove_samples(fl_param.deltaboost_param, dataset, removing_indices);
                 auto stop_rm = timer.now();
                 std::chrono::duration<float> removing_time = stop_rm - start_rm;

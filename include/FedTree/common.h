@@ -42,7 +42,7 @@ std::string string_format(const std::string &format, Args ... args) {
 }
 
 //data types
-typedef double float_type;
+typedef float float_type;
 
 #define EPSILON 1e-9
 

@@ -460,7 +460,7 @@ void DeltaCut::BinTree::split_bin_(int bin_id, int fid, float_type split_value, 
     right_bin_size = indices_right.size();
 
 
-    float_type tol = 1e-8;
+    float_type tol = 1e-4;
     bool left_splittable = std::abs(split_value - bin.left) > tol;
     bool right_splittable = std::abs(split_value - bin.right) > tol;
 

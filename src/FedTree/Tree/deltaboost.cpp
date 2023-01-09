@@ -109,6 +109,10 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
     std::unique_ptr<ObjectiveFunction> obj(ObjectiveFunction::create(param.objective));
     obj->configure(param, dataset);     // slicing param
 
+    if (!dataset.has_csc) {
+        dataset.csr_to_csc();
+    }
+
     LOG(INFO) << "Preparing for deletion";
 
 //    std::vector<std::vector<DeltaTree>> used_trees(trees.begin(), trees.begin() + param.n_used_trees);

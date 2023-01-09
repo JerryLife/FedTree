@@ -45,6 +45,7 @@ private:
     template<class Archive> void serialize(Archive &ar, const unsigned int version) {
         ar & trees;
         ar & gh_pairs_per_sample;
+        ar & is_subset_indices_in_tree;
         ar & ins2node_indices_per_tree;
     }
 
@@ -59,15 +60,35 @@ private:
 //        deltaBoost.ins2node_indices_per_tree = json::value_to<std::vector<std::vector<std::vector<int>>>>(
 //                v.at("ins2node_indices_per_tree"));
 
+        // temporarily convert vector bool to int because vector bool is not support by boost::json 1.75
+        auto is_subset_indices_in_tree_int = json::value_to<std::vector<std::vector<int>>>(v.at("is_subset_indices_in_tree"));
+        // concert every element in vector to bool, stored in is_subset_indices_in_tree
+        for (int i = 0; i < is_subset_indices_in_tree_int.size(); ++i) {
+            vector<bool> temp;
+            for (int j = 0; j < is_subset_indices_in_tree_int[i].size(); ++j) {
+                temp.push_back(is_subset_indices_in_tree_int[i][j] == 1);
+            }
+            deltaBoost.is_subset_indices_in_tree.push_back(temp);
+        }
         return deltaBoost;
     }
 
     //json parser
     friend void tag_invoke(json::value_from_tag, json::value& v, DeltaBoost const& deltaBoost) {
+        // temporarily convert vector bool to int because vector bool is not support by boost::json 1.75
+        vector<vector<int>> is_subset_indices_in_tree_int;
+        for (int i = 0; i < deltaBoost.is_subset_indices_in_tree.size(); ++i) {
+            vector<int> temp;
+            for (int j = 0; j < deltaBoost.is_subset_indices_in_tree[i].size(); ++j) {
+                temp.push_back(deltaBoost.is_subset_indices_in_tree[i][j] ? 1 : 0);
+            }
+            is_subset_indices_in_tree_int.push_back(temp);
+        }
         v = json::object {
                 {"trees", json::value_from(deltaBoost.trees)},
                 {"gh_pairs_per_sample", json::value_from(deltaBoost.gh_pairs_per_sample)},
-//                {"ins2node_indices_per_tree", json::value_from(deltaBoost.ins2node_indices_per_tree)}
+                {"is_subset_indices_in_tree", json::value_from(is_subset_indices_in_tree_int)},
+                {"ins2node_indices_per_tree", json::value_from(deltaBoost.ins2node_indices_per_tree)}
         };
     }
 

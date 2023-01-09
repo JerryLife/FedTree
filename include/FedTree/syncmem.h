@@ -201,6 +201,10 @@ namespace thunder {
             HOST, DEVICE, UNINITIALIZED
         };
 
+        ///transfer the ownership of host data to another pointer. The memory will not be managed by this class
+        ///return the original pointer of host data
+        void *transfer_host_data();
+
         HEAD head() const;
 
         static size_t get_total_memory_size() { return total_memory_size; }

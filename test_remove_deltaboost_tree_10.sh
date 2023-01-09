@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 n_rounds=$1  # 1, 10, 30, 100
 
 for dataset in cadata codrna gisette covtype msd; do

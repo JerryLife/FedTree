@@ -186,13 +186,13 @@ if __name__ == '__main__':
     # parser.add_argument('--model-type', '-m', type=str, default='deltaboost')
     # parser.add_argument('--output-dir', '-o', type=str, default='../fig/')
     # args = parser.parse_args()
-    dataset = 'codrna'
-    n_trees = 30
-    ratio = '1e-02'
+    dataset = 'msd'
+    n_trees = 10
+    ratio = '1e-03'
     i = 0
-    visualize(f"../_cache/{dataset}_tree{n_trees}_original_{ratio}_{i}_deleted.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
-    # visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_{i}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
-    visualize(f"../_cache/{dataset}_tree{n_trees}_retrain_{ratio}_{i}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+    # visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_{i}_deleted.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+    visualize(f"../cache/{dataset}_tree{n_trees}_original_{ratio}_{i}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
+    visualize(f"../cache/{dataset}_tree{n_trees}_retrain_{ratio}_{i}_deltaboost.json", 'deltaboostv2', f'fig/tree_structure/{dataset}_tree{n_trees}/')
 
     # visualize(args.path, model_type=args.model_type, output_dir=args.output_dir)
 

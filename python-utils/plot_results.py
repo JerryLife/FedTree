@@ -192,19 +192,42 @@ def plot_score_before_after_removal(out_dir, datasets, remove_ratios, save_path=
 
 def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n_trees=50, n_rounds=1):
     assert present in ['test']
+    # # single tree
+    # xgboost_scores = {
+    #     'codrna': 1 - 0.9552,
+    #     'covtype': 1 - 0.8016,
+    #     'gisette': 1 - 0.9630,
+    #     'cadata': 0.1165,
+    #     'msd': 0.1143,
+    # }
+    # rf_scores = {
+    #     'codrna': 0.1011,
+    #     'covtype': 0.2472,
+    #     'gisette': 0.0590,
+    #     'cadata': 0.1307,
+    #     'msd': 0.1170,
+    # }
+    # dt_scores = {
+    #     'codrna': 0.0670,
+    #     'covtype': 0.2225,
+    #     'gisette': 0.0750,
+    #     'cadata': 0.1382,
+    #     'msd': 0.1185,
+    # }
+
     xgboost_scores = {
-        'codrna': 1 - 0.9552,
-        'covtype': 1 - 0.8016,
-        'gisette': 1 - 0.9630,
-        'cadata': 0.1165,
-        'msd': 0.1143,
+        'codrna': 0.0343,
+        'covtype': 0.0609,
+        'gisette': 0.0290,
+        'cadata': 0.1272,
+        'msd': 0.1219,
     }
     rf_scores = {
-        'codrna': 0.1011,
-        'covtype': 0.2472,
-        'gisette': 0.0590,
-        'cadata': 0.1307,
-        'msd': 0.1170,
+        'codrna': 0.1287,
+        'covtype': 0.2402,
+        'gisette': 0.0490,
+        'cadata': 0.1283,
+        'msd': 0.1169,
     }
     dt_scores = {
         'codrna': 0.0670,
@@ -219,14 +242,18 @@ def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n
         ratio = '1e-03'  # either should be the same
         deltaboost_scores = []
         for i in range(n_rounds):
-            out_deltaboost_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_deltaboost_{ratio}_retrain_{i}.out")
+            out_deltaboost_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_deltaboost_{ratio}_{i}.out")
             metric, deltaboost_data = get_scores_from_file(out_deltaboost_path, out_fmt='float')
+            print(metric, deltaboost_data)
             deltaboost_scores.append(deltaboost_data[0])
         db_mean = np.mean(deltaboost_scores)
         out_gbdt_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_gbdt_{ratio}.out")
         _, gbdt_data = get_scores_from_file(out_gbdt_path, out_fmt='float')
+        print(gbdt_data)
         gbdt_score = gbdt_data[0]
         summary.append([db_mean, gbdt_score, xgboost_scores[dataset], rf_scores[dataset], dt_scores[dataset]])
+
+        print(f"{dataset} done.")
 
         # # empty datasets
         # if len(deltaboost_scores) == 0 or len(gbdt_scores) == 0:
@@ -828,7 +855,7 @@ if __name__ == '__main__':
     # plot_score_before_after_removal("../out/remove_test/tree30", datasets, remove_ratios)
     # plot_score_before_after_removal("../out/remove_test/tree10", datasets, remove_ratios)
     # plot_score_before_after_removal("../out/remove_test/tree1", datasets, remove_ratios)
-    # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=50)
+    plot_deltaboost_vs_gbdt("../_out/accuracy", datasets, n_trees=100, n_rounds=9)
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=30)
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=10)
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=1)
@@ -873,24 +900,24 @@ if __name__ == '__main__':
     #                                   )
     # model_diff.print_latex_accuracy()
 
-    model_diff = ModelDiff(datasets, remove_ratios, 10, n_rounds=100, n_jobs=1,
-                           hedgecut_path="/data/junhui/Hedgecut",
-                           dart_path="/data/junhui/DART",
-                           deltaboost_out_path="../out/remove_test/tree10/",
-                           deltaboost_path="../_cache",
-                           forget_table_cache_path="out/forget_table_tree10.csv",
-                           # forget_table_cache_path=None,
-                           accuracy_table_cache_path="out/accuracy_table_tree10.csv",
-                           # accuracy_table_cache_path=None,
-                           )
-    model_diff.get_raw_data_forget_(n_bins=50,
-                                    update_dart=False,
-                                    update_hedgecut=False,
-                                    update_deltaboost=True,
-                                    update_datasets=['msd'],
-                                    save_path="out/forget_table_tree10.csv",
-                                    )
-    model_diff.print_latex_forget()
+    # model_diff = ModelDiff(datasets, remove_ratios, 10, n_rounds=100, n_jobs=1,
+    #                        hedgecut_path="/data/junhui/Hedgecut",
+    #                        dart_path="/data/junhui/DART",
+    #                        deltaboost_out_path="../out/remove_test/tree10/",
+    #                        deltaboost_path="../_cache",
+    #                        forget_table_cache_path="out/forget_table_tree10.csv",
+    #                        # forget_table_cache_path=None,
+    #                        accuracy_table_cache_path="out/accuracy_table_tree10.csv",
+    #                        # accuracy_table_cache_path=None,
+    #                        )
+    # model_diff.get_raw_data_forget_(n_bins=50,
+    #                                 update_dart=False,
+    #                                 update_hedgecut=False,
+    #                                 update_deltaboost=True,
+    #                                 update_datasets=['msd'],
+    #                                 save_path="out/forget_table_tree10.csv",
+    #                                 )
+    # model_diff.print_latex_forget()
 
     # model_diff.get_raw_data_accuracy_(update_dart=False,
     #                                   update_hedgecut=False,

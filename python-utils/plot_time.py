@@ -14,6 +14,8 @@ args = parser.parse_args()
 def load_file(file_path, n_runs, is_retrain):
     removing_time = [0 for _ in range(n_runs)]
     training_time = [0 for _ in range(n_runs)]
+    if is_retrain:
+        file_path += '_retrain'
     for i in range(n_runs):
         fn = file_path + "_" + str(i) + ".out"
         print("Loading file: ", fn)
@@ -31,7 +33,7 @@ def load_file(file_path, n_runs, is_retrain):
 
 
 if args.rate == 0.01:
-    load_file("out/remove_test/tree10/"+args.dataset + "_deltaboost_1e-02", 9, args.is_retrain)
+    load_file("out/time/tree10/"+args.dataset + "_deltaboost_1e-02", 3, args.is_retrain)
 elif args.rate == 0.001:
-    load_file("out/remove_test/tree10/"+args.dataset + "_deltaboost_1e-03", 100, args.is_retrain)
+    load_file("out/time/tree10/"+args.dataset + "_deltaboost_1e-03", 3, args.is_retrain)
 
