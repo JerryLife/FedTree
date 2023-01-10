@@ -102,32 +102,32 @@ void DeltaBoost::train(DeltaBoostParam &param, DataSet &dataset) {
 
 
 void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const vector<int>& sample_indices) {
+    typedef std::chrono::high_resolution_clock timer;
+    auto start_time = timer::now();
+    auto end_time = timer::now();
+    std::chrono::duration<double> duration = end_time - start_time;
 
+    LOG(INFO) << "start removing samples";
+
+    start_time = timer::now();
 
     SyncArray<float_type> y = SyncArray<float_type>(dataset.n_instances());
     y.copy_from(dataset.y.data(), dataset.n_instances());
     std::unique_ptr<ObjectiveFunction> obj(ObjectiveFunction::create(param.objective));
     obj->configure(param, dataset);     // slicing param
 
-    if (!dataset.has_csc) {
-        dataset.csr_to_csc();
-    }
-
     LOG(INFO) << "Preparing for deletion";
-
-//    std::vector<std::vector<DeltaTree>> used_trees(trees.begin(), trees.begin() + param.n_used_trees);
 
     DeltaBoostRemover deltaboost_remover;
     if (param.hash_sampling_round > 1) {
         deltaboost_remover = DeltaBoostRemover(&dataset, &trees, is_subset_indices_in_tree, obj.get(), param);
     } else {
-        typedef std::chrono::high_resolution_clock clock;
-        auto start_time = clock::now();
+        start_time = timer::now();
 
         deltaboost_remover = DeltaBoostRemover(&dataset, &trees, obj.get(), param);
 
-        auto end_time = clock::now();
-        std::chrono::duration<float> duration = end_time - start_time;
+        end_time = timer::now();
+        duration = end_time - start_time;
         LOG(DEBUG) << "[Removing time] Step 0 (out) = " << duration.count();
     }
 
@@ -135,13 +135,6 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 
 //    deltaboost_remover.get_info_by_prediction(gh_pairs_per_sample);
     deltaboost_remover.get_info(gh_pairs_per_sample, ins2node_indices_per_tree);
-//    size_t num_iter = param.n_trees == -1 ? deltaboost_remover.trees_ptr->size() : param.n_used_trees;
-//    for (int iid = 0; iid < deltaboost_remover.n_all_instances; ++iid) {
-//        for (int iter = 0; iter < num_iter; iter++) {
-//            deltaboost_remover.tree_removers[iter].gh_pairs[iid] = gh_pairs_per_sample[iter][iid];
-//            deltaboost_remover.tree_removers[iter].ins2node_indices[iid] = ins2node_indices_per_tree[iter][iid];
-//        }
-//    }
 
     LOG(INFO) << "Deleting " << param.n_used_trees << " trees";
 
@@ -201,6 +194,10 @@ void DeltaBoost::remove_samples(DeltaBoostParam &param, DataSet &dataset, const 
 //            tree_remover.adjust_split_nbrs_by_indices(adjust_indices, adjust_values, false);
 //        }
     }
+
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(INFO) << "Removing time in function = " << duration.count();
 }
 
 float_type DeltaBoost::predict_score(const DeltaBoostParam &model_param, const DataSet &dataSet, int num_trees) {

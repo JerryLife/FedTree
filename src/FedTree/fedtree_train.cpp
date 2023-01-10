@@ -96,6 +96,10 @@ int main(int argc, char** argv){
     bool use_global_test_set = !model_param.test_path.empty();
     dataset.load_from_csv(model_param.path, fl_param);
 
+    if (!dataset.has_csc) {
+        dataset.csr_to_csc();
+    }
+
     DataSet test_dataset;
     if (use_global_test_set)
         test_dataset.load_from_csv(model_param.test_path, fl_param);
@@ -152,8 +156,8 @@ int main(int argc, char** argv){
             float_type score;
             string model_path = string_format("cache/%s_deltaboost.model",
                                               fl_param.deltaboost_param.save_model_name.c_str());
-            deltaboost->train(fl_param.deltaboost_param, dataset);
-            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
+//            deltaboost->train(fl_param.deltaboost_param, dataset);
+//            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
 
 //            auto deltaboost_load = std::unique_ptr<DeltaBoost>(new DeltaBoost());
             parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
@@ -191,7 +195,9 @@ int main(int argc, char** argv){
 
                 std::chrono::high_resolution_clock timer;
                 auto start_rm = timer.now();
+
                 deltaboost->remove_samples(fl_param.deltaboost_param, dataset, removing_indices);
+
                 auto stop_rm = timer.now();
                 std::chrono::duration<float> removing_time = stop_rm - start_rm;
                 LOG(INFO) << "removing time = " << removing_time.count();
