@@ -68,7 +68,7 @@ class Record(object):
         return self.raw_data[f'{dataset_type}_data_df'].filter(regex=(f'{model_type}.*'))
 
 def test_sklearn_cls(dataset, n_trees=10):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
+    train_dataset_path = f'../data/{dataset}.train.remain_1e-02'
     test_dataset_path = f'../data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
@@ -84,7 +84,7 @@ def test_sklearn_cls(dataset, n_trees=10):
 
 
 def test_sklearn_reg(dataset, n_trees=10):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
+    train_dataset_path = f'../data/{dataset}.train.remain_1e-02'
     test_dataset_path = f'../data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)

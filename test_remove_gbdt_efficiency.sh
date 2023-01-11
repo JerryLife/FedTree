@@ -8,7 +8,7 @@ cpus="0-63"
 : "${1?"Number of rounds unset."}"
 
 subdir=tree"$n_trees"
-outdir="out/accuracy/$subdir/"
+outdir="out/time/$subdir/"
 mkdir -p $outdir
 
 
