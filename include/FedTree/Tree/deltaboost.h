@@ -2,13 +2,20 @@
 // Created by HUSTW on 7/31/2021.
 //
 
+
+
+#ifndef FEDTREE_DELTABOOST_H
+#define FEDTREE_DELTABOOST_H
+
+
 #include "gbdt.h"
+#include "../deltabooster.h"
+#include "delta_tree_remover.h"
+#include "deltaboost_remover.h"
 #include "boost/archive/text_oarchive.hpp"
 #include "boost/archive/text_iarchive.hpp"
 #include "boost/serialization/vector.hpp"
 
-#ifndef FEDTREE_DELTABOOST_H
-#define FEDTREE_DELTABOOST_H
 
 class DeltaBoost : public GBDT{
 public:
@@ -37,7 +44,12 @@ public:
 
     vector<float_type> predict_raw(const DeltaBoostParam &model_param, const DataSet &dataSet, int num_trees=-1);
 
-    void remove_samples(DeltaBoostParam &param, DataSet &dataset, const vector<int>& sample_indices);
+//    inline __attribute__((always_inline)) void remove_samples(DeltaBoostParam &param, DataSet &dataset, const vector<int>& sample_indices) {
+//
+//    }
+    void trim_unused_members_();
+
+    DeltaBoost slim_down();
 
 private:
     friend class boost::serialization::access;

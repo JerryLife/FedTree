@@ -634,24 +634,26 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
             auto t_dp_begin = timer::now();
             SyncArray<int> node_idx(n_instances);
             SyncArray<int> node_ptr(n_nodes_in_level + 1);
-            {
-                TIMED_SCOPE(timerObj, "data partitioning");
 
-                SyncArray<int> nid4sort(n_instances);
-                nid4sort.copy_from(ins2node_id);
-                sequence(thrust::host, node_idx.host_data(), node_idx.host_end(), 0);
-                thrust::stable_sort_by_key(thrust::host, nid4sort.host_data(), nid4sort.host_end(),
-                                           node_idx.host_data());
-                auto counting_iter = thrust::make_counting_iterator<int>(nid_offset);
-                node_ptr.host_data()[0] =
-                        thrust::lower_bound(thrust::host, nid4sort.host_data(), nid4sort.host_end(), nid_offset) -
-                        nid4sort.host_data();
+            start_time = timer::now();
 
-                thrust::upper_bound(thrust::host, nid4sort.host_data(), nid4sort.host_end(), counting_iter,
-                                    counting_iter + n_nodes_in_level, node_ptr.host_data() + 1);
+            SyncArray<int> nid4sort(n_instances);
+            nid4sort.copy_from(ins2node_id);
+            sequence(thrust::host, node_idx.host_data(), node_idx.host_end(), 0);
+            thrust::stable_sort_by_key(thrust::host, nid4sort.host_data(), nid4sort.host_end(),
+                                       node_idx.host_data());
+            auto counting_iter = thrust::make_counting_iterator<int>(nid_offset);
+            node_ptr.host_data()[0] =
+                    thrust::lower_bound(thrust::host, nid4sort.host_data(), nid4sort.host_end(), nid_offset) -
+                    nid4sort.host_data();
 
+            thrust::upper_bound(thrust::host, nid4sort.host_data(), nid4sort.host_end(), counting_iter,
+                                counting_iter + n_nodes_in_level, node_ptr.host_data() + 1);
 
-            }
+            end_time = timer::now();
+            duration = end_time - start_time;
+            LOG(TRACE) << "[compute hist] data partitioning time: " << duration.count();
+
             auto t_dp_end = timer::now();
             std::chrono::duration<double> dp_used_time = t_dp_end - t_dp_begin;
             this->total_dp_time += dp_used_time.count();
@@ -663,6 +665,8 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
             auto gh_data = gh_pair.host_data();
             auto dense_bin_id_data = dense_bin_id.host_data();
             auto max_num_bin = param.max_num_bin;
+
+            start_time = timer::now();
 
             for (int i = 0; i < n_nodes_in_level / 2; ++i) {
 
@@ -728,6 +732,10 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                 std::chrono::duration<double> cp_used_time = t_copy_end - t_copy_start;
                 this->total_copy_time += cp_used_time.count();
             }  // end for each node
+
+            end_time = timer::now();
+            duration = end_time - start_time;
+            LOG(DEBUG) << "[compute hist] compute histogram for all nodes time: " << duration.count() << "s";
         }
 
 
@@ -736,13 +744,20 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
         auto last_hist_data = last_hist.host_data();
         auto hist_data = hist.host_data();
 
-
+        start_time = timer::now();
 
 #pragma omp parallel for
         for (int i = 0; i < n_nodes_in_level * n_bins; i++) {
             last_hist_data[i] = hist_data[i];
         }
+        // byte sizeof() * size
+        // #include <stdio.h>
+        //#include <string.h>
+//        memcpy(last_hist_data, hist_data, sizeof(GHPair) * n_nodes_in_level * n_bins);
 
+        end_time = timer::now();
+        duration = end_time - start_time;
+        LOG(DEBUG) << "[compute hist] copy last hist time: " << duration.count() << "s";
 
     }
 
@@ -750,6 +765,8 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
     std::chrono::duration<double> compute_histogram_inner_time_para = end_time - start_time;
     LOG(DEBUG) << "compute_histogram_inner_time: " << compute_histogram_inner_time_para.count();
 
+
+    start_time = timer::now();
     this->build_n_hist++;
     if (n_column > 1){
 //        SyncArray<GHPair> hist_res(hist.size());
@@ -784,6 +801,10 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                               hist.host_data(), hist.host_data());
     }
 //    LOG(DEBUG) << hist;
+
+    end_time = timer::now();
+    duration = end_time - start_time;
+    LOG(DEBUG) << "[compute hist] inclusive scan time: " << duration.count() << "s";
 
 
     auto nodes_data = tree.nodes.host_data();

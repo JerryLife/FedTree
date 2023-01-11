@@ -1,11 +1,13 @@
 import numpy as np
 import pickle
 import time
+import os
 
 import xgboost as xgb
 from sklearn.metrics import accuracy_score, mean_squared_error
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
 
 from train_test_split import load_data
 
@@ -65,13 +67,42 @@ class Record(object):
     def read(self, model_type, dataset_type):
         return self.raw_data[f'{dataset_type}_data_df'].filter(regex=(f'{model_type}.*'))
 
+def test_sklearn_cls(dataset, n_trees=10):
+    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
+    test_dataset_path = f'../data/{dataset}.test'
+    X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
+    X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
+    st = time.time()
+    model = GradientBoostingClassifier(n_estimators=n_trees, max_depth=7)
+    model.fit(X, y)
+    et = time.time()
+    print(f'sklearn GBDT training time: {et - st:.3f}s')
+    pred = model.predict(X_test)
+    acc = accuracy_score(y_test, np.round(pred))
+    print(f'sklearn GBDT error: {1 - acc:.4f}')
+    return model
+
+
+def test_sklearn_reg(dataset, n_trees=10):
+    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
+    test_dataset_path = f'../data/{dataset}.test'
+    X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
+    X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
+    st = time.time()
+    model = GradientBoostingRegressor(n_estimators=n_trees, max_depth=7)
+    model.fit(X, y)
+    et = time.time()
+    print(f'sklearn GBDT training time: {et - st:.3f}s')
+    pred = model.predict(X_test)
+    rmse = np.sqrt(mean_squared_error(y_test, pred))
+    print(f'sklearn GBDT error: {1 - rmse:.4f}')
+    return model
+
 
 def test_xgb_cls(dataset, n_trees=10):
     train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
     test_dataset_path = f'../data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
-    X = X.astype(np.double)
-    y = y.astype(np.double)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
     st = time.time()
     dtrain = xgb.DMatrix(X, label=y, missing=np.NaN, )
@@ -91,8 +122,6 @@ def test_xgb_reg(dataset, n_trees=10):
     test_dataset_path = f'../data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
-    X = X.astype(np.double)
-    y = y.astype(np.double)
     st = time.time()
     dtrain = xgb.DMatrix(X, label=y, missing=np.NaN)
     bst = xgb.train({'tree_method': 'approx', 'objective': 'reg:squarederror', 'max_bin': 1000,
@@ -104,6 +133,7 @@ def test_xgb_reg(dataset, n_trees=10):
     rmse = np.sqrt(mean_squared_error(y_test, pred))
     print(f'XGBoost RMSE: {rmse:.4f}')
     return bst
+
 
 
 def test_tree_cls(dataset):
@@ -153,6 +183,7 @@ def test_rf_cls(dataset, n_trees=10):
     print(f'Random Forest error: {1 - acc:.4f}')
     return rf
 
+
 def test_rf_reg(dataset, n_trees=10):
     train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
     test_dataset_path = f'../data/{dataset}.test'
@@ -173,17 +204,29 @@ if __name__ == '__main__':
     # record = Record.load_from_file('covtype', '1%')
     # print(record.raw_data['test_data_df'].describe())
     # print(record.raw_data['test_data_df'].columns)
+    # os.environ['OMP_NUM_THREADS'] = "1"
 
-    test_xgb_cls('codrna', 10)
+    test_sklearn_cls('codrna', 10)
     print("=====================================")
-    test_xgb_cls('covtype', 10)
+    test_sklearn_cls('covtype', 10)
     print("=====================================")
-    test_xgb_cls('gisette', 10)
+    test_sklearn_cls('gisette', 10)
     print("=====================================")
-    test_xgb_reg('cadata', 10)
+    test_sklearn_reg('cadata', 10)
     print("=====================================")
-    test_xgb_reg('msd', 10)
+    test_sklearn_reg('msd', 10)
     print("=====================================")
+
+    # test_xgb_cls('codrna', 10)
+    # print("=====================================")
+    # test_xgb_cls('covtype', 10)
+    # print("=====================================")
+    # test_xgb_cls('gisette', 10)
+    # print("=====================================")
+    # test_xgb_reg('cadata', 10)
+    # print("=====================================")
+    # test_xgb_reg('msd', 10)
+    # print("=====================================")
 
     # test_rf_cls('codrna', 100)
     # print("=====================================")

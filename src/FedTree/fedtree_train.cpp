@@ -50,7 +50,7 @@ int main(int argc, char** argv){
 */
 
     omp_set_dynamic(0);
-//    omp_set_num_threads(64);
+//    omp_set_num_threads(10);
 
 //centralized training test
     FLParam fl_param;
@@ -156,11 +156,13 @@ int main(int argc, char** argv){
             float_type score;
             string model_path = string_format("cache/%s_deltaboost.model",
                                               fl_param.deltaboost_param.save_model_name.c_str());
-//            deltaboost->train(fl_param.deltaboost_param, dataset);
-//            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
+            deltaboost->train(fl_param.deltaboost_param, dataset);      // train
+            parser.save_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);     // save
 
 //            auto deltaboost_load = std::unique_ptr<DeltaBoost>(new DeltaBoost());
-            parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);
+//            parser.load_model(model_path, fl_param.deltaboost_param, *deltaboost, dataset);     // load
+
+            deltaboost->trim_unused_members_();
 
 
 //            string model_path_json = string_format("cache/%s_deltaboost.json",
@@ -193,14 +195,84 @@ int main(int argc, char** argv){
                 vector<int> removing_indices(static_cast<int>(fl_param.deltaboost_param.remove_ratio * dataset.n_instances()));
                 std::iota(removing_indices.begin(), removing_indices.end(), 0);
 
-                std::chrono::high_resolution_clock timer;
-                auto start_rm = timer.now();
+                typedef std::chrono::high_resolution_clock timer;
+                auto start_rm = timer::now();
 
-                deltaboost->remove_samples(fl_param.deltaboost_param, dataset, removing_indices);
+//                deltaboost->remove_samples(fl_param.deltaboost_param, dataset, removing_indices);
+                ////////////////////////////////////////// start
+                auto &param = fl_param.deltaboost_param;
+                const auto &sample_indices = removing_indices;
 
-                auto stop_rm = timer.now();
+//                typedef std::chrono::high_resolution_clock timer;
+                auto start_time = timer::now();
+                auto end_time = timer::now();
+                std::chrono::duration<double> duration = end_time - start_time;
+
+                LOG(INFO) << "start removing samples";
+
+                start_time = timer::now();
+
+                SyncArray<float_type> y = SyncArray<float_type>(dataset.n_instances());
+                y.copy_from(dataset.y.data(), dataset.n_instances());
+                std::unique_ptr<ObjectiveFunction> obj(ObjectiveFunction::create(param.objective));
+                obj->configure(param, dataset);     // slicing param
+
+                end_time = timer::now();
+                duration = end_time - start_time;
+                LOG(INFO) << "Copy y time: " << duration.count();
+
+                LOG(INFO) << "Preparing for deletion";
+
+                DeltaBoostRemover deltaboost_remover;
+                if (param.hash_sampling_round > 1) {
+                    deltaboost_remover = DeltaBoostRemover(&dataset, &(deltaboost->trees), deltaboost->is_subset_indices_in_tree, obj.get(), param);
+                } else {
+                    start_time = timer::now();
+
+                    deltaboost_remover = DeltaBoostRemover(&dataset, &(deltaboost->trees), obj.get(), param);
+
+                    end_time = timer::now();
+                    duration = end_time - start_time;
+                    LOG(DEBUG) << "[Removing time] Step 0 (out) = " << duration.count();
+                }
+
+                deltaboost_remover.n_all_instances = dataset.n_instances();
+
+//    deltaboost_remover.get_info_by_prediction(gh_pairs_per_sample);
+                deltaboost_remover.get_info(deltaboost->gh_pairs_per_sample, deltaboost->ins2node_indices_per_tree);
+
+                LOG(INFO) << "Deleting " << param.n_used_trees << " trees";
+
+#pragma omp parallel for
+                for (int i = 0; i < param.n_used_trees; ++i) {
+
+                    DeltaTreeRemover& tree_remover = deltaboost_remover.tree_removers[i];
+                    vector<bool> is_iid_removed = indices_to_hash_table(sample_indices, dataset.n_instances());
+                    tree_remover.is_iid_removed = is_iid_removed;
+                    const std::vector<GHPair>& gh_pairs = tree_remover.gh_pairs;
+                    vector<int> trained_sample_indices;
+                    if (param.hash_sampling_round > 1) {
+                        std::copy_if(sample_indices.begin(), sample_indices.end(), std::back_inserter(trained_sample_indices), [&](int idx){
+                            return deltaboost->is_subset_indices_in_tree[i][idx];
+                        });
+                    } else {
+                        trained_sample_indices = sample_indices;
+                    }
+
+                    tree_remover.remove_samples_by_indices(trained_sample_indices);
+                    tree_remover.prune();
+                }
+
+                end_time = timer::now();
+                duration = end_time - start_time;
+                LOG(INFO) << "Removing time in function = " << duration.count();
+
+                auto stop_rm = timer::now();
                 std::chrono::duration<float> removing_time = stop_rm - start_rm;
                 LOG(INFO) << "removing time = " << removing_time.count();
+
+
+                //////////////////////// end
 
                 LOG(INFO) << "Predict after removals";
                 LOG(INFO) << "On test dataset";
