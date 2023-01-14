@@ -91,6 +91,19 @@ void HistTreeBuilder::get_bin_ids() {
     SyncArray<unsigned char> bin_id;
     bin_id.resize(nnz);
     auto bin_id_data = bin_id.host_data();
+    sparse_bin_id.resize(nnz);
+    auto sparse_bin_id_data = sparse_bin_id.host_data();
+    sparse_bin_col_ptr.resize(n_column+1);
+    auto sparse_bin_id_col_ptr_data = sparse_bin_col_ptr.host_data();
+    sparse_bin_id_map.resize(nnz);
+    auto sparse_bin_id_map_data = sparse_bin_id_map.host_data();
+    sparse_bin_id_reverse_map.resize(sorted_dataset.csc_col_ptr[1] - sorted_dataset.csc_col_ptr[0]);
+    auto sparse_bin_id_map_reverse_data = sparse_bin_id_reverse_map.host_data();
+    for(int i = 0; i < sparse_bin_id_reverse_map.size(); i++)
+        sparse_bin_id_map_reverse_data[i] = 0;
+    int idx = 0;
+
+    auto csc_row_idx_data = sorted_dataset.csc_row_idx.data();
     {
         auto lowerBound = [=]__host__(const float_type *search_begin, const float_type *search_end, float_type val) {
             const float_type *left = search_begin;
@@ -106,21 +119,38 @@ void HistTreeBuilder::get_bin_ids() {
         };
         TIMED_SCOPE(timerObj, "binning");
 
-#pragma omp parallel for
+//#pragma omp parallel for
+
+        sparse_bin_id_col_ptr_data[0] = 0;
+        sparse_bin_id_col_ptr_data[1] = 0;
         for (int cid = 0; cid < n_column; cid++) {
+            if(cid >= 1)
+                sparse_bin_id_col_ptr_data[cid + 1] = sparse_bin_id_col_ptr_data[cid];
             for (int i = csc_col_ptr_data[cid]; i < csc_col_ptr_data[cid + 1]; i++) {
                 auto search_begin = cut_points_ptr + cut_col_ptr[cid];
                 auto search_end = cut_points_ptr + cut_col_ptr[cid + 1];
                 auto val = csc_val_data[i];
                 bin_id_data[i] = lowerBound(search_begin, search_end, val) - search_begin;
+                if(int(bin_id_data[i]) != cut_col_ptr[cid + 1] - cut_col_ptr[cid] - 1) {
+                    sparse_bin_id_data[idx] = bin_id_data[i];
+                    sparse_bin_id_col_ptr_data[cid + 1] += 1;
+                    int row = csc_row_idx_data[i];
+                    sparse_bin_id_map_data[idx] = row;
+                    sparse_bin_id_map_reverse_data[row] = 1;
+                    idx += 1;
+                }
+		//else{
+		//	std::cout<<"skip bin"<<std::endl;
+		//}
             }
         }
     }
+//    sparse_bin_id.resize_without_delete(idx);
 
     auto max_num_bin = param.max_num_bin;
     dense_bin_id.resize(n_instances * n_column);
     auto dense_bin_id_data = dense_bin_id.host_data();
-    auto csc_row_idx_data = sorted_dataset.csc_row_idx.data();
+
 #pragma omp parallel for
     for (int i = 0; i < n_instances * n_column; i++) {
         dense_bin_id_data[i] = max_num_bin;
@@ -180,26 +210,26 @@ void HistTreeBuilder::find_split(int level) {
     compute_histogram_in_a_level(level, n_max_splits, n_bins, n_nodes_in_level, hist_fid_data, missing_gh, hist);
     end_time = timer::now();
     duration = end_time - start_time;
-    LOG(DEBUG) << "compute_histogram_in_a_level time: " << duration.count() << "s";
+    LOG(INFO) << "compute_histogram_in_a_level time: " << duration.count() << "s";
 
     start_time = timer::now();
     compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist);
     end_time = timer::now();
     duration = end_time - start_time;
-    LOG(DEBUG) << "compute_gain_in_a_level time: " << duration.count() << "s";
+    LOG(INFO) << "compute_gain_in_a_level time: " << duration.count() << "s";
 
     start_time = timer::now();
     SyncArray<int_float> best_idx_gain(n_nodes_in_level);
     get_best_gain_in_a_level(gain, best_idx_gain, n_nodes_in_level, n_bins);
     end_time = timer::now();
     duration = end_time - start_time;
-    LOG(DEBUG) << "get_best_gain_in_a_level time: " << duration.count() << "s";
+    LOG(INFO) << "get_best_gain_in_a_level time: " << duration.count() << "s";
 
     start_time = timer::now();
     get_split_points(best_idx_gain, n_nodes_in_level, hist_fid_data, missing_gh, hist);
     end_time = timer::now();
     duration = end_time - start_time;
-    LOG(DEBUG) << "get_split_points time: " << duration.count() << "s";
+    LOG(INFO) << "get_split_points time: " << duration.count() << "s";
 }
 
 
@@ -590,6 +620,10 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
     LOG(TRACE) << "start finding split";
     start_time = timer::now();
 
+    auto csc_val_data = &(sorted_dataset.csc_val[0]);
+    auto csc_col_ptr_data = &(sorted_dataset.csc_col_ptr[0]);
+    auto csc_row_data = &(sorted_dataset.csc_row_idx[0]);
+
     {
         TIMED_SCOPE(timerObj, "build hist");
         if (n_nodes_in_level == 1) {
@@ -599,31 +633,40 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
             auto dense_bin_id_data = dense_bin_id.host_data();
             auto max_num_bin = param.max_num_bin;
             auto n_instances = this->n_instances;
-
-
+            auto sparse_bin_col_data = sparse_bin_col_ptr.host_data();
+            auto sparse_bin_id_map_data = sparse_bin_id_map.host_data();
             #pragma omp parallel for
             for(int fid = 0; fid < n_column; fid++){
-                #pragma omp parallel for
-                for(int iid = 0; iid < n_instances; iid++) {
+                int column_max_bin = cut_col_ptr_data[fid+1] - cut_col_ptr_data[fid];
+//                hist_data[feature_offset + column_max_bin - 1] =
+//                #pragma omp parallel for
+//                for(int i = csc_col_ptr_data[fid]; i < csc_col_ptr_data[fid+1]; i++)
+                for(int i = sparse_bin_col_data[fid]; i < sparse_bin_col_data[fid+1]; i++){
+                    int iid = sparse_bin_id_map_data[i];
+//                for(int iid = 0; iid < n_instances; iid++) {
                     unsigned char bid = dense_bin_id_data[iid * n_column + fid];
-                    if (bid != max_num_bin) {
+                    if (int(bid) == column_max_bin - 1) {
+//                        std::cout<<"here"<<std::endl;
+                        continue;
+                    }
+                    else if (bid != max_num_bin) {
                         int feature_offset = cut_col_ptr_data[fid];
                         const GHPair src = gh_data[iid];
                         GHPair &dest = hist_data[feature_offset + bid];
                         if (!src.encrypted && !dest.encrypted){
                             if (src.h != 0){
-#pragma omp atomic
+//#pragma omp atomic
                                 dest.h += src.h;
                             }
                             if (src.g != 0){
-#pragma omp atomic
+//#pragma omp atomic
                                 dest.g += src.g;
                             }
                         }
                         else {
-#pragma omp atomic
+//#pragma omp atomic
                             dest.g += src.g;
-#pragma omp atomic
+//#pragma omp atomic
                             dest.h += + src.h;
                         }
                     }
@@ -652,7 +695,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
 
             end_time = timer::now();
             duration = end_time - start_time;
-            LOG(TRACE) << "[compute hist] data partitioning time: " << duration.count();
+            LOG(DEBUG) << "[compute hist] data partitioning time: " << duration.count();
 
             auto t_dp_end = timer::now();
             std::chrono::duration<double> dp_used_time = t_dp_end - t_dp_begin;
@@ -686,13 +729,25 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
                     auto idx_end = node_ptr.host_data()[nid0 + 1];
                     auto hist_data = hist.host_data() + nid0 * n_bins;
                     this->total_hist_num++;
+                    auto sparse_bin_id_map_reverse_data = sparse_bin_id_reverse_map.host_data();
                     #pragma omp parallel for
                     for(int fid = 0; fid < n_column; fid++){
-                        #pragma omp parallel for
+                        int column_max_bin = cut_col_ptr_data[fid+1] - cut_col_ptr_data[fid];
+//                        #pragma omp parallel for
                         for(int rid = 0; rid < (idx_end - idx_begin); rid++){
                             int iid = node_idx_data[rid + idx_begin];
+                            if(sparse_bin_id_map_reverse_data[iid] == 0)
+			    {		
+				    std::cout<<"skipped"<<std::endl;
+				    continue;
+			    }
                             unsigned char bid = dense_bin_id_data[iid * n_column + fid];
-                            if (bid != max_num_bin){
+                            if (int(bid) == column_max_bin - 1) {
+//                                std::cout<<"here"<<std::endl;
+				//std::cout<<"skipped"<<std::endl;                              
+                                continue;
+                            }
+                            else if (bid != max_num_bin){
                                 int feature_offset = cut_col_ptr_data[fid];
                                 const GHPair src = gh_data[iid];
                                 GHPair &dest = hist_data[feature_offset + bid];
@@ -768,6 +823,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
 
     start_time = timer::now();
     this->build_n_hist++;
+    auto hist_data = hist.host_data();
     if (n_column > 1){
 //        SyncArray<GHPair> hist_res(hist.size());
 //        SyncArray<GHPair> hist_res_para(hist.size());
@@ -783,7 +839,16 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
 
         inclusive_scan_by_cut_points(hist.host_data(), cut.cut_col_ptr.host_data(),
                                      n_nodes_in_level, n_column, n_bins, hist.host_data());
-
+        auto cut_points = cut.cut_col_ptr.host_data();
+        if(n_nodes_in_level == 1){
+#pragma omp parallel for
+            for (int i = 0; i < n_nodes_in_level; ++i) {
+#pragma omp parallel for
+                for (int j = 0; j < n_column; ++j) {
+                    hist_data[i*n_bins + cut_points[j+1] - cut_points[j]] = trees.nodes.host_data()[i].sum_gh_pair;
+                }
+            }
+        }
 //        assert(hist_res_para.to_vec() == hist_res.to_vec());
 //        hist.copy_from(hist_res);
 
@@ -810,7 +875,7 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
     auto nodes_data = tree.nodes.host_data();
     auto missing_gh_data = missing_gh.host_data();
     auto cut_col_ptr = cut.cut_col_ptr.host_data();
-    auto hist_data = hist.host_data();
+    hist_data = hist.host_data();
     #pragma omp parallel for
     for (int pid = 0; pid < n_partition; pid++) {
 //        int nid0 = pid / n_column;
@@ -824,9 +889,6 @@ void HistTreeBuilder::compute_histogram_in_a_level(int level, int n_max_splits, 
 //        }
         missing_gh_data[pid] = GHPair(0, 0);
     }
-
-
-
 }
 
 
@@ -869,14 +931,14 @@ HistTreeBuilder::compute_gain_in_a_level(SyncArray<float_type> &gain, int n_node
             float_type default_to_left_gain = std::max((float_type)0,
                                                        compute_gain(father_gh, father_gh - rch_gh, rch_gh, mcw, l));
 //            rch_gh = rch_gh + p_missing_gh;
-            rch_gh.g += p_missing_gh.g;
-            rch_gh.h += p_missing_gh.h;
-            float_type default_to_right_gain = std::max((float_type)0,
-                                                        compute_gain(father_gh, father_gh - rch_gh, rch_gh, mcw, l));
-            if (default_to_left_gain > default_to_right_gain)
-                gain_data[i] = default_to_left_gain;
-            else
-                gain_data[i] = -default_to_right_gain;//negative means default split to right
+//            rch_gh.g += p_missing_gh.g;
+//            rch_gh.h += p_missing_gh.h;
+//            float_type default_to_right_gain = std::max((float_type)0,
+//                                                        compute_gain(father_gh, father_gh - rch_gh, rch_gh, mcw, l));
+//            if (default_to_left_gain > default_to_right_gain)
+            gain_data[i] = default_to_left_gain;
+//            else
+//                gain_data[i] = -default_to_right_gain;//negative means default split to right
         } else gain_data[i] = 0;
     }
     return;
