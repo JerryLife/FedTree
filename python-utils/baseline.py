@@ -88,6 +88,8 @@ def test_sklearn_reg(dataset, n_trees=10):
     test_dataset_path = f'../data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
+    X = X.astype(np.float32)
+    y = y.astype(np.float32)
     st = time.time()
     model = GradientBoostingRegressor(n_estimators=n_trees, max_depth=7)
     model.fit(X, y)
@@ -105,7 +107,7 @@ def test_xgb_cls(dataset, n_trees=10):
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
     st = time.time()
-    dtrain = xgb.DMatrix(X, label=y, missing=np.NaN, )
+    dtrain = xgb.DMatrix(X, label=y, missing=np.NaN)
     bst = xgb.train({'tree_method': 'approx', 'objective': 'binary:logistic', 'max_bin': 1000,
                      'eta': 1, 'max_depth': 7}, dtrain,
                     num_boost_round=n_trees)
@@ -118,7 +120,7 @@ def test_xgb_cls(dataset, n_trees=10):
 
 
 def test_xgb_reg(dataset, n_trees=10):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
+    train_dataset_path = f'../data/{dataset}.train.remain_1e-02'
     test_dataset_path = f'../data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
@@ -205,17 +207,18 @@ if __name__ == '__main__':
     # print(record.raw_data['test_data_df'].describe())
     # print(record.raw_data['test_data_df'].columns)
     # os.environ['OMP_NUM_THREADS'] = "1"
+    print(xgb.__version__)
 
-    test_sklearn_cls('codrna', 10)
-    print("=====================================")
-    test_sklearn_cls('covtype', 10)
-    print("=====================================")
-    test_sklearn_cls('gisette', 10)
-    print("=====================================")
-    test_sklearn_reg('cadata', 10)
-    print("=====================================")
-    test_sklearn_reg('msd', 10)
-    print("=====================================")
+    # test_sklearn_cls('codrna', 10)
+    # print("=====================================")
+    # test_sklearn_cls('covtype', 10)
+    # print("=====================================")
+    # test_sklearn_cls('gisette', 10)
+    # print("=====================================")
+    # test_sklearn_reg('cadata', 10)
+    # print("=====================================")
+    # test_sklearn_reg('msd', 10)
+    # print("=====================================")
 
     # test_xgb_cls('codrna', 10)
     # print("=====================================")
@@ -225,8 +228,8 @@ if __name__ == '__main__':
     # print("=====================================")
     # test_xgb_reg('cadata', 10)
     # print("=====================================")
-    # test_xgb_reg('msd', 10)
-    # print("=====================================")
+    test_xgb_reg('msd', 10)
+    print("=====================================")
 
     # test_rf_cls('codrna', 100)
     # print("=====================================")

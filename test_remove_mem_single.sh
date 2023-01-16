@@ -10,10 +10,10 @@ cpus="0-63"
 : "${1?"Number of rounds unset."}"
 
 subdir=tree"$n_trees"
-outdir="out/ablation/$subdir/"
+outdir="out/mem/$subdir/"
 mkdir -p $outdir
 
-nthreads=2
+nthreads=1
 
 # iterate n_rounds times
 for i in $(seq 0 $(($n_rounds-1))); do

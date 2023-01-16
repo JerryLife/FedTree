@@ -151,6 +151,29 @@ public:
             };
         }
 
+        // enable save in boost::serialization
+        friend class boost::serialization::access;
+
+        template<class Archive> void serialize(Archive &ar, const unsigned int /*version*/) {
+            ar & final_id;
+            ar & lch_index;
+            ar & rch_index;
+            ar & parent_index;
+            ar & gain;
+            ar & base_weight;
+            ar & split_feature_id;
+            ar & pid;
+            ar & split_value;
+            ar & split_bid;
+            ar & default_right;
+            ar & is_leaf;
+            ar & is_valid;
+            ar & is_pruned;
+            ar & sum_gh_pair.g;
+            ar & sum_gh_pair.h;
+            ar & n_instances;
+        }
+
     };
 
     Tree() = default;
@@ -209,6 +232,14 @@ public:
                 {"n_nodes_level", json::value_from(tree.n_nodes_level)},
                 {"final_depth", tree.final_depth}
         };
+    }
+
+    friend class boost::serialization::access;
+
+    template<class Archive> void serialize(Archive &ar, const unsigned int /*version*/) {
+        ar & nodes;
+        ar & n_nodes_level;
+        ar & final_depth;
     }
 
 

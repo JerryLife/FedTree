@@ -190,52 +190,56 @@ def plot_score_before_after_removal(out_dir, datasets, remove_ratios, save_path=
         print(latex_table)
 
 
-def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n_trees=50, n_rounds=1):
+def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n_trees=10, n_rounds=1):
     assert present in ['test']
-    # # single tree
-    # xgboost_scores = {
-    #     'codrna': 1 - 0.9552,
-    #     'covtype': 1 - 0.8016,
-    #     'gisette': 1 - 0.9630,
-    #     'cadata': 0.1165,
-    #     'msd': 0.1143,
-    # }
-    # rf_scores = {
-    #     'codrna': 0.1011,
-    #     'covtype': 0.2472,
-    #     'gisette': 0.0590,
-    #     'cadata': 0.1307,
-    #     'msd': 0.1170,
-    # }
-    # dt_scores = {
-    #     'codrna': 0.0670,
-    #     'covtype': 0.2225,
-    #     'gisette': 0.0750,
-    #     'cadata': 0.1382,
-    #     'msd': 0.1185,
-    # }
 
-    xgboost_scores = {
-        'codrna': 0.0343,
-        'covtype': 0.0609,
-        'gisette': 0.0290,
-        'cadata': 0.1272,
-        'msd': 0.1219,
-    }
-    rf_scores = {
-        'codrna': 0.1287,
-        'covtype': 0.2402,
-        'gisette': 0.0490,
-        'cadata': 0.1283,
-        'msd': 0.1169,
-    }
-    dt_scores = {
-        'codrna': 0.0670,
-        'covtype': 0.2225,
-        'gisette': 0.0750,
-        'cadata': 0.1382,
-        'msd': 0.1185,
-    }
+    if n_trees == 10:
+        # 10 trees
+        xgboost_scores = {
+            'codrna': 1 - 0.9552,
+            'covtype': 1 - 0.8016,
+            'gisette': 1 - 0.9630,
+            'cadata': 0.1165,
+            'msd': 0.1143,
+        }
+        rf_scores = {
+            'codrna': 0.1011,
+            'covtype': 0.2472,
+            'gisette': 0.0590,
+            'cadata': 0.1307,
+            'msd': 0.1170,
+        }
+        dt_scores = {
+            'codrna': 0.0670,
+            'covtype': 0.2225,
+            'gisette': 0.0750,
+            'cadata': 0.1382,
+            'msd': 0.1185,
+        }
+    elif n_trees == 100:
+        xgboost_scores = {
+            'codrna': 0.0343,
+            'covtype': 0.0609,
+            'gisette': 0.0290,
+            'cadata': 0.1272,
+            'msd': 0.1219,
+        }
+        rf_scores = {
+            'codrna': 0.1287,
+            'covtype': 0.2402,
+            'gisette': 0.0490,
+            'cadata': 0.1283,
+            'msd': 0.1169,
+        }
+        dt_scores = {
+            'codrna': 0.0670,
+            'covtype': 0.2225,
+            'gisette': 0.0750,
+            'cadata': 0.1382,
+            'msd': 0.1185,
+        }
+    else:
+        assert False
 
     summary = []
     for dataset in datasets:
@@ -275,6 +279,7 @@ def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n
                              figsize=None)
         ax.margins(y=0.1)
         ax.legend()
+        plt.tight_layout()
         plt.show()
 
 
@@ -395,9 +400,9 @@ class ModelDiffSingle:
                 logging.debug("Done loading deltaboost data")
             else:
                 # get size from example
-                example_output = np.genfromtxt(
+                example_output = pd.read_csv(
                     f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_0_deltaboost_score_{keyword}.csv",
-                    delimiter=',')
+                    delimiter=',').values
                 n_instance = example_output.shape[0]
 
                 # directly load output of deltaboost from csv
@@ -407,15 +412,15 @@ class ModelDiffSingle:
                 self.deleted_score = np.zeros((n_rounds, n_instance))
                 self.X, self.y = None, None
                 for i in tqdm(range(n_rounds)):
-                    self.original_score[i, :] = np.genfromtxt(
+                    self.original_score[i, :] = pd.read_csv(
                         f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_{i}_deltaboost_score_{keyword}.csv",
-                        delimiter=',')[:, 0]
-                    self.retrain_score[i, :] = np.genfromtxt(
+                        delimiter=',').values[:, 0]
+                    self.retrain_score[i, :] = pd.read_csv(
                         f"{deltaboost_path}/{dataset}_tree{n_trees}_retrain_{self.remove_ratio}_{i}_deltaboost_score_{keyword}.csv",
-                        delimiter=',')[:, 0]
-                    self.deleted_score[i, :] = np.genfromtxt(
+                        delimiter=',').values[:, 0]
+                    self.deleted_score[i, :] = pd.read_csv(
                         f"{deltaboost_path}/{dataset}_tree{n_trees}_original_{self.remove_ratio}_{i}_deleted_score_{keyword}.csv",
-                        delimiter=',')[:, 0]
+                        delimiter=',').values[:, 0]
                 logging.debug("Done loading deltaboost output.")
         else:
             # read from Record
@@ -454,16 +459,16 @@ class ModelDiffSingle:
         return original_score, retrain_score, deleted_score
 
     def predict_(self, n_used_trees=None):
-        logging.debug("predicting with deltaboost")
+        logging.info("predicting with deltaboost")
         # execute predict_i in parallel with joblib.Parallel
         results = Parallel(n_jobs=1)(delayed(self.predict_i)(i, n_used_trees) for i in range(self.n_rounds))
 
         # convert results to numpy array
         self.original_score, self.retrain_score, self.deleted_score = np.array(results).transpose((1, 0, 2))
-        logging.debug("Done")
+        logging.info("Done")
 
     def get_hellinger_distance(self, n_bins=50, return_std=True):
-        logging.debug("Calculating Hellinger distance")
+        logging.info("Calculating Hellinger distance")
         min_value = min(np.min(self.original_score), np.min(self.retrain_score), np.min(self.deleted_score))
         max_value = max(np.max(self.original_score), np.max(self.retrain_score), np.max(self.deleted_score))
 
@@ -498,18 +503,18 @@ class ModelDiffSingle:
         retrain_vs_deleted = 1 - bin_width * np.sum(np.sqrt(retrain_hist * deleted_hist), axis=1)
         original_vs_retrain = 1 - bin_width * np.sum(np.sqrt(original_hist * retrain_hist), axis=1)
 
-        logging.debug("Done")
+        logging.info("Done")
 
         if return_std:
             return (np.nanmean(original_vs_retrain), np.nanstd(original_vs_retrain)), \
-                   (np.nanmean(retrain_vs_deleted), np.nanstd(retrain_vs_deleted))
+                (np.nanmean(retrain_vs_deleted), np.nanstd(retrain_vs_deleted))
         else:
             return np.nanmean(original_vs_retrain), np.nanmean(retrain_vs_deleted)
 
     def get_accuracy(self):
-        logging.debug("Loading Accuracy")
+        logging.info("Loading Accuracy")
         ret = self.record.get_accuracy(['origin', 'forget', 'retrain'], 'test')
-        logging.debug("Done")
+        logging.info("Done")
         return ret
 
 
@@ -524,6 +529,7 @@ class ModelDiff:
         :param n_trees: number of trees
         :param n_rounds: number of rounds
         :param n_used_trees: number of used trees, if None, use all trees
+        :param keyword: the dataset that used for inference results, e.g. test
         :param n_jobs: number of jobs for parallel computing
         :param hedgecut_path: path of hedgecut model, if None, use default path
         :param dart_path: path of dart model, if None, use default path
@@ -846,16 +852,39 @@ if __name__ == '__main__':
         format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
         datefmt='%Y-%m-%d:%H:%M:%S',
         level=logging.DEBUG)
+    plt.rcParams.update({'font.size': 15})
 
     datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
     # datasets = ['cadata', 'codrna']
     remove_ratios = ['1e-03', '1e-02']
+    # plot_deltaboost_vs_gbdt("../_out/accuracy", datasets, n_trees=100, n_rounds=10)
+    # plot_deltaboost_vs_gbdt("../_out/remove_test", datasets, n_trees=10, n_rounds=10)
+
+    model_diff = ModelDiff(datasets, remove_ratios, 10, n_rounds=100, n_jobs=1,
+                           hedgecut_path="/data/junhui/Hedgecut",
+                           dart_path="/data/junhui/DART",
+                           deltaboost_out_path="../out/remove_test/tree10/",
+                           deltaboost_path="../cache/ablation-bagging/hsr1",
+                           # forget_table_cache_path="out/forget_table_tree10.csv",
+                           forget_table_cache_path=None,
+                           # accuracy_table_cache_path="out/accuracy_table_tree10.csv",
+                           accuracy_table_cache_path=None,
+                           )
+    model_diff.get_raw_data_forget_(n_bins=50,
+                                    update_dart=False,
+                                    update_hedgecut=False,
+                                    update_deltaboost=True,
+                                    update_datasets=['codrna'],
+                                    save_path=None
+                                    )
+    model_diff.print_latex_forget()
+
     # remove_ratios = ['0.001', '0.01']
     # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)
     # plot_score_before_after_removal("../out/remove_test/tree30", datasets, remove_ratios)
     # plot_score_before_after_removal("../out/remove_test/tree10", datasets, remove_ratios)
     # plot_score_before_after_removal("../out/remove_test/tree1", datasets, remove_ratios)
-    plot_deltaboost_vs_gbdt("../_out/accuracy", datasets, n_trees=100, n_rounds=9)
+
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=30)
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=10)
     # plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=1)

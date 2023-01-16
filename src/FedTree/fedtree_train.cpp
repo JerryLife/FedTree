@@ -165,9 +165,9 @@ int main(int argc, char** argv){
             deltaboost->trim_unused_members_();
 
 
-//            string model_path_json = string_format("cache/%s_deltaboost.json",
-//                                              fl_param.deltaboost_param.save_model_name.c_str());
-//            parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
+            string model_path_json = string_format("cache/%s_deltaboost.json",
+                                              fl_param.deltaboost_param.save_model_name.c_str());
+            parser.save_model_to_json(model_path_json, fl_param.deltaboost_param, *deltaboost, dataset);
 
             LOG(INFO) << "On test dataset";
             vector<float_type> test_scores;
@@ -301,6 +301,11 @@ int main(int argc, char** argv){
         } else {
             auto gbdt = std::unique_ptr<GBDT>(new GBDT());
             gbdt->train(fl_param.gbdt_param, dataset);
+
+            // save model
+            string model_path = string_format("cache/%s_gbdt.model",
+                                              fl_param.gbdt_param.save_model_name.c_str());
+            parser.save_model(model_path, fl_param.gbdt_param, gbdt->trees, dataset);
 
             LOG(INFO) << "On test dataset";
             gbdt->predict_score(fl_param.gbdt_param, test_dataset);

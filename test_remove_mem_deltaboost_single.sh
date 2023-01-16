@@ -15,5 +15,5 @@ mkdir -p $outdir
 
 taskset -c $cpus ./main conf/"$subdir"/"$dataset"_"$ratio".conf data=./data/"$dataset".train remove_ratio="$ratio" n_trees="$n_trees" \
     remain_data=./data/"$dataset".train.remain_"$ratio" delete_data=./data/"$dataset".train.delete_"$ratio" \
-    save_model_name="$dataset"_tree"$n_trees"_original_"$ratio"_"$i" enable_delta=true seed="$i" > \
+    save_model_name="$dataset"_tree"$n_trees"_original_"$ratio"_"$i" enable_delta=true seed="$i" perform_remove=false > \
     $outdir/"$dataset"_deltaboost_"$ratio"_"$i".out
