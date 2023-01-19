@@ -49,8 +49,8 @@ int main(int argc, char** argv){
     acc = model.predict(test_dataset);
 */
 
-    omp_set_dynamic(0);
-//    omp_set_num_threads(10);
+//    omp_set_dynamic(0);
+//    omp_set_num_threads(1);
 
 //centralized training test
     FLParam fl_param;

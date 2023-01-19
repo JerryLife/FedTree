@@ -68,12 +68,12 @@ class Record(object):
         return self.raw_data[f'{dataset_type}_data_df'].filter(regex=(f'{model_type}.*'))
 
 def test_sklearn_cls(dataset, n_trees=10):
-    train_dataset_path = f'../data/{dataset}.train.remain_1e-02'
+    train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
     test_dataset_path = f'../data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
     st = time.time()
-    model = GradientBoostingClassifier(n_estimators=n_trees, max_depth=7)
+    model = GradientBoostingClassifier(n_estimators=n_trees, max_depth=5)
     model.fit(X, y)
     et = time.time()
     print(f'sklearn GBDT training time: {et - st:.3f}s')
@@ -109,7 +109,7 @@ def test_xgb_cls(dataset, n_trees=10):
     st = time.time()
     dtrain = xgb.DMatrix(X, label=y, missing=np.NaN)
     bst = xgb.train({'tree_method': 'approx', 'objective': 'binary:logistic', 'max_bin': 1000,
-                     'eta': 1, 'max_depth': 7}, dtrain,
+                     'eta': 1, 'max_depth': 5}, dtrain,
                     num_boost_round=n_trees)
     et = time.time()
     print(f'XGBoost training time: {et - st:.3f}s')
@@ -207,14 +207,14 @@ if __name__ == '__main__':
     # print(record.raw_data['test_data_df'].describe())
     # print(record.raw_data['test_data_df'].columns)
     # os.environ['OMP_NUM_THREADS'] = "1"
-    print(xgb.__version__)
+    # print(xgb.__version__)
 
     # test_sklearn_cls('codrna', 10)
     # print("=====================================")
     # test_sklearn_cls('covtype', 10)
     # print("=====================================")
-    # test_sklearn_cls('gisette', 10)
-    # print("=====================================")
+    test_sklearn_cls('gisette', 10)
+    print("=====================================")
     # test_sklearn_reg('cadata', 10)
     # print("=====================================")
     # test_sklearn_reg('msd', 10)
@@ -228,8 +228,8 @@ if __name__ == '__main__':
     # print("=====================================")
     # test_xgb_reg('cadata', 10)
     # print("=====================================")
-    test_xgb_reg('msd', 10)
-    print("=====================================")
+    # test_xgb_reg('msd', 10)
+    # print("=====================================")
 
     # test_rf_cls('codrna', 100)
     # print("=====================================")

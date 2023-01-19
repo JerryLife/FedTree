@@ -9,7 +9,7 @@ n_trees=10  # 1, 10, 30, 100
 conf_ratio=1e-03
 
 #for ratio in 5e-01 2e-01 1e-01 5e-02; do
-for ratio in 5e-03; do
+for ratio in 1e-02; do
   # iterate n_rounds times
   subdir=ratio"$ratio"
   cache_sub_dir="ablation-ratio/""$subdir"

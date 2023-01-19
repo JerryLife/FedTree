@@ -10,7 +10,7 @@ cpus="0-63"
 : "${1?"Number of rounds unset."}"
 
 subdir=tree"$n_trees"
-outdir="out/ablation/$subdir/"
+outdir="out/efficiency/$subdir/"
 mkdir -p $outdir
 
 nthreads=2

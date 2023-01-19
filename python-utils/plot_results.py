@@ -272,7 +272,7 @@ def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n
         #         assert False
     # plot
     if present == 'test':
-        algos = ['DeltaBoost', 'GBDT', 'XGBoost', 'Random Forest', 'Decision Tree']
+        algos = ['DeltaBoost', 'ThunderGBM-CPU', 'XGBoost', 'Random Forest', 'Decision Tree']
         summary_df = pd.DataFrame(data=summary, index=datasets, columns=algos)
         ax = summary_df.plot(kind='bar', rot=0, xlabel='Datasets', ylabel='Error',
                              title=f'Error of DeltaBoost and GBDT (tree {n_trees})',
@@ -857,27 +857,27 @@ if __name__ == '__main__':
     datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
     # datasets = ['cadata', 'codrna']
     remove_ratios = ['1e-03', '1e-02']
-    # plot_deltaboost_vs_gbdt("../_out/accuracy", datasets, n_trees=100, n_rounds=10)
-    # plot_deltaboost_vs_gbdt("../_out/remove_test", datasets, n_trees=10, n_rounds=10)
+    plot_deltaboost_vs_gbdt("../_out/accuracy", datasets, n_trees=100, n_rounds=10)
+    plot_deltaboost_vs_gbdt("../_out/remove_test", datasets, n_trees=10, n_rounds=10)
 
-    model_diff = ModelDiff(datasets, remove_ratios, 10, n_rounds=100, n_jobs=1,
-                           hedgecut_path="/data/junhui/Hedgecut",
-                           dart_path="/data/junhui/DART",
-                           deltaboost_out_path="../out/remove_test/tree10/",
-                           deltaboost_path="../cache/ablation-bagging/hsr1",
-                           # forget_table_cache_path="out/forget_table_tree10.csv",
-                           forget_table_cache_path=None,
-                           # accuracy_table_cache_path="out/accuracy_table_tree10.csv",
-                           accuracy_table_cache_path=None,
-                           )
-    model_diff.get_raw_data_forget_(n_bins=50,
-                                    update_dart=False,
-                                    update_hedgecut=False,
-                                    update_deltaboost=True,
-                                    update_datasets=['codrna'],
-                                    save_path=None
-                                    )
-    model_diff.print_latex_forget()
+    # model_diff = ModelDiff(datasets, remove_ratios, 10, n_rounds=100, n_jobs=1,
+    #                        hedgecut_path="/data/junhui/Hedgecut",
+    #                        dart_path="/data/junhui/DART",
+    #                        deltaboost_out_path="../out/remove_test/tree10/",
+    #                        deltaboost_path="../cache/ablation-bagging/hsr1",
+    #                        # forget_table_cache_path="out/forget_table_tree10.csv",
+    #                        forget_table_cache_path=None,
+    #                        # accuracy_table_cache_path="out/accuracy_table_tree10.csv",
+    #                        accuracy_table_cache_path=None,
+    #                        )
+    # model_diff.get_raw_data_forget_(n_bins=50,
+    #                                 update_dart=False,
+    #                                 update_hedgecut=False,
+    #                                 update_deltaboost=True,
+    #                                 update_datasets=['codrna'],
+    #                                 save_path=None
+    #                                 )
+    # model_diff.print_latex_forget()
 
     # remove_ratios = ['0.001', '0.01']
     # plot_score_before_after_removal("../out/remove_test/tree50", datasets, remove_ratios)

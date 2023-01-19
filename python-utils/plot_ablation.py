@@ -53,9 +53,9 @@ def plot_bagging_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data='te
     yerr = [data[1] for data in forget_data]
     ax.errorbar(x, y, yerr=yerr, fmt='o', capsize=5, color='k')
     ax.plot(x, y, color='k')
-    ax.set_xlabel("Hash sampling cycle")
-    ax.set_ylabel(r"$H^2(M_r,M;\mathbf{D}_{test})$")
-    ax.set_title(f"Different bagging on {dataset} dataset")
+    ax.set_xlabel("Sampling cycle (1 / sampling rate)")
+    ax.set_ylabel(r"Forgetfulness")
+    ax.set_title(f"Bagging")
     plt.tight_layout()
     plt.savefig(f"fig/ablation/ablation-bagging-{dataset}.jpg")
     # plt.show()
@@ -91,9 +91,9 @@ def plot_iteration_forget(dataset, remove_ratio, n_rounds, infer_data='test', n_
     yerr = [data[1] for data in forget_data]
     ax.errorbar(x, y, yerr=yerr, fmt='o', capsize=5, color='k')
     ax.plot(x, y, color='k')
-    ax.set_xlabel("Number of trees")
-    ax.set_ylabel(r"$H^2(M_r,M;\mathbf{D}_{test})$")
-    ax.set_title(f"Different number of trees on {dataset} dataset")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel(r"Forgetfulness")
+    ax.set_title(f"#iterations")
     plt.tight_layout()
     plt.savefig(f"fig/ablation/ablation-iter-{dataset}.jpg")
 
@@ -131,9 +131,9 @@ def plot_quantization_forget(dataset, n_trees, remove_ratio, n_rounds, infer_dat
     yerr = [data[1] for data in forget_data]
     ax.errorbar(x, y, yerr=yerr, fmt='o', capsize=5, color='k')
     ax.plot(x, y, color='k')
-    ax.set_xlabel("Quantization")
-    ax.set_ylabel(r"$H^2(M_r,M;\mathbf{D}_{test})$")
-    ax.set_title(f"Different quantization on {dataset} dataset")
+    ax.set_xlabel("Quantized interval")
+    ax.set_ylabel(r"Forgetfulness")
+    ax.set_title(f"Quantization")
     plt.tight_layout()
     plt.savefig(f"fig/ablation/ablation-quan-{dataset}.jpg")
 
@@ -150,7 +150,7 @@ def _nbins_get_single_diff(n_bins, dataset, n_jobs, n_trees, remove_ratio, n_rou
 def plot_nbins_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data='test', n_jobs=1,
                       cache_dir="../cache/ablation-nbins/"):
     forget_data = []
-    nbins_list = [50, 100, 300, 500, 1000]
+    nbins_list = [50, 100, 300, 500, 1000][::-1]
 
     for nbins in nbins_list:
         original_vs_retrain, retrain_vs_delete = _nbins_get_single_diff(nbins, dataset, n_jobs, n_trees, remove_ratio,
@@ -168,9 +168,9 @@ def plot_nbins_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data='test
     yerr = [data[1] for data in forget_data]
     ax.errorbar(x, y, yerr=yerr, fmt='o', capsize=5, color='k')
     ax.plot(x, y, color='k')
-    ax.set_xlabel("Max bin size")
-    ax.set_ylabel(r"$H^2(M_r,M;\mathbf{D}_{test})$")
-    ax.set_title(f"Different number of bins on {dataset} dataset")
+    ax.set_xlabel("Max bin size $t$")
+    ax.set_ylabel(r"Forgetfulness")
+    ax.set_title(f"Number of bins")
     plt.tight_layout()
     plt.savefig(f"fig/ablation/ablation-nbins-{dataset}.jpg")
 
@@ -208,9 +208,9 @@ def plot_regularization_forget(dataset, n_trees, remove_ratio, n_rounds, infer_d
     yerr = [data[1] for data in forget_data]
     ax.errorbar(x, y, yerr=yerr, fmt='o', capsize=5, color='k')
     ax.plot(x, y, color='k')
-    ax.set_xlabel("Regularization")
-    ax.set_ylabel(r"$H^2(M_r,M;\mathbf{D}_{test})$")
-    ax.set_title(rf"Different $\lambda$ on {dataset} dataset")
+    ax.set_xlabel("$\lambda$")
+    ax.set_ylabel(r"Forgetfulness")
+    ax.set_title(rf"Regularization")
     plt.tight_layout()
     plt.savefig(f"fig/ablation/ablation-reg-{dataset}.jpg")
 
@@ -225,7 +225,7 @@ def _ratio_get_single_diff(ratio, dataset, n_jobs, n_trees, remove_ratio, n_roun
 def plot_ratio_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data='test', n_jobs=1,
                       cache_dir="../cache/ablation-ratio/"):
     forget_data = []
-    ratio_list = ["5e-01", "2e-01", "1e-01", "5e-02", "1e-02", "1e-03"]
+    ratio_list = list(reversed(["5e-01", "2e-01", "1e-01", "5e-02", "1e-02", "1e-03"]))
 
     for ratio in ratio_list:
         original_vs_retrain, retrain_vs_delete = _ratio_get_single_diff(ratio, dataset, n_jobs, n_trees, remove_ratio,
@@ -238,16 +238,67 @@ def plot_ratio_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data='test
     # plot the mean and std as error bar with a line connecting them
     print("Plotting")
     fig, ax = plt.subplots()
-    x = ratio_list
+    # convert ratio to percentage
+    x = [f"{float(ratio) * 100:.2g}%" for ratio in ratio_list]
     y = [data[0] for data in forget_data]
     yerr = [data[1] for data in forget_data]
     ax.errorbar(x, y, yerr=yerr, fmt='o', capsize=5, color='k')
     ax.plot(x, y, color='k')
-    ax.set_xlabel("Ratio of deletion")
-    ax.set_ylabel(r"$H^2(M_r,M;\mathbf{D}_{test})$")
-    ax.set_title(rf"Different ratio of deletion on {dataset} dataset")
+    ax.set_xlabel("$n_d/n$")
+    ax.set_ylabel(r"Forgetfulness")
+    ax.set_title(rf"Ratio of deletion")
     plt.tight_layout()
     plt.savefig(f"fig/ablation/ablation-ratio-{dataset}.jpg")
+
+
+def load_time(file_path, n_runs, is_retrain):
+    removing_time = [0. for _ in range(n_runs)]
+    training_time = [0. for _ in range(n_runs)]
+    if is_retrain:
+        file_path += '_retrain'
+    for i in range(n_runs):
+        fn = file_path + "_" + str(i) + ".out"
+        print("Loading file: ", fn)
+        with open(fn, "r") as f:
+            for line in f:
+                if "removing time" in line:
+                    removing_time[i] = float(re.findall("\d+\.\d+", line)[0])
+                if "training time" in line:
+                    training_time[i] += float(re.findall("\d+\.\d+", line)[0])
+                if "Init booster time" in line:
+                    training_time[i] += float(re.findall("\d+\.\d+", line)[0])
+    return np.mean(training_time), np.mean(removing_time)
+
+
+def plot_ratio_time(dataset, n_trees, n_rounds, out_dir="../out/ablation-ratio/"):
+    training_time_list = []
+    removing_time_list = []
+    ratio_list = list(reversed(["5e-01", "2e-01", "1e-01", "5e-02", "1e-02", "1e-03"]))
+
+    for ratio in ratio_list:
+        deltaboost_base_path = os.path.join(out_dir, f"ratio{ratio}", f"{dataset}_deltaboost_{ratio}")
+        training_time, removing_time = load_time(deltaboost_base_path, n_rounds, is_retrain=False)
+        training_time_list.append(training_time)
+        removing_time_list.append(removing_time)
+
+    print("Plotting")
+    fig, ax = plt.subplots()
+    # convert ratio to percentage
+    x = ([f"{float(ratio) * 100:.2g}%" for ratio in ratio_list])
+    # ax.plot(x, training_time_list, color='k', marker='o', label="training time")
+    ax.plot(x, removing_time_list, color='k', marker='^', label="removing time")
+
+    # plot a threshold line of 0.238
+    ax.axhline(y=0.238, color='r', linestyle='--', label="XGBoost retrain")
+
+    ax.set_xlabel("$n_d/n$")
+    ax.set_ylabel(r"Removing time (sec)")
+    ax.set_title(rf"Ratio of deletion")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"fig/ablation/ablation-ratio-time-{dataset}.jpg")
+
+
 
 
 if __name__ == '__main__':
@@ -259,9 +310,10 @@ if __name__ == '__main__':
     infer_data = 'test'
     n_jobs = 1
 
-    plot_bagging_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data)
-    plot_iteration_forget(dataset, remove_ratio, n_rounds, infer_data)
-    plot_quantization_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data)
-    plot_regularization_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data)
-    plot_nbins_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data)
+    # plot_bagging_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data)
+    # plot_iteration_forget(dataset, remove_ratio, n_rounds, infer_data)
+    # plot_quantization_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data)
+    # plot_regularization_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data)
+    # plot_nbins_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data)
     plot_ratio_forget(dataset, n_trees, remove_ratio, n_rounds, infer_data)
+    plot_ratio_time(dataset, n_trees, n_rounds)

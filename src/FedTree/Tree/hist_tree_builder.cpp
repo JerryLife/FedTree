@@ -210,26 +210,26 @@ void HistTreeBuilder::find_split(int level) {
     compute_histogram_in_a_level(level, n_max_splits, n_bins, n_nodes_in_level, hist_fid_data, missing_gh, hist);
     end_time = timer::now();
     duration = end_time - start_time;
-    LOG(INFO) << "compute_histogram_in_a_level time: " << duration.count() << "s";
+    LOG(DEBUG) << "compute_histogram_in_a_level time: " << duration.count() << "s";
 
     start_time = timer::now();
     compute_gain_in_a_level(gain, n_nodes_in_level, n_bins, hist_fid_data, missing_gh, hist);
     end_time = timer::now();
     duration = end_time - start_time;
-    LOG(INFO) << "compute_gain_in_a_level time: " << duration.count() << "s";
+    LOG(DEBUG) << "compute_gain_in_a_level time: " << duration.count() << "s";
 
     start_time = timer::now();
     SyncArray<int_float> best_idx_gain(n_nodes_in_level);
     get_best_gain_in_a_level(gain, best_idx_gain, n_nodes_in_level, n_bins);
     end_time = timer::now();
     duration = end_time - start_time;
-    LOG(INFO) << "get_best_gain_in_a_level time: " << duration.count() << "s";
+    LOG(DEBUG) << "get_best_gain_in_a_level time: " << duration.count() << "s";
 
     start_time = timer::now();
     get_split_points(best_idx_gain, n_nodes_in_level, hist_fid_data, missing_gh, hist);
     end_time = timer::now();
     duration = end_time - start_time;
-    LOG(INFO) << "get_split_points time: " << duration.count() << "s";
+    LOG(DEBUG) << "get_split_points time: " << duration.count() << "s";
 }
 
 

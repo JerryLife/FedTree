@@ -33,7 +33,7 @@ def load_file(file_path, n_runs, is_retrain):
 
 
 if args.rate == 0.01:
-    load_file("out/time/tree10/"+args.dataset + "_deltaboost_1e-02", 10, args.is_retrain)
+    load_file("out/efficiency/tree10/"+args.dataset + "_deltaboost_1e-02", 10, args.is_retrain)
 elif args.rate == 0.001:
-    load_file("out/time/tree10/"+args.dataset + "_deltaboost_1e-03", 10, args.is_retrain)
+    load_file("out/efficiency/tree10/"+args.dataset + "_deltaboost_1e-03", 10, args.is_retrain)
 

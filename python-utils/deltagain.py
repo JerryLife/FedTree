@@ -160,7 +160,7 @@ class Hist:
             remove_gh_in_bins[i] += np.array([rm_g, rm_h])
         return remove_gh_in_bins
 
-    def estimate_delta_gain_in_bins(self, remove_ratio, n_est_rounds=1000, _lambda=1, delta_gain_img_path=None, seed=0):
+    def estimate_delta_gain_in_bins(self, remove_ratio, n_est_rounds=1000, _lambda=1., delta_gain_img_path=None, seed=0):
         remove_gh_in_bins = self.estimate_removed_gh_in_bins(remove_ratio, n_est_rounds, seed=seed)
         remain_gh_in_bins = self.gh_in_bins - remove_gh_in_bins
         remain_gh_leftsum = np.cumsum(remain_gh_in_bins, axis=2)
@@ -280,8 +280,8 @@ class Hist:
 
 def plot_est_vs_calc_delta_gain(dataset):
     os.makedirs(f"fig/delta_gain/{dataset}", exist_ok=True)
-    X, y = load_data(f"../_data/{dataset}.train", data_fmt='csv', output_dense=True)
-    with open(f"../_cache/{dataset}.json", 'r') as f:
+    X, y = load_data(f"../data/{dataset}.train", data_fmt='csv', output_dense=True)
+    with open(f"../cache/{dataset}_tree1_original_1e-03_0_deltaboost.json", 'r') as f:
         js = json.load(f)
     print("Loaded.")
     gh = load_gradients(js)
@@ -308,8 +308,8 @@ def plot_est_vs_calc_delta_gain(dataset):
             plt.plot(gh_leftsum[1], ev_delta_gain, label='Calculated')
             plt.legend()
             plt.ylabel("Expected value of delta-gain")
-            plt.xlabel("Accumulated sum of hessians")
-            plt.savefig(f"fig/delta_gain/{dataset}/deltagain_ev_tree_{tree_id}_feature_{feature_id}.jpg")
+            plt.xlabel("Accumulated sum of Hessians")
+            plt.savefig(f"fig/delta_gain/{dataset}/deltagain_ev_tree_{tree_id}_feature_{feature_id}.jpg", bbox_inches='tight')
             plt.close()
     print(f"Overall calculation time {calc_time}, "
           f"overall estimation time {est_time}")
@@ -317,8 +317,8 @@ def plot_est_vs_calc_delta_gain(dataset):
 
 def plot_est_vs_calc_remain_gain(dataset):
     os.makedirs(f"fig/delta_gain/{dataset}", exist_ok=True)
-    X, y = load_data(f"../_data/{dataset}.train", data_fmt='csv', output_dense=True)
-    with open(f"../_cache/{dataset}_tree1_original_1e-02_0_deltaboost.json", 'r') as f:
+    X, y = load_data(f"../data/{dataset}.train", data_fmt='csv', output_dense=True)
+    with open(f"../cache/{dataset}_tree1_original_1e-03_0_deltaboost.json", 'r') as f:
         js = json.load(f)
     print("Loaded.")
     gh = load_gradients(js)
@@ -348,6 +348,7 @@ def plot_est_vs_calc_remain_gain(dataset):
             plt.ylabel(r"E[$\phi_1$] after removal")
             plt.xlabel("Sorted split values")
             plt.xticks([])
+            plt.tight_layout()
             plt.savefig(f"fig/remain_gain/{dataset}/deltagain-ev-tree-{tree_id}-feature-{feature_id}.jpg", bbox_inches='tight')
             plt.close()
     print(f"Overall calculation time {calc_time}, "
@@ -356,25 +357,28 @@ def plot_est_vs_calc_remain_gain(dataset):
 
 def plot_gain_vs_remain_gain(dataset):
     os.makedirs(f"fig/gain_func/{dataset}", exist_ok=True)
-    X, y = load_data(f"../_data/{dataset}.train", data_fmt='libsvm', output_dense=True)
-    with open(f"../_cache/{dataset}_deltaboost.json", 'r') as f:
+    X, y = load_data(f"../data/{dataset}.train", data_fmt='csv', output_dense=True)
+    with open(f"../cache/{dataset}_tree1_original_1e-03_0_deltaboost.json", 'r') as f:
         js = json.load(f)
     print("Loaded.")
     gh = load_gradients(js)
     for tree_id in range(len(js['deltaboost']['trees'])):
         for feature_id in range(X.shape[1]):
             hist = Hist.generate_robust_hist(X[:, feature_id], gh[tree_id])
-            ev_delta_gain = hist.calc_ev_delta_gain_in_bins(0.01)
+            ev_delta_gain = hist.calc_ev_delta_gain_in_bins(0.01, _lambda=1)
             plot_gain_func(X, gh, tree_id, feature_id, delta_gain=ev_delta_gain,
                            save_path=f"fig/gain_func/{dataset}/gain_tree_{tree_id}_feature_{feature_id}.jpg")
             print(f"Tree {tree_id}, feature {feature_id} completed")
 
 
+
 if __name__ == '__main__':
-    dataset = "cadata"
+    plt.rcParams.update({'font.size': 18})
+    dataset = "covtype"
     # plot_gain_vs_remain_gain(dataset)
-    plot_est_vs_calc_remain_gain(dataset)
+    # plot_est_vs_calc_remain_gain(dataset)
     # plot_gain_vs_remain_gain(dataset)
+    plot_est_vs_calc_delta_gain(dataset)
     # remove_ratio = 0.01
     # os.makedirs(f"fig/delta_gain/{dataset}", exist_ok=True)
     # X, y = load_data(f"../data/{dataset}.train", data_fmt='libsvm', output_dense=True)

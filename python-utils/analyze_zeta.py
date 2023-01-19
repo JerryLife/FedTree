@@ -15,7 +15,7 @@ def histedges_equalN(x, nbin):
                      np.arange(npt),
                      np.sort(x))
 
-datasets = ['codrna', 'cadata', 'gisette', 'msd', 'susy']
+datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
 mean_zeta = []
 std_zeta = []
 for dataset in datasets:
@@ -58,7 +58,7 @@ for dataset in datasets:
     scaled_zeta = zeta * remove_ratio
 
     plt.plot(bin_edges[1:-1], scaled_zeta)
-    plt.show()
+    # plt.show()
 
     mean_zeta.append(np.mean(scaled_zeta))
     std_zeta.append(np.std(scaled_zeta))

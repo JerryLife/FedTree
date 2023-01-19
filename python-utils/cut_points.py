@@ -379,16 +379,18 @@ def plot_gain_func(X, gh, tree_id=0, feature_id=0, _lambda=1, save_path=None, re
                       (sum_gh[0] - gh_leftsum[0]) ** 2 / (_lambda + sum_gh[1] - gh_leftsum[1]) -
                       sum_gh[0] ** 2 / (_lambda + sum_gh[1]), 0)
     plt.plot(gh_leftsum[1], gain, label='Gain')
+    plt.ylabel("Gain value")
+    plt.xlabel("Accumulated sum of Hessians")
     if delta_gain is not None:
         plt.plot(gh_leftsum[1], gain + delta_gain, label='Gain after removal')
         plt.legend()
     if save_path is None:
         plt.show()
     else:
-        plt.savefig(save_path)
+        plt.savefig(save_path, bbox_inches='tight')
     if gh_bin_save_path is not None:
         plt.plot(gh_leftsum[1], gh_leftsum[0])
-        plt.savefig(gh_bin_save_path)
+        plt.savefig(gh_bin_save_path, bbox_inches='tight')
     plt.close()
 
 
@@ -429,7 +431,7 @@ def analyze_delta_gain(X, gh, tree_id=0, feature_id=0, _lambda=1, remove_ratio=0
     if delta_gain_img_path is not None:
         plt.errorbar(gh_leftsum[1], mean_delta_gain, std_delta_gain * 3)
         # plt.plot(gh_leftsum[1], gain, 'r')
-        plt.savefig(delta_gain_img_path)
+        plt.savefig(delta_gain_img_path, bbox_inches='tight')
         plt.close()
 
     return mean_delta_gain, std_delta_gain
