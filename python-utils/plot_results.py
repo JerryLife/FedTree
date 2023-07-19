@@ -3,6 +3,7 @@ import re
 import pickle
 import logging
 import warnings
+import argparse
 
 import numpy as np
 import pandas as pd
@@ -820,6 +821,10 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d:%H:%M:%S',
         level=logging.DEBUG)
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--n-trees', type=int, default=1)
+    args = parser.parse_args()
+
     datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
     # datasets = ['cadata', 'codrna']
     remove_ratios = ['1e-03', '1e-02']
@@ -873,29 +878,31 @@ if __name__ == '__main__':
     #                                   )
     # model_diff.print_latex_accuracy()
 
-    model_diff = ModelDiff(datasets, remove_ratios, 10, n_rounds=100, n_jobs=1,
-                           hedgecut_path="/data/junhui/Hedgecut",
-                           dart_path="/data/junhui/DART",
-                           deltaboost_out_path="../out/remove_test/tree10/",
+    n_trees = args.n_trees
+    model_diff = ModelDiff(datasets, remove_ratios, n_trees, n_rounds=100, n_jobs=1,
+                           # hedgecut_path="/data/junhui/Hedgecut",
+                           # dart_path="/data/junhui/DART",
+                           deltaboost_out_path=f"../out/remove_test/tree{n_trees}/",
                            deltaboost_path="../cache",
-                           forget_table_cache_path="out/forget_table_tree10.csv",
+                           # forget_table_cache_path=f"../out/forget_table_tree{n_trees}.csv",
                            # forget_table_cache_path=None,
-                           accuracy_table_cache_path="out/accuracy_table_tree10.csv",
+                           # accuracy_table_cache_path=f"../out/accuracy_table_tree{n_trees}.csv",
                            # accuracy_table_cache_path=None,
                            )
     model_diff.get_raw_data_forget_(n_bins=50,
                                     update_dart=False,
                                     update_hedgecut=False,
                                     update_deltaboost=True,
-                                    update_datasets=['msd'],
-                                    save_path="out/forget_table_tree10.csv",
+                                    # update_datasets=['msd'],
+                                    save_path=f"../out/forget_table_tree{n_trees}.csv",
                                     )
     model_diff.print_latex_forget()
 
-    # model_diff.get_raw_data_accuracy_(update_dart=False,
-    #                                   update_hedgecut=False,
-    #                                   update_deltaboost=True,
-    #                                   update_datasets=['msd'],
-    #                                   save_path="out/accuracy_table_tree10.csv",
-    #                                   )
-    # model_diff.print_latex_accuracy()
+
+    model_diff.get_raw_data_accuracy_(update_dart=False,
+                                      update_hedgecut=False,
+                                      update_deltaboost=True,
+                                      # update_datasets=['msd'],
+                                      save_path=f"../out/accuracy_table_tree{n_trees}.csv",
+                                      )
+    model_diff.print_latex_accuracy()
