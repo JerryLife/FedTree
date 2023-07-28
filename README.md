@@ -1,27 +1,88 @@
----
-title: Documentation of DeltaBoost
-numbersections: true
----
 
-[//]: # (Table of contents)
-# Contents
-- [Getting Started](#getting-started)
-  - [Prepare Data](#prepare-data)
-    - [Install Python Environment](#install-python-environment)
-    - [Download and Preprocess Datasets](#download-and-preprocess-datasets)
-  - [Environment](#environment)
-    - [Install NTL](#install-ntl)
-    - [Install GMP](#install-gmp)
-    - [Install Boost](#install-boost)
-  - [Build DeltaBoost](#build-deltaboost)
-- [Usage of DeltaBoost](#usage-of-deltaboost)
-  - [Basic Usage](#basic-usage)
-  - [Parameter Guide](#parameter-guide)
-- 
+# DeltaBoost Documentation
+DeltaBoost is a machine learning model based on gradient boosting decision tree (GBDT) that supports efficient machine unlearning. We provide two methods to reproduce the results in the paper: a master script and a step-by-step guide. The master script will automatically download the datasets, build DeltaBoost, run the experiments, and summary results. The estimated execution time of the master script is a week. The step-by-step guide will show how to run each experiment in the paper.
+
+**Contents**
+<!-- TOC -->
+* [DeltaBoost Documentation](#deltaboost-documentation)
+* [Getting Started](#getting-started)
+  * [Environment](#environment)
+    * [Install NTL](#install-ntl)
+    * [Install GMP](#install-gmp)
+    * [Install Boost](#install-boost)
+  * [Reproduce Main Results (Master Script)](#reproduce-main-results-master-script)
+  * [Prepare Data](#prepare-data)
+    * [Install Python Environment](#install-python-environment)
+    * [Download and Preprocess Datasets](#download-and-preprocess-datasets)
+  * [Build DeltaBoost](#build-deltaboost)
+* [Usage of DeltaBoost](#usage-of-deltaboost)
+  * [Basic Usage](#basic-usage)
+  * [Parameter Guide](#parameter-guide)
+  * [Reproduce Main Results (Step by Step)](#reproduce-main-results-step-by-step)
+    * [Removing in one tree (Table 4,5)](#removing-in-one-tree-table-45)
+    * [Removing in Multiple trees (Table 7)](#removing-in-multiple-trees-table-7)
+    * [Efficiency (Table 6)](#efficiency-table-6)
+    * [Memory Usage (Table 8)](#memory-usage-table-8)
+    * [Accuracy (Figure 9)](#accuracy-figure-9)
+    * [Ablation Study (Figure 10, 11)](#ablation-study-figure-10-11)
+<!-- TOC -->
 
 [//]: # (Contents)
 
 # Getting Started
+
+## Environment
+The required packages for DeltaBoost includes 
+* CMake 3.15 or above
+* GMP
+* NTL
+* Boost
+
+### Install NTL
+The NTL can be installed from source by 
+```shell
+wget https://libntl.org/ntl-11.5.1.tar.gz
+tar -xvf ntl-11.5.1.tar.gz
+cd ntl-11.5.1/src
+./configure SHARED=on
+make -j
+sudo make install
+```
+If `NTL` is not installed under default folder, you need to specify the category of NTL during compilation by
+```shell
+cmake .. -DNTL_PATH="PATH_TO_NTL"
+```
+
+### Install GMP
+The GMP can be directly installed by `apt` on Debian-based Linux, e.g. Ubuntu.
+```shell
+sudo apt-get install libgmp3-dev
+```
+
+### Install Boost
+DeltaBoost requires `boost >= 1.75.0`. Since it may not be available on official `apt` repositories, you may need to install manually.
+
+Download and unzip `boost 1.75.0`.
+```shell
+wget https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.bz2
+tar -xvf boost_1_75_0.tar.bz2
+```
+Install dependencies for building boost.
+```shell
+sudo apt-get install build-essential g++ python-dev autotools-dev libicu-dev libbz2-dev libboost-all-dev
+```
+Start building.
+```shell
+./bootstrap.sh --prefix=/usr/
+./b2
+sudo ./b2 install
+```
+
+## Reproduce Main Results (Master Script)
+We provide a master script to reproduce the main results in the paper. The script will automatically download the datasets, build DeltaBoost, run the experiments, and summary results. The results will be saved in `fig/` and `out/` directory. Simply run
+```shell
+bash run.sh
+```
 
 ## Prepare Data
 
@@ -76,52 +137,6 @@ data
 └── msd.train.remain_1e-03
 ```
 
-## Environment
-The required packages for DeltaBoost includes 
-* CMake 3.15 or above
-* GMP
-* NTL
-* Boost
-
-### Install NTL
-The NTL can be installed from source by 
-```shell
-wget https://libntl.org/ntl-11.5.1.tar.gz
-tar -xvf ntl-11.5.1.tar.gz
-cd ntl-11.5.1/src
-./configure SHARED=on
-make -j
-sudo make install
-```
-If `NTL` is not installed under default folder, you need to specify the category of NTL during compilation by
-```shell
-cmake .. -DNTL_PATH="PATH_TO_NTL"
-```
-
-### Install GMP
-The GMP can be directly installed by `apt` on Debian-based Linux, e.g. Ubuntu.
-```shell
-sudo apt-get install libgmp3-dev
-```
-
-### Install Boost
-DeltaBoost requires `boost >= 1.75.0`. Since it may not be available on official `apt` repositories, you may need to install manually.
-
-Download and unzip `boost 1.75.0`.
-```shell
-wget https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.bz2
-tar -xvf boost_1_75_0.tar.bz2
-```
-Install dependencies for building boost.
-```shell
-sudo apt-get install build-essential g++ python-dev autotools-dev libicu-dev libbz2-dev libboost-all-dev
-```
-Start building.
-```shell
-./bootstrap.sh --prefix=/usr/
-./b2
-sudo ./b2 install
-```
 
 ## Build DeltaBoost
 Build DeltaBoost by
@@ -271,8 +286,7 @@ Sure, here is a brief parameter guide in markdown format.
     - Usage: The seed for random number generation.
     - Default value: ""
 
-
-## Reproduce Main Results
+## Reproduce Main Results (Step by Step)
 Before reproducing the main results, please make sure that the binary `main` has been created. All the time reported are done on two AMD EPYC 7543 32-Core Processor using 96 threads. If your machine does not have the required threads, you may
 - reduce the number of seeds, for example, to `5`. However, this increases the variance of the calculated Hellinger distance.
 - reduce the require threads, for example, to `taskset -c 0-11`. However, this increases the running time. If you want to use all the threads, simply remove `taskset -c 0-x` before the command.
@@ -343,7 +357,7 @@ To test removing in 10 trees with Deltaboost, simply run
 ```shell
 bash test_remove_deltaboost_tree_10.sh 100  # try 100 seeds
 ```
-The script finishes in **6 hours**. After the execution, two folders will appear under the project root:
+The script finishes in **2-3 days**. After the execution, two folders will appear under the project root:
 - `out/remove_test/tree10` contains accuracy of each model on five datasets.
 - `cache/` contains two kinds of information:
   - original model, deleted model, and retrained model in `json` format.
@@ -427,7 +441,156 @@ We also provide a script to running the baselines: `sklearn` and `xgboost` for e
 ```shell
 taskset -c 0-95 python baseline.py  # Also limit the number of threads to 96
 ```
-This script is expected to finish in **10 minutes**.
+This script is expected to finish in **10 minutes**. The output contains the accuracy and training time (excluding loading data) of baselines. The expected output should be like
+```text
+Got X with shape (58940, 8), y with shape (58940,)
+Scaling y to [0,1]
+Got X with shape (271617, 8), y with shape (271617,)
+Scaling y to [0,1]
+sklearn GBDT training time: 1.209s
+sklearn GBDT error: 0.0577
+=====================================
+Got X with shape (460161, 54), y with shape (460161,)
+Scaling y to [0,1]
+Got X with shape (116203, 54), y with shape (116203,)
+Scaling y to [0,1]
+sklearn GBDT training time: 21.309s
+sklearn GBDT error: 0.1974
+=====================================
+Got X with shape (5940, 5000), y with shape (5940,)
+Scaling y to [0,1]
+Got X with shape (1000, 5000), y with shape (1000,)
+Scaling y to [0,1]
+sklearn GBDT training time: 21.941s
+sklearn GBDT error: 0.0600
+=====================================
+Got X with shape (16347, 8), y with shape (16347,)
+Scaling y to [0,1]
+Got X with shape (4128, 8), y with shape (4128,)
+Scaling y to [0,1]
+sklearn GBDT training time: 0.601s
+sklearn GBDT error: 0.8558
+=====================================
+Got X with shape (459078, 90), y with shape (459078,)
+Scaling y to [0,1]
+Got X with shape (51630, 90), y with shape (51630,)
+Scaling y to [0,1]
+sklearn GBDT training time: 372.924s
+sklearn GBDT error: 0.8819
+=====================================
+Got X with shape (59476, 8), y with shape (59476,)
+Scaling y to [0,1]
+Got X with shape (271617, 8), y with shape (271617,)
+Scaling y to [0,1]
+[10:06:19] WARNING: ../src/learner.cc:1115: Starting in XGBoost 1.3.0, the default evaluation metric used with the objective 'binary:logistic' was changed from 'error' to 'logloss'. Explicitly set eval_metric if you'd like to restore the old behavior.
+XGBoost training time: 9.131s
+XGBoost error: 0.0405
+=====================================
+Got X with shape (464345, 54), y with shape (464345,)
+Scaling y to [0,1]
+Got X with shape (116203, 54), y with shape (116203,)
+Scaling y to [0,1]
+[10:06:29] WARNING: ../src/learner.cc:1115: Starting in XGBoost 1.3.0, the default evaluation metric used with the objective 'binary:logistic' was changed from 'error' to 'logloss'. Explicitly set eval_metric if you'd like to restore the old behavior.
+XGBoost training time: 13.075s
+XGBoost error: 0.1558
+=====================================
+Got X with shape (5994, 5000), y with shape (5994,)
+Scaling y to [0,1]
+Got X with shape (1000, 5000), y with shape (1000,)
+Scaling y to [0,1]
+[10:06:47] WARNING: ../src/learner.cc:1115: Starting in XGBoost 1.3.0, the default evaluation metric used with the objective 'binary:logistic' was changed from 'error' to 'logloss'. Explicitly set eval_metric if you'd like to restore the old behavior.
+XGBoost training time: 13.260s
+XGBoost error: 0.0320
+=====================================
+Got X with shape (16496, 8), y with shape (16496,)
+Scaling y to [0,1]
+Got X with shape (4128, 8), y with shape (4128,)
+Scaling y to [0,1]
+XGBoost training time: 8.966s
+XGBoost RMSE: 0.1182
+=====================================
+Got X with shape (463252, 90), y with shape (463252,)
+Scaling y to [0,1]
+Got X with shape (51630, 90), y with shape (51630,)
+Scaling y to [0,1]
+XGBoost training time: 20.309s
+XGBoost RMSE: 0.1145
+=====================================
+Got X with shape (59476, 8), y with shape (59476,)
+Scaling y to [0,1]
+Got X with shape (271617, 8), y with shape (271617,)
+Scaling y to [0,1]
+Random Forest training time: 0.278s
+Random Forest error: 0.1073
+=====================================
+Got X with shape (464345, 54), y with shape (464345,)
+Scaling y to [0,1]
+Got X with shape (116203, 54), y with shape (116203,)
+Scaling y to [0,1]
+Random Forest training time: 2.656s
+Random Forest error: 0.2360
+=====================================
+Got X with shape (5994, 5000), y with shape (5994,)
+Scaling y to [0,1]
+Got X with shape (1000, 5000), y with shape (1000,)
+Scaling y to [0,1]
+Random Forest training time: 0.280s
+Random Forest error: 0.0650
+=====================================
+Got X with shape (16496, 8), y with shape (16496,)
+Scaling y to [0,1]
+Got X with shape (4128, 8), y with shape (4128,)
+Scaling y to [0,1]
+Random Forest training time: 0.387s
+Random Forest accuracy: 0.1312
+=====================================
+Got X with shape (463252, 90), y with shape (463252,)
+Scaling y to [0,1]
+Got X with shape (51630, 90), y with shape (51630,)
+Scaling y to [0,1]
+Random Forest training time: 229.927s
+Random Forest accuracy: 0.1170
+Got X with shape (59476, 8), y with shape (59476,)
+Scaling y to [0,1]
+Got X with shape (271617, 8), y with shape (271617,)
+Scaling y to [0,1]
+Decision Tree training time: 0.122s
+Decision Tree error: 0.0669
+=====================================
+Got X with shape (464345, 54), y with shape (464345,)
+Scaling y to [0,1]
+Got X with shape (116203, 54), y with shape (116203,)
+Scaling y to [0,1]
+Decision Tree training time: 2.289s
+Decision Tree error: 0.2225
+=====================================
+Got X with shape (5994, 5000), y with shape (5994,)
+Scaling y to [0,1]
+Got X with shape (1000, 5000), y with shape (1000,)
+Scaling y to [0,1]
+Decision Tree training time: 2.464s
+Decision Tree error: 0.0680
+=====================================
+Got X with shape (16496, 8), y with shape (16496,)
+Scaling y to [0,1]
+Got X with shape (4128, 8), y with shape (4128,)
+Scaling y to [0,1]
+Decision Tree training time: 0.058s
+Decision Tree accuracy: 0.1382
+=====================================
+Got X with shape (463252, 90), y with shape (463252,)
+Scaling y to [0,1]
+Got X with shape (51630, 90), y with shape (51630,)
+Scaling y to [0,1]
+Decision Tree training time: 35.572s
+Decision Tree accuracy: 0.1185
+```
+
+Note that the training time of baselines in this example is longer than that in Table 6 due to the different CPU. Nonetheless, the speedup of DeltaBoost is still similarly significant, thus the conclusion is not affected.
+
+### Memory Usage (Table 8)
+The peak memory usage can be easily observed during the training, which is however hard to be recorded by a script. Since the memory consumption is almost consistent during the training, the recommended approach is to manually monitor the peak memory usage of the process in the system monitor, e.g., `htop`.
+
 
 ### Accuracy (Figure 9)
 The accuracy of baselines is output by the same command as testing efficiency.
@@ -435,4 +598,54 @@ The accuracy of baselines is output by the same command as testing efficiency.
 python baseline.py
 ```
 The accuracy of DeltaBoost has also recorded in the previous logs.
+
+The default max number of trees is `10`, which is sufficient to obtain a promising accuracy. To test the accuracy of baselines with 100 trees, run
+```shell
+python baseline.py -t 100
+```
+Since each baseline algorithm is run for only once, this script is expected to finish in **10 minutes**.
+
+Next, we also need to obtain the results of DeltaBoost with 100 trees. To do so, run
+```shell
+bash test_accuracy.sh 10  # run 10 times
+```
+This procedure takes around **1-2 days**. For more efficient testing, you can reduce the number of repeats by changing the parameter from `10` to a smaller number. This will result in larger variance in the results.
+
+After obtaining all the results, run
+```shell
+python plot_results.py -acc -t 10   # (10 trees)
+python plot_results.py -acc -t 100  # (100 trees)
+```
+Two images will be generated in `fig/`, named
+```text
+acc-tree10.png
+acc-tree100.png
+```
+Both images are similar to Fig. 9 in the paper.
+
+
+### Ablation Study (Figure 10, 11)
+The ablation study includes six bash scripts.
+```text
+ablation_bagging.sh
+ablation_iteration.sh
+ablation_nbins.sh
+ablation_quantization.sh
+ablation_ratio.sh
+ablation_regularization.sh
+```
+These scripts can be run in a single script `test_all_ablation.sh` by
+```shell
+bash test_all_ablation.sh 50  # run 50 times
+```
+This combined script takes around **1-2 days**. If you want to run the ablation study in a shorter time, you can reduce the number of repeats by changing the parameter from `50` to a smaller number. This will result in larger variance in the results.
+
+To plot all the figures of ablation study into `fig/ablation`, run
+```shell
+python plot_ablation.py
+```
+This plotting process takes around **10 minutes**. The major time cost is calculating Hellinger distance.
+
+
+
 

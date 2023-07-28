@@ -42,3 +42,9 @@ for dataset in codrna cadata covtype gisette msd; do
   python python-utils/remove_sample.py -s 0 -r 0.01 data/"$dataset".train -if csv -of csv
   python python-utils/remove_sample.py -s 0 -r 0.001 data/"$dataset".train -if csv -of csv
 done
+
+echo "Removing samples from codrna with other ratios"
+dataset=codrna
+for ratio in 0.5 0.2 0.1 0.05 0.01 0.001; do
+  python python-utils/remove_sample.py -s 0 -r $ratio data/"$dataset".train -if csv -of csv
+done

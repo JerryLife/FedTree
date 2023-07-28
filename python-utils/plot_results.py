@@ -191,43 +191,74 @@ def plot_score_before_after_removal(out_dir, datasets, remove_ratios, save_path=
         print(latex_table)
 
 
-def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n_trees=50, n_rounds=1):
+def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n_trees=10, n_rounds=1):
     assert present in ['test']
-    xgboost_scores = {
-        'codrna': 1 - 0.9552,
-        'covtype': 1 - 0.8016,
-        'gisette': 1 - 0.9630,
-        'cadata': 0.1165,
-        'msd': 0.1143,
-    }
-    rf_scores = {
-        'codrna': 0.1011,
-        'covtype': 0.2472,
-        'gisette': 0.0590,
-        'cadata': 0.1307,
-        'msd': 0.1170,
-    }
-    dt_scores = {
-        'codrna': 0.0670,
-        'covtype': 0.2225,
-        'gisette': 0.0750,
-        'cadata': 0.1382,
-        'msd': 0.1185,
-    }
+
+    if n_trees == 10:
+        # 10 trees
+        xgboost_scores = {
+            'codrna': 1 - 0.9552,
+            'covtype': 1 - 0.8016,
+            'gisette': 1 - 0.9630,
+            'cadata': 0.1165,
+            'msd': 0.1143,
+        }
+        rf_scores = {
+            'codrna': 0.1011,
+            'covtype': 0.2472,
+            'gisette': 0.0590,
+            'cadata': 0.1307,
+            'msd': 0.1170,
+        }
+        dt_scores = {
+            'codrna': 0.0670,
+            'covtype': 0.2225,
+            'gisette': 0.0750,
+            'cadata': 0.1382,
+            'msd': 0.1185,
+        }
+    elif n_trees == 100:
+        xgboost_scores = {
+            'codrna': 0.0343,
+            'covtype': 0.0609,
+            'gisette': 0.0290,
+            'cadata': 0.1272,
+            'msd': 0.1219,
+        }
+        rf_scores = {
+            'codrna': 0.1287,
+            'covtype': 0.2402,
+            'gisette': 0.0490,
+            'cadata': 0.1283,
+            'msd': 0.1169,
+        }
+        dt_scores = {
+            'codrna': 0.0670,
+            'covtype': 0.2225,
+            'gisette': 0.0750,
+            'cadata': 0.1382,
+            'msd': 0.1185,
+        }
+    else:
+        assert False
 
     summary = []
     for dataset in datasets:
         ratio = '1e-03'  # either should be the same
         deltaboost_scores = []
         for i in range(n_rounds):
-            out_deltaboost_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_deltaboost_{ratio}_retrain_{i}.out")
+            out_deltaboost_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_deltaboost_{ratio}_{i}.out")
             metric, deltaboost_data = get_scores_from_file(out_deltaboost_path, out_fmt='float')
+            print(metric, deltaboost_data)
             deltaboost_scores.append(deltaboost_data[0])
         db_mean = np.mean(deltaboost_scores)
         out_gbdt_path = os.path.join(out_dir, f"tree{n_trees}/{dataset}_gbdt_{ratio}.out")
         _, gbdt_data = get_scores_from_file(out_gbdt_path, out_fmt='float')
+        print(gbdt_data)
         gbdt_score = gbdt_data[0]
         summary.append([db_mean, gbdt_score, xgboost_scores[dataset], rf_scores[dataset], dt_scores[dataset]])
+
+        print(f"{dataset} done.")
 
         # # empty datasets
         # if len(deltaboost_scores) == 0 or len(gbdt_scores) == 0:
@@ -242,14 +273,19 @@ def plot_deltaboost_vs_gbdt(out_dir, datasets, save_path=None, present='test', n
         #         assert False
     # plot
     if present == 'test':
-        algos = ['DeltaBoost', 'GBDT', 'XGBoost', 'Random Forest', 'Decision Tree']
+        algos = ['DeltaBoost', 'ThunderGBM-CPU', 'XGBoost', 'Random Forest', 'Decision Tree']
         summary_df = pd.DataFrame(data=summary, index=datasets, columns=algos)
         ax = summary_df.plot(kind='bar', rot=0, xlabel='Datasets', ylabel='Error',
                              title=f'Error of DeltaBoost and GBDT (tree {n_trees})',
                              figsize=None)
         ax.margins(y=0.1)
         ax.legend()
-        plt.show()
+        plt.tight_layout()
+        if save_path is not None:
+            plt.savefig(save_path)
+        else:
+            plt.show()
+
 
 
 def summary_model_diff_for_dataset(dataset, n_trees, remove_ratios):
@@ -823,6 +859,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--n-trees', type=int, default=1)
+    parser.add_argument('-acc', action='store_true', default=False)
+    parser.add_argument('-p', '--figure-path', type=str, default=None)
     args = parser.parse_args()
 
     datasets = ['codrna', 'covtype', 'gisette', 'cadata', 'msd']
@@ -877,32 +915,38 @@ if __name__ == '__main__':
     #                                   # save_path="out/accuracy_table_susy.csv",
     #                                   )
     # model_diff.print_latex_accuracy()
+    if args.acc:
+        if args.figure_path is None:
+            figure_path = f"../fig/acc-tree{args.n_trees}.jpg"
+        else:
+            figure_path = args.figure_path
+        plot_deltaboost_vs_gbdt("../out/remove_test", datasets, n_trees=args.n_trees, save_path=figure_path)
+    else:
+        n_trees = args.n_trees
+        model_diff = ModelDiff(datasets, remove_ratios, n_trees, n_rounds=100, n_jobs=1,
+                               # hedgecut_path="/data/junhui/Hedgecut",
+                               # dart_path="/data/junhui/DART",
+                               deltaboost_out_path=f"../out/remove_test/tree{n_trees}/",
+                               deltaboost_path="../cache",
+                               # forget_table_cache_path=f"../out/forget_table_tree{n_trees}.csv",
+                               # forget_table_cache_path=None,
+                               # accuracy_table_cache_path=f"../out/accuracy_table_tree{n_trees}.csv",
+                               # accuracy_table_cache_path=None,
+                               )
+        model_diff.get_raw_data_forget_(n_bins=50,
+                                        update_dart=False,
+                                        update_hedgecut=False,
+                                        update_deltaboost=True,
+                                        # update_datasets=['msd'],
+                                        save_path=f"../out/forget_table_tree{n_trees}.csv",
+                                        )
+        model_diff.print_latex_forget()
 
-    n_trees = args.n_trees
-    model_diff = ModelDiff(datasets, remove_ratios, n_trees, n_rounds=100, n_jobs=1,
-                           # hedgecut_path="/data/junhui/Hedgecut",
-                           # dart_path="/data/junhui/DART",
-                           deltaboost_out_path=f"../out/remove_test/tree{n_trees}/",
-                           deltaboost_path="../cache",
-                           # forget_table_cache_path=f"../out/forget_table_tree{n_trees}.csv",
-                           # forget_table_cache_path=None,
-                           # accuracy_table_cache_path=f"../out/accuracy_table_tree{n_trees}.csv",
-                           # accuracy_table_cache_path=None,
-                           )
-    model_diff.get_raw_data_forget_(n_bins=50,
-                                    update_dart=False,
-                                    update_hedgecut=False,
-                                    update_deltaboost=True,
-                                    # update_datasets=['msd'],
-                                    save_path=f"../out/forget_table_tree{n_trees}.csv",
-                                    )
-    model_diff.print_latex_forget()
 
-
-    model_diff.get_raw_data_accuracy_(update_dart=False,
-                                      update_hedgecut=False,
-                                      update_deltaboost=True,
-                                      # update_datasets=['msd'],
-                                      save_path=f"../out/accuracy_table_tree{n_trees}.csv",
-                                      )
-    model_diff.print_latex_accuracy()
+        model_diff.get_raw_data_accuracy_(update_dart=False,
+                                          update_hedgecut=False,
+                                          update_deltaboost=True,
+                                          # update_datasets=['msd'],
+                                          save_path=f"../out/accuracy_table_tree{n_trees}.csv",
+                                          )
+        model_diff.print_latex_accuracy()

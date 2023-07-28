@@ -1,11 +1,14 @@
 import numpy as np
 import pickle
 import time
+import os
+import argparse
 
 import xgboost as xgb
 from sklearn.metrics import accuracy_score, mean_squared_error
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
 
 from train_test_split import load_data
 
@@ -65,19 +68,50 @@ class Record(object):
     def read(self, model_type, dataset_type):
         return self.raw_data[f'{dataset_type}_data_df'].filter(regex=(f'{model_type}.*'))
 
+def test_sklearn_cls(dataset, n_trees=10):
+    train_dataset_path = f'../data/{dataset}.train.remain_1e-02'
+    test_dataset_path = f'../data/{dataset}.test'
+    X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
+    X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
+    st = time.time()
+    model = GradientBoostingClassifier(n_estimators=n_trees, max_depth=7)
+    model.fit(X, y)
+    et = time.time()
+    print(f'sklearn GBDT training time: {et - st:.3f}s')
+    pred = model.predict(X_test)
+    acc = accuracy_score(y_test, np.round(pred))
+    print(f'sklearn GBDT error: {1 - acc:.4f}')
+    return model
+
+
+def test_sklearn_reg(dataset, n_trees=10):
+    train_dataset_path = f'../data/{dataset}.train.remain_1e-02'
+    test_dataset_path = f'../data/{dataset}.test'
+    X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
+    X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
+    st = time.time()
+    model = GradientBoostingRegressor(n_estimators=n_trees, max_depth=7)
+    model.fit(X, y)
+    et = time.time()
+    print(f'sklearn GBDT training time: {et - st:.3f}s')
+    pred = model.predict(X_test)
+    rmse = np.sqrt(mean_squared_error(y_test, pred))
+    print(f'sklearn GBDT error: {1 - rmse:.4f}')
+    return model
+
 
 def test_xgb_cls(dataset, n_trees=10):
     train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
     test_dataset_path = f'../data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
-    dtrain = xgb.DMatrix(X, label=y, missing=np.NaN)
     st = time.time()
-    bst = xgb.train({'tree_method': 'auto', 'objective': 'binary:logistic', 'max_bin': 255,
-                     'eta': 1}, dtrain,
+    dtrain = xgb.DMatrix(X, label=y, missing=np.NaN, )
+    bst = xgb.train({'tree_method': 'approx', 'objective': 'binary:logistic', 'max_bin': 1000,
+                     'eta': 1, 'max_depth': 7}, dtrain,
                     num_boost_round=n_trees)
     et = time.time()
-    print(f'XGBoost training time: {et - st:.2f}s')
+    print(f'XGBoost training time: {et - st:.3f}s')
     pred = bst.predict(xgb.DMatrix(X_test))
     acc = accuracy_score(y_test, np.round(pred))
     print(f'XGBoost error: {1 - acc:.4f}')
@@ -89,17 +123,18 @@ def test_xgb_reg(dataset, n_trees=10):
     test_dataset_path = f'../data/{dataset}.test'
     X, y = load_data(train_dataset_path, 'csv', scale_y=True, output_dense=True)
     X_test, y_test = load_data(test_dataset_path, 'csv', scale_y=True, output_dense=True)
-    dtrain = xgb.DMatrix(X, label=y, missing=np.NaN)
     st = time.time()
-    bst = xgb.train({'tree_method': 'hist', 'objective': 'reg:squarederror', 'max_bin': 32,
-                     'eta': 1}, dtrain,
+    dtrain = xgb.DMatrix(X, label=y, missing=np.NaN)
+    bst = xgb.train({'tree_method': 'approx', 'objective': 'reg:squarederror', 'max_bin': 1000,
+                     'eta': 1, 'max_depth': 7}, dtrain,
                     num_boost_round=n_trees)
     et = time.time()
-    print(f'XGBoost training time: {et - st:.2f}s')
+    print(f'XGBoost training time: {et - st:.3f}s')
     pred = bst.predict(xgb.DMatrix(X_test))
     rmse = np.sqrt(mean_squared_error(y_test, pred))
-    print(f'XGBoost accuracy: {rmse:.4f}')
+    print(f'XGBoost RMSE: {rmse:.4f}')
     return bst
+
 
 
 def test_tree_cls(dataset):
@@ -111,7 +146,7 @@ def test_tree_cls(dataset):
     dt = DecisionTreeClassifier(max_depth=7)
     dt.fit(X, y)
     et = time.time()
-    print(f'Decision Tree training time: {et - st:.2f}s')
+    print(f'Decision Tree training time: {et - st:.3f}s')
     pred = dt.predict(X_test)
     acc = accuracy_score(y_test, np.round(pred))
     print(f'Decision Tree error: {1 - acc:.4f}')
@@ -127,7 +162,7 @@ def test_tree_reg(dataset):
     dt = DecisionTreeRegressor(max_depth=7)
     dt.fit(X, y)
     et = time.time()
-    print(f'Decision Tree training time: {et - st:.2f}s')
+    print(f'Decision Tree training time: {et - st:.3f}s')
     pred = dt.predict(X_test)
     rmse = np.sqrt(mean_squared_error(y_test, pred))
     print(f'Decision Tree accuracy: {rmse:.4f}')
@@ -143,11 +178,12 @@ def test_rf_cls(dataset, n_trees=10):
     rf = RandomForestClassifier(n_estimators=n_trees, max_depth=7)
     rf.fit(X, y)
     et = time.time()
-    print(f'Random Forest training time: {et - st:.2f}s')
+    print(f'Random Forest training time: {et - st:.3f}s')
     pred = rf.predict(X_test)
     acc = accuracy_score(y_test, np.round(pred))
     print(f'Random Forest error: {1 - acc:.4f}')
     return rf
+
 
 def test_rf_reg(dataset, n_trees=10):
     train_dataset_path = f'../data/{dataset}.train.remain_1e-03'
@@ -158,7 +194,7 @@ def test_rf_reg(dataset, n_trees=10):
     rf = RandomForestRegressor(n_estimators=n_trees, max_depth=7)
     rf.fit(X, y)
     et = time.time()
-    print(f'Random Forest training time: {et - st:.2f}s')
+    print(f'Random Forest training time: {et - st:.3f}s')
     pred = rf.predict(X_test)
     rmse = np.sqrt(mean_squared_error(y_test, pred))
     print(f'Random Forest accuracy: {rmse:.4f}')
@@ -166,27 +202,42 @@ def test_rf_reg(dataset, n_trees=10):
 
 
 if __name__ == '__main__':
+    # add arguments for number of trees
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--n_trees', type=int, default=10)
+    args = parser.parse_args()
 
-    test_xgb_cls('codrna', 10)
+    test_sklearn_cls('codrna', args.n_trees)
     print("=====================================")
-    test_xgb_cls('covtype', 10)
+    test_sklearn_cls('covtype', args.n_trees)
     print("=====================================")
-    test_xgb_cls('gisette', 10)
+    test_sklearn_cls('gisette', args.n_trees)
     print("=====================================")
-    test_xgb_reg('cadata', 10)
+    test_sklearn_reg('cadata', args.n_trees)
     print("=====================================")
-    test_xgb_reg('msd', 10)
+    test_sklearn_reg('msd', args.n_trees)
     print("=====================================")
 
-    test_rf_cls('codrna', 10)
+    test_xgb_cls('codrna', args.n_trees)
     print("=====================================")
-    test_rf_cls('covtype', 10)
+    test_xgb_cls('covtype', args.n_trees)
     print("=====================================")
-    test_rf_cls('gisette', 10)
+    test_xgb_cls('gisette', args.n_trees)
     print("=====================================")
-    test_rf_reg('cadata', 10)
+    test_xgb_reg('cadata', args.n_trees)
     print("=====================================")
-    test_rf_reg('msd', 10)
+    test_xgb_reg('msd', args.n_trees)
+    print("=====================================")
+
+    test_rf_cls('codrna', args.n_trees)
+    print("=====================================")
+    test_rf_cls('covtype', args.n_trees)
+    print("=====================================")
+    test_rf_cls('gisette', args.n_trees)
+    print("=====================================")
+    test_rf_reg('cadata', args.n_trees)
+    print("=====================================")
+    test_rf_reg('msd', args.n_trees)
 
     test_tree_cls('codrna')
     print("=====================================")
