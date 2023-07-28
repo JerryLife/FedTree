@@ -291,6 +291,11 @@ Before reproducing the main results, please make sure that the binary `main` has
 - reduce the number of seeds, for example, to `5`. However, this increases the variance of the calculated Hellinger distance.
 - reduce the require threads, for example, to `taskset -c 0-11`. However, this increases the running time. If you want to use all the threads, simply remove `taskset -c 0-x` before the command.
 
+First, create necessary folders to store results.
+```shell
+mkdir -p cache out fig
+```
+
 ### Removing in one tree (Table 4,5)
 To test removing in a single tree with Deltaboost, simply run
 
